@@ -1,0 +1,55 @@
+<section class="bestiary-main-content">
+  <header class="bestiary-header">
+    <h1><i class="fas fa-book-skull"></i> {{localize "BESTIARY.Title"}}</h1>
+  </header>
+
+  <div class="bestiary-tiles-grid bestiary-scrollable">
+    {{#if noSections}}
+      <div class="bestiary-empty-hint">
+        <i class="fas fa-feather-pointed"></i>
+        <p>{{localize "BESTIARY.NoSections"}}</p>
+      </div>
+    {{/if}}
+
+    {{#each sections}}
+      <div class="bestiary-tile {{#if this.isHidden}}tile-hidden{{/if}}" data-section-id="{{this.id}}" data-hidden="{{this.isHidden}}" data-action="openSection">
+        <div class="tile-image-wrapper">
+          <img src="{{this.displayImage}}" alt="{{this.name}}" loading="lazy" />
+          <div class="tile-overlay"></div>
+        </div>
+        {{#if this.isHidden}}
+          <div class="tile-hidden-badge"><i class="fas fa-eye-slash"></i></div>
+        {{/if}}
+        <div class="tile-info">
+          {{#if this.name}}
+            <h3 class="tile-title">{{this.name}}</h3>
+          {{else}}
+            <h3 class="tile-title tile-untitled">—</h3>
+          {{/if}}
+          <span class="tile-count">{{this.creatureCount}} <i class="fas fa-dragon"></i></span>
+        </div>
+        {{#if ../isGM}}
+          <div class="tile-actions">
+            <button type="button" class="tile-action-btn" data-action="toggleSectionVisibility" data-tooltip="{{#if this.isHidden}}{{localize 'BESTIARY.ShowToPlayers'}}{{else}}{{localize 'BESTIARY.HideFromPlayers'}}{{/if}}">
+              <i class="fas {{#if this.isHidden}}fa-eye{{else}}fa-eye-slash{{/if}}"></i>
+            </button>
+            <button type="button" class="tile-action-btn" data-action="editSection" data-tooltip="{{localize 'BESTIARY.EditSection'}}">
+              <i class="fas fa-pen-to-square"></i>
+            </button>
+            <button type="button" class="tile-action-btn tile-action-delete" data-action="deleteSection" data-tooltip="{{localize 'BESTIARY.DeleteSection'}}">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        {{/if}}
+      </div>
+    {{/each}}
+
+    {{#if isGM}}
+      <div class="bestiary-tile bestiary-tile-add" data-action="createSection">
+        <div class="tile-add-inner">
+          <i class="fas fa-plus"></i>
+        </div>
+      </div>
+    {{/if}}
+  </div>
+</section>

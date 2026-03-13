@@ -1,0 +1,123 @@
+<section class="bestiary-section-content">
+  <header class="section-header">
+    <div class="section-header-left">
+      <button type="button" class="btn-back" data-action="goBack" data-tooltip="{{localize 'BESTIARY.Back'}}">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      {{#if sectionImage}}
+        <img class="section-header-image" src="{{sectionImage}}" alt="" />
+      {{/if}}
+      <h2 class="section-title">{{sectionName}}</h2>
+    </div>
+    <div class="section-header-right">
+      <div class="bestiary-search">
+        <i class="fas fa-magnifying-glass"></i>
+        <input type="text" class="bestiary-search-input" placeholder="{{localize 'BESTIARY.Search'}}" value="{{searchQuery}}" />
+      </div>
+      <div class="view-toggle-group">
+        <button type="button" class="sort-btn {{#if (eq sortMode 'name')}}active{{/if}}" data-action="sortName" data-tooltip="{{localize 'BESTIARY.SortName'}}">
+          <i class="fas fa-arrow-down-a-z"></i>
+        </button>
+        <button type="button" class="sort-btn {{#if (eq sortMode 'cr')}}active{{/if}}" data-action="sortCR" data-tooltip="{{localize 'BESTIARY.SortCR'}}">
+          <i class="fas fa-shield-halved"></i>
+        </button>
+        <div class="view-separator"></div>
+        <button type="button" class="view-toggle-btn {{#if (eq viewMode 'card')}}active{{/if}}" data-action="toggleView" data-view-mode="card" data-tooltip="{{localize 'BESTIARY.ViewCard'}}">
+          <i class="fas fa-grip"></i>
+        </button>
+        <button type="button" class="view-toggle-btn {{#if (eq viewMode 'list')}}active{{/if}}" data-action="toggleView" data-view-mode="list" data-tooltip="{{localize 'BESTIARY.ViewList'}}">
+          <i class="fas fa-list"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="bestiary-creatures-area {{viewMode}}-view bestiary-scrollable">
+    {{#if isEmpty}}
+      <div class="bestiary-empty-hint">
+        <i class="fas fa-dragon"></i>
+        {{#if isGM}}
+          <p>{{localize "BESTIARY.DropHint"}}</p>
+        {{else}}
+          <p>{{localize "BESTIARY.NoCreatures"}}</p>
+        {{/if}}
+      </div>
+    {{/if}}
+
+    {{#if (eq viewMode "card")}}
+      <div class="creatures-grid">
+        {{#each creatures}}
+          <div class="creature-card {{#if this.isHidden}}creature-hidden{{/if}}" data-uuid="{{this.uuid}}" data-action="openCreature">
+            <div class="creature-card-image">
+              <img src="{{this.img}}" alt="{{this.name}}" loading="lazy" />
+              <div class="creature-card-overlay">
+                <span class="creature-cr-badge" data-tooltip="{{localize 'BESTIARY.CR'}}">CR {{this.crFormatted}}</span>
+              </div>
+            </div>
+            {{#if this.isHidden}}
+              <div class="creature-hidden-badge"><i class="fas fa-eye-slash"></i></div>
+            {{/if}}
+            <div class="creature-card-footer">
+              <h4 class="creature-name">{{this.name}}</h4>
+              <span class="creature-type-label">{{this.typeLabel}}</span>
+            </div>
+            {{#if ../isGM}}
+              <div class="creature-card-actions">
+                <button type="button" data-action="toggleCreatureVisibility" data-tooltip="{{#if this.isHidden}}{{localize 'BESTIARY.ShowToPlayers'}}{{else}}{{localize 'BESTIARY.HideFromPlayers'}}{{/if}}">
+                  <i class="fas {{#if this.isHidden}}fa-eye{{else}}fa-eye-slash{{/if}}"></i>
+                </button>
+                <button type="button" data-action="openSheet" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}">
+                  <i class="fas fa-scroll"></i>
+                </button>
+                <button type="button" data-action="removeCreature" data-tooltip="{{localize 'BESTIARY.RemoveCreature'}}">
+                  <i class="fas fa-xmark"></i>
+                </button>
+              </div>
+            {{/if}}
+          </div>
+        {{/each}}
+      </div>
+    {{/if}}
+
+    {{#if (eq viewMode "list")}}
+      <div class="creatures-list">
+        {{#each creatures}}
+          <div class="creature-list-row {{#if this.isHidden}}creature-hidden{{/if}}" data-uuid="{{this.uuid}}" data-action="openCreature">
+            <img class="creature-list-img" src="{{this.img}}" alt="{{this.name}}" loading="lazy" />
+            <div class="creature-list-info">
+              <h4 class="creature-name">{{this.name}}</h4>
+              <span class="creature-type-label">{{this.typeLabel}}</span>
+            </div>
+            <div class="creature-list-stats">
+              <div class="stat-pill" data-tooltip="{{localize 'BESTIARY.AC'}}">
+                <i class="fas fa-shield"></i> {{this.ac.value}}
+              </div>
+              <div class="stat-pill" data-tooltip="{{localize 'BESTIARY.HP'}}">
+                <i class="fas fa-heart"></i> {{this.hp.max}}
+              </div>
+              <div class="stat-pill cr-pill" data-tooltip="{{localize 'BESTIARY.CR'}}">
+                CR {{this.crFormatted}}
+              </div>
+              {{#if this.isHidden}}
+                <div class="stat-pill hidden-pill"><i class="fas fa-eye-slash"></i></div>
+              {{/if}}
+            </div>
+            {{#if ../isGM}}
+              <div class="creature-list-actions">
+                <button type="button" data-action="toggleCreatureVisibility" data-tooltip="{{#if this.isHidden}}{{localize 'BESTIARY.ShowToPlayers'}}{{else}}{{localize 'BESTIARY.HideFromPlayers'}}{{/if}}">
+                  <i class="fas {{#if this.isHidden}}fa-eye{{else}}fa-eye-slash{{/if}}"></i>
+                </button>
+                <button type="button" data-action="openSheet" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}">
+                  <i class="fas fa-scroll"></i>
+                </button>
+                <button type="button" data-action="removeCreature" data-tooltip="{{localize 'BESTIARY.RemoveCreature'}}">
+                  <i class="fas fa-xmark"></i>
+                </button>
+              </div>
+            {{/if}}
+          </div>
+        {{/each}}
+      </div>
+    {{/if}}
+  </div>
+</section>

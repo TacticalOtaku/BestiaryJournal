@@ -1,0 +1,30 @@
+<section class="tile-editor-form">
+  <div class="tile-editor-preview">
+    <img src="{{image}}" alt="" style="{{#unless image}}display:none;{{/unless}}" />
+    <button type="button" class="btn-pick-image" data-action="pickImage">
+      <i class="fas fa-image"></i>
+      {{localize "BESTIARY.SectionImage"}}
+    </button>
+  </div>
+
+  <input type="hidden" name="image" value="{{image}}" />
+
+  <div class="form-group">
+    <label>{{localize "BESTIARY.SectionName"}}</label>
+    <input type="text" name="name" value="{{name}}" placeholder="{{localize 'BESTIARY.SectionName'}}" autofocus />
+  </div>
+
+  <div class="form-group form-group-checkbox">
+    <label>
+      <input type="checkbox" name="hidden" {{#if isHidden}}checked{{/if}} />
+      <i class="fas fa-eye-slash"></i>
+      {{localize "BESTIARY.HiddenFromPlayers"}}
+    </label>
+  </div>
+
+  <footer class="sheet-footer flexrow">
+    <button type="submit" class="btn-save">
+      <i class="fas fa-check"></i> {{localize "BESTIARY.Save"}}
+    </button>
+  </footer>
+</section>

@@ -1,0 +1,241 @@
+<section class="creature-detail-wrapper bestiary-scrollable">
+  {{#if error}}
+    <div class="bestiary-error">
+      <i class="fas fa-exclamation-triangle"></i>
+      <p>Could not load creature data.</p>
+    </div>
+  {{else}}
+    <div class="creature-detail-view detail-{{detailLevel}}">
+
+      {{!-- Detail level selector --}}
+      {{#if canToggleDetail}}
+        <nav class="detail-level-nav">
+          <button type="button" class="detail-level-btn {{#if isMinimal}}active{{/if}}" data-action="setDetailLevel" data-level="minimal">
+            {{localize "BESTIARY.ViewMinimal"}}
+          </button>
+          <button type="button" class="detail-level-btn {{#if isStandard}}active{{/if}}" data-action="setDetailLevel" data-level="standard">
+            {{localize "BESTIARY.ViewStandard"}}
+          </button>
+          <button type="button" class="detail-level-btn {{#if isExpanded}}active{{/if}}" data-action="setDetailLevel" data-level="expanded">
+            {{localize "BESTIARY.ViewExpanded"}}
+          </button>
+          {{#if isGM}}
+            <button type="button" class="detail-level-btn {{#if isCustom}}active{{/if}}" data-action="setDetailLevel" data-level="custom">
+              <i class="fas fa-sliders"></i> {{localize "BESTIARY.ViewCustom"}}
+            </button>
+          {{/if}}
+          {{#if isGM}}
+            <button type="button" class="detail-level-btn btn-open-sheet" data-action="openSheet" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}">
+              <i class="fas fa-scroll"></i>
+            </button>
+          {{/if}}
+        </nav>
+      {{else}}
+        {{#if isGM}}
+          <nav class="detail-level-nav">
+            <button type="button" class="detail-level-btn btn-open-sheet" data-action="openSheet" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}">
+              <i class="fas fa-scroll"></i>
+            </button>
+          </nav>
+        {{/if}}
+      {{/if}}
+
+      {{!-- Custom mode config panel (GM only) --}}
+      {{#if isCustom}}
+        {{#if isGM}}
+          <div class="custom-display-config">
+            <h4 class="custom-config-title"><i class="fas fa-sliders"></i> {{localize "BESTIARY.CustomConfig"}}</h4>
+            <div class="custom-blocks-grid">
+              {{#each displayBlocksConfig}}
+                <label class="custom-block-toggle {{#if this.isChild}}is-child{{/if}}">
+                  <input type="checkbox" {{#if this.visible}}checked{{/if}} data-block-key="{{this.key}}" />
+                  <span>{{this.localizedLabel}}</span>
+                </label>
+              {{/each}}
+            </div>
+          </div>
+        {{/if}}
+      {{/if}}
+
+      {{!-- Hero Section (always visible) --}}
+      <div class="creature-hero">
+        <div class="creature-portrait">
+          <img src="{{creature.img}}" alt="{{creature.name}}" />
+        </div>
+        <div class="creature-hero-info">
+          <h1 class="creature-name">{{creature.name}}</h1>
+          <p class="creature-type-line">{{creature.typeLabel}}{{#if creature.alignment}}, {{creature.alignment}}{{/if}}</p>
+          <div class="creature-key-stats">
+            <div class="key-stat">
+              <span class="key-stat-label">{{localize "BESTIARY.AC"}}</span>
+              <span class="key-stat-value">{{creature.ac.value}}</span>
+            </div>
+            <div class="key-stat">
+              <span class="key-stat-label">{{localize "BESTIARY.HP"}}</span>
+              <span class="key-stat-value">{{creature.hp.max}}{{#if creature.hp.formula}} <small>({{creature.hp.formula}})</small>{{/if}}</span>
+            </div>
+            <div class="key-stat">
+              <span class="key-stat-label">{{localize "BESTIARY.CR"}}</span>
+              <span class="key-stat-value">{{creature.crFormatted}}{{#if creature.xp}} <small>({{creature.xp}} XP)</small>{{/if}}</span>
+            </div>
+          </div>
+          {{#if speedEntries.length}}
+            <div class="creature-speed">
+              <strong>{{localize "BESTIARY.Speed"}}:</strong>
+              {{#each speedEntries}}
+                {{#if this.label}}<span class="speed-type">{{this.label}}</span>{{/if}}
+                <span class="speed-value">{{this.value}}</span>{{#unless @last}},{{/unless}}
+              {{/each}}
+            </div>
+          {{/if}}
+        </div>
+      </div>
+
+      {{!-- Extended content (everything except minimal) --}}
+      {{#if isNotMinimal}}
+
+        {{#if showAbilitiesSection}}
+          <div class="creature-abilities">
+            <h3 class="section-divider">{{localize "BESTIARY.Abilities"}}</h3>
+            <div class="ability-scores-grid">
+              {{#each abilityEntries}}
+                <div class="ability-score {{#if this.isHighlight}}highlight{{/if}}">
+                  <span class="ability-label">{{this.label}}</span>
+                  <span class="ability-value">{{this.value}}</span>
+                  <span class="ability-mod">({{this.mod}})</span>
+                </div>
+              {{/each}}
+            </div>
+          </div>
+        {{/if}}
+
+        <div class="creature-traits">
+          {{#if showBlock.skills}}
+            <div class="trait-line"><strong>{{localize "BESTIARY.Skills"}}:</strong> {{#each skillEntries}}{{this.label}} {{this.total}}{{#unless @last}}, {{/unless}}{{/each}}</div>
+          {{/if}}
+          {{#if showBlock.senses}}
+            <div class="trait-line"><strong>{{localize "BESTIARY.Senses"}}:</strong> {{#each senseEntries}}{{this.label}} {{this.value}}{{#unless @last}}, {{/unless}}{{/each}}</div>
+          {{/if}}
+          {{#if showBlock.languages}}
+            <div class="trait-line"><strong>{{localize "BESTIARY.Languages"}}:</strong> {{#each creature.languages}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</div>
+          {{/if}}
+          {{#if showBlock.resistances}}
+            <div class="trait-line"><strong>{{localize "BESTIARY.Resistances"}}:</strong> {{#each creature.resistances}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</div>
+          {{/if}}
+          {{#if showBlock.immunities}}
+            <div class="trait-line"><strong>{{localize "BESTIARY.Immunities"}}:</strong> {{#each creature.immunities}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</div>
+          {{/if}}
+          {{#if showBlock.vulnerabilities}}
+            <div class="trait-line"><strong>{{localize "BESTIARY.Vulnerabilities"}}:</strong> {{#each creature.vulnerabilities}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</div>
+          {{/if}}
+          {{#if showBlock.conditionImmunities}}
+            <div class="trait-line"><strong>{{localize "BESTIARY.ConditionImmunities"}}:</strong> {{#each creature.conditionImmunities}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</div>
+          {{/if}}
+        </div>
+
+        {{#if showBlock.features}}
+          <div class="creature-items-section">
+            <h3 class="section-divider">{{localize "BESTIARY.Features"}}</h3>
+            {{#each features}}
+              <div class="creature-item" data-item-name="{{this.name}}" data-action="expandItem">
+                <div class="creature-item-header">
+                  {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                  <span class="item-name">{{this.name}}</span>
+                  <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                </div>
+                {{#if this._expanded}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+              </div>
+            {{/each}}
+          </div>
+        {{/if}}
+
+        {{#if showBlock.actions}}
+          <div class="creature-items-section">
+            <h3 class="section-divider">{{localize "BESTIARY.Actions"}}</h3>
+            {{#each actions}}
+              <div class="creature-item" data-item-name="{{this.name}}" data-action="expandItem">
+                <div class="creature-item-header">
+                  {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                  <span class="item-name">{{this.name}}</span>
+                  <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                </div>
+                {{#if this._expanded}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+              </div>
+            {{/each}}
+          </div>
+        {{/if}}
+
+        {{#if showBlock.bonusActions}}
+          <div class="creature-items-section">
+            <h3 class="section-divider">{{localize "BESTIARY.BonusActions"}}</h3>
+            {{#each bonusActions}}
+              <div class="creature-item" data-item-name="{{this.name}}" data-action="expandItem">
+                <div class="creature-item-header">
+                  {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                  <span class="item-name">{{this.name}}</span>
+                  <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                </div>
+                {{#if this._expanded}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+              </div>
+            {{/each}}
+          </div>
+        {{/if}}
+
+        {{#if showBlock.reactions}}
+          <div class="creature-items-section">
+            <h3 class="section-divider">{{localize "BESTIARY.Reactions"}}</h3>
+            {{#each reactions}}
+              <div class="creature-item" data-item-name="{{this.name}}" data-action="expandItem">
+                <div class="creature-item-header">
+                  {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                  <span class="item-name">{{this.name}}</span>
+                  <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                </div>
+                {{#if this._expanded}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+              </div>
+            {{/each}}
+          </div>
+        {{/if}}
+
+        {{#if showBlock.legendaryActions}}
+          <div class="creature-items-section">
+            <h3 class="section-divider legendary">{{localize "BESTIARY.LegendaryActions"}}</h3>
+            {{#each legendaryActions}}
+              <div class="creature-item" data-item-name="{{this.name}}" data-action="expandItem">
+                <div class="creature-item-header">
+                  {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                  <span class="item-name">{{this.name}}</span>
+                  <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                </div>
+                {{#if this._expanded}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+              </div>
+            {{/each}}
+          </div>
+        {{/if}}
+
+        {{#if showBlock.spells}}
+          <div class="creature-items-section">
+            <h3 class="section-divider">{{localize "BESTIARY.Spellcasting"}}</h3>
+            <div class="creature-spells-list">
+              {{#each spells}}
+                <div class="creature-spell-item">
+                  {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                  <span class="spell-name">{{this.name}}</span>
+                  <span class="spell-level">(Lvl {{this.level}})</span>
+                </div>
+              {{/each}}
+            </div>
+          </div>
+        {{/if}}
+
+        {{#if showBlock.biography}}
+          <div class="creature-biography">
+            <h3 class="section-divider">{{localize "BESTIARY.Biography"}}</h3>
+            <div class="biography-content">{{{creature.biography}}}</div>
+          </div>
+        {{/if}}
+
+      {{/if}}
+    </div>
+  {{/if}}
+</section>
