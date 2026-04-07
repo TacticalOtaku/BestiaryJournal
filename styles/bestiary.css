@@ -804,8 +804,10 @@
 .key-stat-value { font-size: 1.2rem; font-weight: 700; color: var(--bj-text-primary); }
 .key-stat-value small { font-weight: 400; font-size: 0.75rem; color: var(--bj-text-secondary); }
 
-.creature-speed { font-size: 0.9rem; color: var(--bj-text-primary); }
-.creature-speed strong { color: var(--bj-text-secondary); }
+.creature-speed-block { font-size: 0.9rem; color: var(--bj-text-primary); margin-bottom: 4px; }
+.creature-speed-block .speed-row { line-height: 1.6; }
+.creature-speed-block .speed-row strong { color: var(--bj-text-secondary); }
+.creature-speed-block .speed-secondary { font-size: 0.82rem; color: var(--bj-text-secondary); }
 .speed-type { text-transform: capitalize; }
 
 .creature-abilities { margin-bottom: 16px; }

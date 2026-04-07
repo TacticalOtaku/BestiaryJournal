@@ -80,12 +80,20 @@
             </div>
           </div>
           {{#if speedEntries.length}}
-            <div class="creature-speed">
-              <strong>{{localize "BESTIARY.Speed"}}:</strong>
-              {{#each speedEntries}}
-                {{#if this.label}}<span class="speed-type">{{this.label}}</span>{{/if}}
-                <span class="speed-value">{{this.value}}</span>{{#unless @last}},{{/unless}}
-              {{/each}}
+            <div class="creature-speed-block">
+              <div class="speed-row">
+                <strong>{{localize "BESTIARY.Speed"}}:</strong>
+                {{#each speedEntries}}
+                  {{#if this.label}}<span class="speed-type">{{this.label}}</span>{{/if}}
+                  <span class="speed-value">{{this.value}}</span>{{#unless @last}},{{/unless}}
+                {{/each}}
+              </div>
+              {{#if creature.maxSpeed}}
+                <div class="speed-row speed-secondary">
+                  <strong>{{localize "BESTIARY.MaxSpeed"}}:</strong>
+                  <span class="speed-value">{{creature.maxSpeed}} {{creature.speedUnits}}</span>
+                </div>
+              {{/if}}
             </div>
           {{/if}}
         </div>

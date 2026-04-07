@@ -114,25 +114,31 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
     };
   }
 
+  // ── Skills: only half-prof (0.5), proficient (1), or expertise (2) ──
   const skills = {};
   for (const [key, skill] of Object.entries(system.skills ?? {})) {
-    if (skill.value > 0 || skill.total !== skill.ability?.mod) {
+    if (skill.value >= 0.5) {
       skills[key] = { label: CONFIG.DND5E.skills[key]?.label ?? key, total: skill.total, value: skill.value };
     }
   }
 
+  // ── Movement: only known speed types, ignore objects/Sets ──
+  const KNOWN_SPEED_KEYS = new Set(["walk", "fly", "swim", "climb", "burrow"]);
   const speeds = {};
   const movement = system.attributes?.movement ?? {};
-  for (const [key, val] of Object.entries(movement)) {
-    if (key === "units" || key === "hover") continue;
-    if (val) speeds[key] = val;
+  for (const key of KNOWN_SPEED_KEYS) {
+    const val = movement[key];
+    if (val && typeof val === "number") speeds[key] = val;
   }
   if (movement.hover) speeds.hover = true;
+  const maxSpeed = (typeof movement.max === "number" && movement.max > 0) ? movement.max : null;
 
-  const resistances = _traitArray(system.traits?.dr);
-  const immunities = _traitArray(system.traits?.di);
-  const vulnerabilities = _traitArray(system.traits?.dv);
-  const conditionImmunities = _traitArray(system.traits?.ci);
+  // ── Damage traits with bypasses ──
+  const resistances = _traitArrayWithBypasses(system.traits?.dr);
+  const immunities = _traitArrayWithBypasses(system.traits?.di);
+  const vulnerabilities = _traitArrayWithBypasses(system.traits?.dv);
+  // ── Condition immunities: deduplicate (case-insensitive) ──
+  const conditionImmunities = _traitArrayDeduped(system.traits?.ci);
 
   const senses = {};
   const sensesData = system.attributes?.senses ?? {};
@@ -208,7 +214,7 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
     return {
       id: actor.id, uuid: actor.uuid, name: actor.name, img: actor.img,
       prototypeToken: actor.prototypeToken?.texture?.src ?? actor.img,
-      abilities, skills, speeds, speedUnits: movement.units ?? "ft",
+      abilities, skills, speeds, speedUnits: movement.units ?? "ft", maxSpeed,
       resistances, immunities, vulnerabilities, conditionImmunities,
       senses, senseUnits: sensesData.units ?? "ft", languages,
       cr, xp, creatureType, creatureSubtype, size, alignment, hp, ac,
@@ -221,7 +227,7 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
   return {
     id: actor.id, uuid: actor.uuid, name: actor.name, img: actor.img,
     prototypeToken: actor.prototypeToken?.texture?.src ?? actor.img,
-    abilities, skills, speeds, speedUnits: movement.units ?? "ft",
+    abilities, skills, speeds, speedUnits: movement.units ?? "ft", maxSpeed,
     resistances, immunities, vulnerabilities, conditionImmunities,
     senses, senseUnits: sensesData.units ?? "ft", languages,
     cr, xp, creatureType, creatureSubtype, size, alignment, hp, ac,
@@ -236,6 +242,62 @@ function _traitArray(trait) {
   const result = [];
   if (trait.value) for (const v of trait.value) result.push(v);
   if (trait.custom) for (const c of trait.custom.split(";")) { const t = c.trim(); if (t) result.push(t); }
+  return result;
+}
+
+/**
+ * Extract damage trait values WITH bypass annotations.
+ * D&D5e stores bypasses as a Set on trait.bypasses (e.g. {"mgc", "ada", "sil"}).
+ * Physical damage types (bludgeoning, piercing, slashing) that have bypasses
+ * get annotated like "piercing (except magical, silvered)".
+ */
+const BYPASS_LABELS = {
+  mgc: "magical", ada: "adamantine", sil: "silvered"
+};
+const PHYSICAL_TYPES = new Set(["bludgeoning", "piercing", "slashing"]);
+
+function _traitArrayWithBypasses(trait) {
+  if (!trait) return [];
+  const result = [];
+  const bypasses = trait.bypasses instanceof Set ? trait.bypasses
+    : (trait.bypasses ? new Set(trait.bypasses) : new Set());
+  const bypassLabels = [...bypasses]
+    .map(b => BYPASS_LABELS[b] ?? b)
+    .filter(Boolean);
+
+  if (trait.value) {
+    for (const v of trait.value) {
+      if (PHYSICAL_TYPES.has(v) && bypassLabels.length > 0) {
+        result.push(`${v} (except ${bypassLabels.join(", ")})`);
+      } else {
+        result.push(v);
+      }
+    }
+  }
+  if (trait.custom) {
+    for (const c of trait.custom.split(";")) {
+      const t = c.trim();
+      if (t) result.push(t);
+    }
+  }
+  return result;
+}
+
+/**
+ * Extract trait values with case-insensitive deduplication.
+ * Keeps the first occurrence of each unique lowercase value.
+ */
+function _traitArrayDeduped(trait) {
+  if (!trait) return [];
+  const raw = _traitArray(trait);
+  const seen = new Set();
+  const result = [];
+  for (const v of raw) {
+    const key = v.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(v);
+  }
   return result;
 }
 
