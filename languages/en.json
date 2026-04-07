@@ -36,6 +36,7 @@
     "HP": "Hit Points",
     "AC": "Armor Class",
     "Speed": "Speed",
+    "MaxSpeed": "Max Speed",
     "CR": "Challenge Rating",
     "XP": "Experience Points",
     "Type": "Type",
