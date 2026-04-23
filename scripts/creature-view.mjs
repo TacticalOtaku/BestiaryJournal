@@ -6,9 +6,33 @@ import {
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
+const CUSTOM_DISPLAY_GROUPS = [
+  {
+    key: "core",
+    label: "BESTIARY.CustomGroupCore",
+    blocks: ["abilities", "str", "dex", "con", "int", "wis", "cha", "skills", "senses", "languages"]
+  },
+  {
+    key: "defense",
+    label: "BESTIARY.CustomGroupDefense",
+    blocks: ["resistances", "immunities", "vulnerabilities", "conditionImmunities"]
+  },
+  {
+    key: "combat",
+    label: "BESTIARY.CustomGroupCombat",
+    blocks: ["features", "actions", "inventory", "bonusActions", "reactions", "legendaryActions", "spells"]
+  },
+  {
+    key: "lore",
+    label: "BESTIARY.CustomGroupLore",
+    blocks: ["biography"]
+  }
+];
+
 export class BestiaryCreatureView extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static _localDetailLevels = new Map();
+  static _instances = new Set();
 
   static DEFAULT_OPTIONS = {
     id: "bestiary-creature-view",
@@ -28,6 +52,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       setDetailLevel: function (e, t) { this._onSetDetailLevel(e, t); },
       openSheet: function (e, t) { this._onOpenSheet(e, t); },
       expandItem: function (e, t) { this._onExpandItem(e, t); },
+      toggleSection: function (e, t) { this._onToggleSection(e, t); },
       toggleCustomBlock: function (e, t) { this._onToggleCustomBlock(e, t); }
     }
   };
@@ -42,6 +67,8 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     super(options);
     this.actorUuid = options.uuid;
     this._expandedItems = new Set();
+    this._expandedSections = new Set();
+    BestiaryCreatureView._instances.add(this);
   }
 
   get detailLevel() {
@@ -64,7 +91,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       "abilities", "str", "dex", "con", "int", "wis", "cha",
       "skills", "senses", "languages",
       "resistances", "immunities", "vulnerabilities", "conditionImmunities",
-      "actions", "bonusActions", "reactions"
+      "actions", "bonusActions", "reactions", "inventory"
     ]);
 
     // Expanded adds features, legendary, spells, biography
@@ -121,6 +148,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const markExpanded = (list) => list.map((item, i) => ({
       ...item, _idx: i, _expanded: this._expandedItems.has(item.name)
     }));
+    const isSectionExpanded = (key) => this._expandedSections.has(key);
 
     const currentLevel = this.detailLevel;
     const isGM = game.user.isGM;
@@ -147,6 +175,13 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       visible: customVisible.includes(b.key),
       isChild: !!b.group
     }));
+    const groupedDisplayBlocks = CUSTOM_DISPLAY_GROUPS.map(group => ({
+      key: group.key,
+      label: game.i18n.localize(group.label) || group.label,
+      blocks: group.blocks
+        .map(key => displayBlocksConfig.find(block => block.key === key))
+        .filter(Boolean)
+    })).filter(group => group.blocks.length > 0);
 
     const ctx = {
       creature: c,
@@ -155,10 +190,21 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       skillEntries, speedEntries, senseEntries,
       features: markExpanded(c.features),
       actions: markExpanded(c.actions),
+      inventory: markExpanded(c.inventory ?? []),
       bonusActions: markExpanded(c.bonusActions),
       reactions: markExpanded(c.reactions),
       legendaryActions: markExpanded(c.legendaryActions),
       spells: c.spells,
+      sectionState: {
+        features: isSectionExpanded("features"),
+        actions: isSectionExpanded("actions"),
+        inventory: isSectionExpanded("inventory"),
+        bonusActions: isSectionExpanded("bonusActions"),
+        reactions: isSectionExpanded("reactions"),
+        legendaryActions: isSectionExpanded("legendaryActions"),
+        spells: isSectionExpanded("spells"),
+        biography: isSectionExpanded("biography")
+      },
       detailLevel: currentLevel,
       isMinimal: !isNotMinimal,
       isNotMinimal,
@@ -175,6 +221,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
         conditionImmunities: show("conditionImmunities") && c.conditionImmunities.length > 0,
         features: show("features") && c.features.length > 0,
         actions: show("actions") && c.actions.length > 0,
+        inventory: show("inventory") && (c.inventory?.length ?? 0) > 0,
         bonusActions: show("bonusActions") && c.bonusActions.length > 0,
         reactions: show("reactions") && c.reactions.length > 0,
         legendaryActions: show("legendaryActions") && c.legendaryActions.length > 0,
@@ -184,6 +231,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       canToggleDetail,
       isGM,
       displayBlocksConfig,
+      groupedDisplayBlocks,
       error: false
     };
 
@@ -219,11 +267,20 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   }
 
   _onExpandItem(event, target) {
-    const name = target.closest("[data-item-name]")?.dataset.itemName;
+    const itemElement = target.closest("[data-item-name]");
+    const name = itemElement?.dataset.itemName;
     if (!name) return;
     if (this._expandedItems.has(name)) this._expandedItems.delete(name);
     else this._expandedItems.add(name);
-    this.render();
+    this._toggleItemElement(itemElement, this._expandedItems.has(name));
+  }
+
+  _onToggleSection(event, target) {
+    const section = target.dataset.sectionKey;
+    if (!section) return;
+    if (this._expandedSections.has(section)) this._expandedSections.delete(section);
+    else this._expandedSections.add(section);
+    this._toggleSectionElement(section, this._expandedSections.has(section));
   }
 
   async _onToggleCustomBlock(event, target) {
@@ -250,6 +307,48 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     }
 
     await setCreatureCustomDisplay(this.actorUuid, updated);
-    this.render();
+    await this._refreshPreservingScroll();
+  }
+
+  async _refreshPreservingScroll() {
+    const scrollContainer = this.element?.querySelector(".creature-detail-wrapper");
+    const scrollTop = scrollContainer?.scrollTop ?? 0;
+    await this.render();
+    const nextScrollContainer = this.element?.querySelector(".creature-detail-wrapper");
+    if (nextScrollContainer) nextScrollContainer.scrollTop = scrollTop;
+  }
+
+  _toggleItemElement(itemElement, expanded) {
+    if (!itemElement) return;
+    const body = itemElement.querySelector(".creature-item-body");
+    const icon = itemElement.querySelector(".creature-item-header > i.fas");
+    itemElement.classList.toggle("is-expanded", expanded);
+    if (body) body.classList.toggle("is-collapsed", !expanded);
+    if (icon) {
+      icon.classList.toggle("fa-chevron-up", expanded);
+      icon.classList.toggle("fa-chevron-down", !expanded);
+    }
+  }
+
+  _toggleSectionElement(sectionKey, expanded) {
+    const sectionElement = this.element?.querySelector(`[data-section-key="${sectionKey}"]`)?.closest(".creature-items-accordion");
+    if (!sectionElement) return;
+    const body = sectionElement.querySelector(".accordion-section-body");
+    const icon = sectionElement.querySelector(".section-toggle > i.fas");
+    sectionElement.classList.toggle("is-expanded", expanded);
+    if (body) body.classList.toggle("is-collapsed", !expanded);
+    if (icon) {
+      icon.classList.toggle("fa-chevron-up", expanded);
+      icon.classList.toggle("fa-chevron-down", !expanded);
+    }
+  }
+
+  async refreshFromExternalUpdate() {
+    await this._refreshPreservingScroll();
+  }
+
+  async close(options) {
+    BestiaryCreatureView._instances.delete(this);
+    return super.close(options);
   }
 }

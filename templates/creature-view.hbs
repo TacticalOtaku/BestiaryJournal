@@ -45,12 +45,19 @@
         {{#if isGM}}
           <div class="custom-display-config">
             <h4 class="custom-config-title"><i class="fas fa-sliders"></i> {{localize "BESTIARY.CustomConfig"}}</h4>
-            <div class="custom-blocks-grid">
-              {{#each displayBlocksConfig}}
-                <label class="custom-block-toggle {{#if this.isChild}}is-child{{/if}}">
-                  <input type="checkbox" {{#if this.visible}}checked{{/if}} data-block-key="{{this.key}}" />
-                  <span>{{this.localizedLabel}}</span>
-                </label>
+            <div class="custom-block-groups">
+              {{#each groupedDisplayBlocks}}
+                <section class="custom-block-group">
+                  <h5 class="custom-block-group-title">{{this.label}}</h5>
+                  <div class="custom-blocks-grid">
+                    {{#each this.blocks}}
+                      <label class="custom-block-toggle {{#if this.isChild}}is-child{{/if}}">
+                        <input type="checkbox" {{#if this.visible}}checked{{/if}} data-block-key="{{this.key}}" />
+                        <span>{{this.localizedLabel}}</span>
+                      </label>
+                    {{/each}}
+                  </div>
+                </section>
               {{/each}}
             </div>
           </div>
@@ -80,20 +87,12 @@
             </div>
           </div>
           {{#if speedEntries.length}}
-            <div class="creature-speed-block">
-              <div class="speed-row">
-                <strong>{{localize "BESTIARY.Speed"}}:</strong>
-                {{#each speedEntries}}
-                  {{#if this.label}}<span class="speed-type">{{this.label}}</span>{{/if}}
-                  <span class="speed-value">{{this.value}}</span>{{#unless @last}},{{/unless}}
-                {{/each}}
-              </div>
-              {{#if creature.maxSpeed}}
-                <div class="speed-row speed-secondary">
-                  <strong>{{localize "BESTIARY.MaxSpeed"}}:</strong>
-                  <span class="speed-value">{{creature.maxSpeed}} {{creature.speedUnits}}</span>
-                </div>
-              {{/if}}
+            <div class="creature-speed">
+              <strong>{{localize "BESTIARY.Speed"}}:</strong>
+              {{#each speedEntries}}
+                {{#if this.label}}<span class="speed-type">{{this.label}}</span>{{/if}}
+                <span class="speed-value">{{this.value}}</span>{{#unless @last}},{{/unless}}
+              {{/each}}
             </div>
           {{/if}}
         </div>
@@ -142,104 +141,434 @@
         </div>
 
         {{#if showBlock.features}}
-          <div class="creature-items-section">
-            <h3 class="section-divider">{{localize "BESTIARY.Features"}}</h3>
-            {{#each features}}
-              <div class="creature-item" data-item-name="{{this.name}}" data-action="expandItem">
-                <div class="creature-item-header">
-                  {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
-                  <span class="item-name">{{this.name}}</span>
-                  <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
-                </div>
-                {{#if this._expanded}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+          <div class="creature-items-section creature-items-accordion {{#if sectionState.features}}is-expanded{{/if}}">
+            <button type="button" class="section-divider section-toggle" data-action="toggleSection" data-section-key="features">
+              <span>{{localize "BESTIARY.Features"}}</span>
+              <i class="fas {{#if sectionState.features}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+            </button>
+            <div class="accordion-section-body {{#unless sectionState.features}}is-collapsed{{/unless}}">
+              <div class="creature-items-list">
+                {{#each features}}
+                  <div class="creature-item {{#if this._expanded}}is-expanded{{/if}}" data-item-name="{{this.name}}" data-action="expandItem">
+                    <div class="creature-item-header">
+                      {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                      <span class="item-name">{{this.name}}</span>
+                      {{#if this.activities.length}}
+                        <span class="item-activity-count">{{this.activities.length}}</span>
+                      {{/if}}
+                      <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                    </div>
+                      <div class="creature-item-body {{#unless this._expanded}}is-collapsed{{/unless}}">
+                        {{#if this.hasMeta}}
+                          <div class="creature-item-meta">
+                            {{#if this.tags.length}}
+                              <div class="creature-item-tags">
+                                {{#each this.tags}}
+                                  <span class="item-tag {{#if this.isAccent}}is-accent{{/if}}">
+                                    <strong>{{localize this.label}}:</strong> {{this.value}}
+                                  </span>
+                                {{/each}}
+                              </div>
+                            {{/if}}
+                            {{#if this.stats.length}}
+                              <div class="creature-item-stats">
+                                {{#each this.stats}}
+                                  <div class="item-stat">
+                                    <span class="item-stat-label">{{localize this.label}}</span>
+                                    <span class="item-stat-value">{{this.value}}</span>
+                                  </div>
+                                {{/each}}
+                              </div>
+                            {{/if}}
+                            {{#if this.activities.length}}
+                              <div class="creature-item-activities">
+                                <div class="item-subsection-title">{{localize "BESTIARY.ItemActivities"}}</div>
+                                <div class="activity-list">
+                                  {{#each this.activities}}
+                                    <div class="activity-row">
+                                      <div class="activity-main">
+                                        <span class="activity-name">{{this.name}}</span>
+                                        <span class="activity-type">{{this.typeLabel}}</span>
+                                      </div>
+                                      <div class="activity-details">
+                                        {{#if this.activationLabel}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemActivation"}}:</strong> {{this.activationLabel}}</span>{{/if}}
+                                        {{#if this.attack}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemAttack"}}:</strong> {{this.attack}}</span>{{/if}}
+                                        {{#if this.damage}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemDamage"}}:</strong> {{this.damage}}</span>{{/if}}
+                                        {{#if this.save}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemSave"}}:</strong> {{this.save}}</span>{{/if}}
+                                        {{#if this.range}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemRange"}}:</strong> {{this.range}}</span>{{/if}}
+                                        {{#if this.target}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemTarget"}}:</strong> {{this.target}}</span>{{/if}}
+                                        {{#if this.uses}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemUses"}}:</strong> {{this.uses}}</span>{{/if}}
+                                      </div>
+                                    </div>
+                                  {{/each}}
+                                </div>
+                              </div>
+                            {{/if}}
+                          </div>
+                        {{/if}}
+                        {{#if this.description}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+                      </div>
+                  </div>
+                {{/each}}
               </div>
-            {{/each}}
+            </div>
           </div>
         {{/if}}
 
         {{#if showBlock.actions}}
-          <div class="creature-items-section">
-            <h3 class="section-divider">{{localize "BESTIARY.Actions"}}</h3>
-            {{#each actions}}
-              <div class="creature-item" data-item-name="{{this.name}}" data-action="expandItem">
-                <div class="creature-item-header">
-                  {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
-                  <span class="item-name">{{this.name}}</span>
-                  <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
-                </div>
-                {{#if this._expanded}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+          <div class="creature-items-section creature-items-accordion {{#if sectionState.actions}}is-expanded{{/if}}">
+            <button type="button" class="section-divider section-toggle" data-action="toggleSection" data-section-key="actions">
+              <span>{{localize "BESTIARY.Actions"}}</span>
+              <i class="fas {{#if sectionState.actions}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+            </button>
+            <div class="accordion-section-body {{#unless sectionState.actions}}is-collapsed{{/unless}}">
+              <div class="creature-items-list">
+                {{#each actions}}
+                  <div class="creature-item {{#if this._expanded}}is-expanded{{/if}}" data-item-name="{{this.name}}" data-action="expandItem">
+                    <div class="creature-item-header">
+                      {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                      <span class="item-name">{{this.name}}</span>
+                      {{#if this.activities.length}}
+                        <span class="item-activity-count">{{this.activities.length}}</span>
+                      {{/if}}
+                      <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                    </div>
+                      <div class="creature-item-body {{#unless this._expanded}}is-collapsed{{/unless}}">
+                        {{#if this.hasMeta}}
+                          <div class="creature-item-meta">
+                            {{#if this.tags.length}}
+                              <div class="creature-item-tags">
+                                {{#each this.tags}}
+                                  <span class="item-tag {{#if this.isAccent}}is-accent{{/if}}">
+                                    <strong>{{localize this.label}}:</strong> {{this.value}}
+                                  </span>
+                                {{/each}}
+                              </div>
+                            {{/if}}
+                            {{#if this.stats.length}}
+                              <div class="creature-item-stats">
+                                {{#each this.stats}}
+                                  <div class="item-stat">
+                                    <span class="item-stat-label">{{localize this.label}}</span>
+                                    <span class="item-stat-value">{{this.value}}</span>
+                                  </div>
+                                {{/each}}
+                              </div>
+                            {{/if}}
+                            {{#if this.activities.length}}
+                              <div class="creature-item-activities">
+                                <div class="item-subsection-title">{{localize "BESTIARY.ItemActivities"}}</div>
+                                <div class="activity-list">
+                                  {{#each this.activities}}
+                                    <div class="activity-row">
+                                      <div class="activity-main">
+                                        <span class="activity-name">{{this.name}}</span>
+                                        <span class="activity-type">{{this.typeLabel}}</span>
+                                      </div>
+                                      <div class="activity-details">
+                                        {{#if this.activationLabel}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemActivation"}}:</strong> {{this.activationLabel}}</span>{{/if}}
+                                        {{#if this.attack}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemAttack"}}:</strong> {{this.attack}}</span>{{/if}}
+                                        {{#if this.damage}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemDamage"}}:</strong> {{this.damage}}</span>{{/if}}
+                                        {{#if this.save}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemSave"}}:</strong> {{this.save}}</span>{{/if}}
+                                        {{#if this.range}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemRange"}}:</strong> {{this.range}}</span>{{/if}}
+                                        {{#if this.target}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemTarget"}}:</strong> {{this.target}}</span>{{/if}}
+                                        {{#if this.uses}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemUses"}}:</strong> {{this.uses}}</span>{{/if}}
+                                      </div>
+                                    </div>
+                                  {{/each}}
+                                </div>
+                              </div>
+                            {{/if}}
+                          </div>
+                        {{/if}}
+                        {{#if this.description}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+                      </div>
+                  </div>
+                {{/each}}
               </div>
-            {{/each}}
+            </div>
+          </div>
+        {{/if}}
+
+        {{#if showBlock.inventory}}
+          <div class="creature-items-section creature-items-accordion {{#if sectionState.inventory}}is-expanded{{/if}}">
+            <button type="button" class="section-divider section-toggle" data-action="toggleSection" data-section-key="inventory">
+              <span>{{localize "BESTIARY.Inventory"}}</span>
+              <i class="fas {{#if sectionState.inventory}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+            </button>
+            <div class="accordion-section-body {{#unless sectionState.inventory}}is-collapsed{{/unless}}">
+              <div class="creature-items-list">
+                {{#each inventory}}
+                  <div class="creature-item {{#if this._expanded}}is-expanded{{/if}}" data-item-name="{{this.name}}" data-action="expandItem">
+                    <div class="creature-item-header">
+                      {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                      <span class="item-name">{{this.name}}</span>
+                      {{#if this.activities.length}}
+                        <span class="item-activity-count">{{this.activities.length}}</span>
+                      {{/if}}
+                      <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                    </div>
+                      <div class="creature-item-body {{#unless this._expanded}}is-collapsed{{/unless}}">
+                        {{#if this.hasMeta}}
+                          <div class="creature-item-meta">
+                            {{#if this.tags.length}}
+                              <div class="creature-item-tags">
+                                {{#each this.tags}}
+                                  <span class="item-tag {{#if this.isAccent}}is-accent{{/if}}">
+                                    <strong>{{localize this.label}}:</strong> {{this.value}}
+                                  </span>
+                                {{/each}}
+                              </div>
+                            {{/if}}
+                            {{#if this.stats.length}}
+                              <div class="creature-item-stats">
+                                {{#each this.stats}}
+                                  <div class="item-stat">
+                                    <span class="item-stat-label">{{localize this.label}}</span>
+                                    <span class="item-stat-value">{{this.value}}</span>
+                                  </div>
+                                {{/each}}
+                              </div>
+                            {{/if}}
+                            {{#if this.activities.length}}
+                              <div class="creature-item-activities">
+                                <div class="item-subsection-title">{{localize "BESTIARY.ItemActivities"}}</div>
+                                <div class="activity-list">
+                                  {{#each this.activities}}
+                                    <div class="activity-row">
+                                      <div class="activity-main">
+                                        <span class="activity-name">{{this.name}}</span>
+                                        <span class="activity-type">{{this.typeLabel}}</span>
+                                      </div>
+                                      <div class="activity-details">
+                                        {{#if this.activationLabel}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemActivation"}}:</strong> {{this.activationLabel}}</span>{{/if}}
+                                        {{#if this.attack}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemAttack"}}:</strong> {{this.attack}}</span>{{/if}}
+                                        {{#if this.damage}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemDamage"}}:</strong> {{this.damage}}</span>{{/if}}
+                                        {{#if this.save}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemSave"}}:</strong> {{this.save}}</span>{{/if}}
+                                        {{#if this.range}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemRange"}}:</strong> {{this.range}}</span>{{/if}}
+                                        {{#if this.target}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemTarget"}}:</strong> {{this.target}}</span>{{/if}}
+                                        {{#if this.uses}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemUses"}}:</strong> {{this.uses}}</span>{{/if}}
+                                      </div>
+                                    </div>
+                                  {{/each}}
+                                </div>
+                              </div>
+                            {{/if}}
+                          </div>
+                        {{/if}}
+                        {{#if this.description}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+                      </div>
+                  </div>
+                {{/each}}
+              </div>
+            </div>
           </div>
         {{/if}}
 
         {{#if showBlock.bonusActions}}
-          <div class="creature-items-section">
-            <h3 class="section-divider">{{localize "BESTIARY.BonusActions"}}</h3>
-            {{#each bonusActions}}
-              <div class="creature-item" data-item-name="{{this.name}}" data-action="expandItem">
-                <div class="creature-item-header">
-                  {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
-                  <span class="item-name">{{this.name}}</span>
-                  <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
-                </div>
-                {{#if this._expanded}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+          <div class="creature-items-section creature-items-accordion {{#if sectionState.bonusActions}}is-expanded{{/if}}">
+            <button type="button" class="section-divider section-toggle" data-action="toggleSection" data-section-key="bonusActions">
+              <span>{{localize "BESTIARY.BonusActions"}}</span>
+              <i class="fas {{#if sectionState.bonusActions}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+            </button>
+            <div class="accordion-section-body {{#unless sectionState.bonusActions}}is-collapsed{{/unless}}">
+              <div class="creature-items-list">
+                {{#each bonusActions}}
+                  <div class="creature-item {{#if this._expanded}}is-expanded{{/if}}" data-item-name="{{this.name}}" data-action="expandItem">
+                    <div class="creature-item-header">
+                      {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                      <span class="item-name">{{this.name}}</span>
+                      {{#if this.activities.length}}
+                        <span class="item-activity-count">{{this.activities.length}}</span>
+                      {{/if}}
+                      <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                    </div>
+                      <div class="creature-item-body {{#unless this._expanded}}is-collapsed{{/unless}}">
+                        {{#if this.hasMeta}}
+                          <div class="creature-item-meta">
+                            {{#if this.tags.length}}
+                              <div class="creature-item-tags">
+                                {{#each this.tags}}
+                                  <span class="item-tag {{#if this.isAccent}}is-accent{{/if}}">
+                                    <strong>{{localize this.label}}:</strong> {{this.value}}
+                                  </span>
+                                {{/each}}
+                              </div>
+                            {{/if}}
+                            {{#if this.stats.length}}
+                              <div class="creature-item-stats">
+                                {{#each this.stats}}
+                                  <div class="item-stat">
+                                    <span class="item-stat-label">{{localize this.label}}</span>
+                                    <span class="item-stat-value">{{this.value}}</span>
+                                  </div>
+                                {{/each}}
+                              </div>
+                            {{/if}}
+                            {{#if this.activities.length}}
+                              <div class="creature-item-activities">
+                                <div class="item-subsection-title">{{localize "BESTIARY.ItemActivities"}}</div>
+                                <div class="activity-list">
+                                  {{#each this.activities}}
+                                    <div class="activity-row">
+                                      <div class="activity-main">
+                                        <span class="activity-name">{{this.name}}</span>
+                                        <span class="activity-type">{{this.typeLabel}}</span>
+                                      </div>
+                                      <div class="activity-details">
+                                        {{#if this.activationLabel}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemActivation"}}:</strong> {{this.activationLabel}}</span>{{/if}}
+                                        {{#if this.attack}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemAttack"}}:</strong> {{this.attack}}</span>{{/if}}
+                                        {{#if this.damage}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemDamage"}}:</strong> {{this.damage}}</span>{{/if}}
+                                        {{#if this.save}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemSave"}}:</strong> {{this.save}}</span>{{/if}}
+                                        {{#if this.range}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemRange"}}:</strong> {{this.range}}</span>{{/if}}
+                                        {{#if this.target}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemTarget"}}:</strong> {{this.target}}</span>{{/if}}
+                                        {{#if this.uses}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemUses"}}:</strong> {{this.uses}}</span>{{/if}}
+                                      </div>
+                                    </div>
+                                  {{/each}}
+                                </div>
+                              </div>
+                            {{/if}}
+                          </div>
+                        {{/if}}
+                        {{#if this.description}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+                      </div>
+                  </div>
+                {{/each}}
               </div>
-            {{/each}}
+            </div>
           </div>
         {{/if}}
 
         {{#if showBlock.reactions}}
-          <div class="creature-items-section">
-            <h3 class="section-divider">{{localize "BESTIARY.Reactions"}}</h3>
-            {{#each reactions}}
-              <div class="creature-item" data-item-name="{{this.name}}" data-action="expandItem">
-                <div class="creature-item-header">
-                  {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
-                  <span class="item-name">{{this.name}}</span>
-                  <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
-                </div>
-                {{#if this._expanded}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+          <div class="creature-items-section creature-items-accordion {{#if sectionState.reactions}}is-expanded{{/if}}">
+            <button type="button" class="section-divider section-toggle" data-action="toggleSection" data-section-key="reactions">
+              <span>{{localize "BESTIARY.Reactions"}}</span>
+              <i class="fas {{#if sectionState.reactions}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+            </button>
+            <div class="accordion-section-body {{#unless sectionState.reactions}}is-collapsed{{/unless}}">
+              <div class="creature-items-list">
+                {{#each reactions}}
+                  <div class="creature-item {{#if this._expanded}}is-expanded{{/if}}" data-item-name="{{this.name}}" data-action="expandItem">
+                    <div class="creature-item-header">
+                      {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                      <span class="item-name">{{this.name}}</span>
+                      {{#if this.activities.length}}
+                        <span class="item-activity-count">{{this.activities.length}}</span>
+                      {{/if}}
+                      <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                    </div>
+                      <div class="creature-item-body {{#unless this._expanded}}is-collapsed{{/unless}}">
+                        {{#if this.hasMeta}}
+                          <div class="creature-item-meta">
+                            {{#if this.tags.length}}
+                              <div class="creature-item-tags">
+                                {{#each this.tags}}
+                                  <span class="item-tag {{#if this.isAccent}}is-accent{{/if}}">
+                                    <strong>{{localize this.label}}:</strong> {{this.value}}
+                                  </span>
+                                {{/each}}
+                              </div>
+                            {{/if}}
+                            {{#if this.stats.length}}
+                              <div class="creature-item-stats">
+                                {{#each this.stats}}
+                                  <div class="item-stat">
+                                    <span class="item-stat-label">{{localize this.label}}</span>
+                                    <span class="item-stat-value">{{this.value}}</span>
+                                  </div>
+                                {{/each}}
+                              </div>
+                            {{/if}}
+                            {{#if this.activities.length}}
+                              <div class="creature-item-activities">
+                                <div class="item-subsection-title">{{localize "BESTIARY.ItemActivities"}}</div>
+                                <div class="activity-list">
+                                  {{#each this.activities}}
+                                    <div class="activity-row">
+                                      <div class="activity-main">
+                                        <span class="activity-name">{{this.name}}</span>
+                                        <span class="activity-type">{{this.typeLabel}}</span>
+                                      </div>
+                                      <div class="activity-details">
+                                        {{#if this.activationLabel}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemActivation"}}:</strong> {{this.activationLabel}}</span>{{/if}}
+                                        {{#if this.attack}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemAttack"}}:</strong> {{this.attack}}</span>{{/if}}
+                                        {{#if this.damage}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemDamage"}}:</strong> {{this.damage}}</span>{{/if}}
+                                        {{#if this.save}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemSave"}}:</strong> {{this.save}}</span>{{/if}}
+                                        {{#if this.range}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemRange"}}:</strong> {{this.range}}</span>{{/if}}
+                                        {{#if this.target}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemTarget"}}:</strong> {{this.target}}</span>{{/if}}
+                                        {{#if this.uses}}<span class="activity-detail"><strong>{{localize "BESTIARY.ItemUses"}}:</strong> {{this.uses}}</span>{{/if}}
+                                      </div>
+                                    </div>
+                                  {{/each}}
+                                </div>
+                              </div>
+                            {{/if}}
+                          </div>
+                        {{/if}}
+                        {{#if this.description}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+                      </div>
+                  </div>
+                {{/each}}
               </div>
-            {{/each}}
+            </div>
           </div>
         {{/if}}
 
         {{#if showBlock.legendaryActions}}
-          <div class="creature-items-section">
-            <h3 class="section-divider legendary">{{localize "BESTIARY.LegendaryActions"}}</h3>
-            {{#each legendaryActions}}
-              <div class="creature-item" data-item-name="{{this.name}}" data-action="expandItem">
-                <div class="creature-item-header">
-                  {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
-                  <span class="item-name">{{this.name}}</span>
-                  <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
-                </div>
-                {{#if this._expanded}}<div class="creature-item-description">{{{this.description}}}</div>{{/if}}
+          <div class="creature-items-section creature-items-accordion {{#if sectionState.legendaryActions}}is-expanded{{/if}}">
+            <button type="button" class="section-divider section-toggle legendary" data-action="toggleSection" data-section-key="legendaryActions">
+              <span>{{localize "BESTIARY.LegendaryActions"}}</span>
+              <i class="fas {{#if sectionState.legendaryActions}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+            </button>
+            <div class="accordion-section-body {{#unless sectionState.legendaryActions}}is-collapsed{{/unless}}">
+              <div class="creature-items-list">
+                {{#each legendaryActions}}
+                  <div class="creature-item {{#if this._expanded}}is-expanded{{/if}}" data-item-name="{{this.name}}" data-action="expandItem">
+                    <div class="creature-item-header">
+                      {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                      <span class="item-name">{{this.name}}</span>
+                      <i class="fas {{#if this._expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                    </div>
+                    <div class="creature-item-body {{#unless this._expanded}}is-collapsed{{/unless}}">
+                      <div class="creature-item-description">{{{this.description}}}</div>
+                    </div>
+                  </div>
+                {{/each}}
               </div>
-            {{/each}}
+            </div>
           </div>
         {{/if}}
 
         {{#if showBlock.spells}}
-          <div class="creature-items-section">
-            <h3 class="section-divider">{{localize "BESTIARY.Spellcasting"}}</h3>
-            <div class="creature-spells-list">
-              {{#each spells}}
-                <div class="creature-spell-item">
-                  {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
-                  <span class="spell-name">{{this.name}}</span>
-                  <span class="spell-level">(Lvl {{this.level}})</span>
-                </div>
-              {{/each}}
+          <div class="creature-items-section creature-items-accordion {{#if sectionState.spells}}is-expanded{{/if}}">
+            <button type="button" class="section-divider section-toggle" data-action="toggleSection" data-section-key="spells">
+              <span>{{localize "BESTIARY.Spellcasting"}}</span>
+              <i class="fas {{#if sectionState.spells}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+            </button>
+            <div class="accordion-section-body {{#unless sectionState.spells}}is-collapsed{{/unless}}">
+              <div class="creature-spells-list">
+                {{#each spells}}
+                  <div class="creature-spell-item">
+                    {{#if this.img}}<img class="item-icon" src="{{this.img}}" alt="" />{{/if}}
+                    <span class="spell-name">{{this.name}}</span>
+                    <span class="spell-level">(Lvl {{this.level}})</span>
+                  </div>
+                {{/each}}
+              </div>
             </div>
           </div>
         {{/if}}
 
         {{#if showBlock.biography}}
-          <div class="creature-biography">
-            <h3 class="section-divider">{{localize "BESTIARY.Biography"}}</h3>
-            <div class="biography-content">{{{creature.biography}}}</div>
+          <div class="creature-items-section creature-items-accordion {{#if sectionState.biography}}is-expanded{{/if}}">
+            <button type="button" class="section-divider section-toggle" data-action="toggleSection" data-section-key="biography">
+              <span>{{localize "BESTIARY.Biography"}}</span>
+              <i class="fas {{#if sectionState.biography}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+            </button>
+            <div class="accordion-section-body {{#unless sectionState.biography}}is-collapsed{{/unless}}">
+              <div class="biography-content creature-biography-content">{{{creature.biography}}}</div>
+            </div>
           </div>
         {{/if}}
 
