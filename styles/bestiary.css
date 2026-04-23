@@ -151,12 +151,16 @@
 .tile-image-wrapper {
   position: absolute;
   inset: 0;
+  line-height: 0;
+  background: #0d0d12;
 }
 
 .tile-image-wrapper img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
   transition: transform 0.4s ease;
 }
 
@@ -546,12 +550,16 @@
   aspect-ratio: 1;
   overflow: hidden;
   position: relative;
+  line-height: 0;
+  background: #0d0d12;
 }
 
 .creature-card-image img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
   transition: transform 0.4s ease;
 }
 
@@ -804,10 +812,8 @@
 .key-stat-value { font-size: 1.2rem; font-weight: 700; color: var(--bj-text-primary); }
 .key-stat-value small { font-weight: 400; font-size: 0.75rem; color: var(--bj-text-secondary); }
 
-.creature-speed-block { font-size: 0.9rem; color: var(--bj-text-primary); margin-bottom: 4px; }
-.creature-speed-block .speed-row { line-height: 1.6; }
-.creature-speed-block .speed-row strong { color: var(--bj-text-secondary); }
-.creature-speed-block .speed-secondary { font-size: 0.82rem; color: var(--bj-text-secondary); }
+.creature-speed { font-size: 0.9rem; color: var(--bj-text-primary); }
+.creature-speed strong { color: var(--bj-text-secondary); }
 .speed-type { text-transform: capitalize; }
 
 .creature-abilities { margin-bottom: 16px; }
@@ -872,6 +878,55 @@
 
 .creature-items-section { margin-bottom: 8px; }
 
+.creature-items-accordion {
+  border: 1px solid rgba(201, 168, 76, 0.16);
+  border-radius: var(--bj-radius-sm);
+  background: rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.creature-items-accordion.is-expanded {
+  background: rgba(0, 0, 0, 0.18);
+  border-color: rgba(201, 168, 76, 0.28);
+}
+
+.section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.section-toggle:hover {
+  background: rgba(201, 168, 76, 0.08);
+}
+
+.section-toggle i {
+  font-size: 0.8rem;
+  color: var(--bj-text-secondary);
+  transition: color var(--bj-transition), transform var(--bj-transition);
+}
+
+.section-toggle:hover i {
+  color: var(--bj-gold);
+}
+
+.creature-items-list {
+  padding: 6px 6px 4px;
+}
+
+.accordion-section-body.is-collapsed,
+.creature-item-body.is-collapsed {
+  display: none;
+}
+
 .creature-item {
   border: 1px solid transparent;
   border-radius: var(--bj-radius-sm);
@@ -904,19 +959,165 @@
   color: var(--bj-text-primary);
 }
 
+.item-activity-count {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(201, 168, 76, 0.16);
+  border: 1px solid rgba(201, 168, 76, 0.25);
+  color: var(--bj-gold);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
 .creature-item-header i { color: var(--bj-text-secondary); font-size: 0.7rem; flex-shrink: 0; }
 
+.creature-item-body {
+  border-top: 1px solid var(--bj-border);
+}
+
+.creature-item-meta {
+  padding: 10px 12px 6px 42px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.creature-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.item-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.78rem;
+  color: var(--bj-text-primary);
+}
+
+.item-tag strong {
+  color: var(--bj-text-secondary);
+}
+
+.item-tag.is-accent {
+  background: rgba(201, 168, 76, 0.08);
+  border-color: rgba(201, 168, 76, 0.18);
+}
+
+.creature-item-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, max-content));
+  gap: 8px;
+}
+
+.item-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--bj-radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.item-stat-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bj-text-secondary);
+}
+
+.item-stat-value {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--bj-text-primary);
+}
+
+.item-subsection-title {
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--bj-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activity-row {
+  padding: 8px 10px;
+  border-radius: var(--bj-radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.activity-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.activity-name {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--bj-text-primary);
+}
+
+.activity-type {
+  font-size: 0.72rem;
+  color: var(--bj-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.activity-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.activity-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--bj-text-primary);
+  font-size: 0.76rem;
+}
+
+.activity-detail strong {
+  color: var(--bj-text-secondary);
+}
+
 .creature-item-description {
-  padding: 4px 10px 10px 42px;
+  padding: 0 12px 12px 42px;
   font-size: 0.85rem;
   color: var(--bj-text-primary);
   line-height: 1.55;
-  border-top: 1px solid var(--bj-border);
 }
 
 .creature-item-description p { margin: 4px 0; }
 
 .creature-spells-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.creature-items-accordion .creature-spells-list { padding: 8px 10px 12px; }
 
 .creature-spell-item {
   display: flex;
@@ -941,6 +1142,7 @@
 
 .biography-content { font-size: 0.875rem; color: var(--bj-text-primary); line-height: 1.6; }
 .biography-content p { margin: 6px 0; }
+.creature-biography-content { padding: 10px 12px 12px; }
 
 .bestiary-error {
   display: flex;
@@ -1158,6 +1360,27 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 4px 12px;
+}
+
+.custom-block-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.custom-block-group {
+  padding: 10px 12px 12px;
+  border-radius: var(--bj-radius-sm);
+  border: 1px solid rgba(201, 168, 76, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.custom-block-group-title {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--bj-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .custom-block-toggle {

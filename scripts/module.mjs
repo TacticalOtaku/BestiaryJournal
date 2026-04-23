@@ -1,4 +1,5 @@
 import { BestiaryApp } from "./bestiary-app.mjs";
+import { BestiaryCreatureView } from "./creature-view.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -89,9 +90,9 @@ Hooks.once("ready", () => {
 
   game.socket.on("module.bestiary-journal", (data) => {
     if (data.action === "refreshCreatureView") {
-      for (const app of Object.values(ui.windows)) {
-        if (app.constructor.name === "BestiaryCreatureView" && app.actorUuid === data.uuid) {
-          app.render();
+      for (const app of BestiaryCreatureView._instances) {
+        if (app.actorUuid === data.uuid && app.rendered) {
+          app.refreshFromExternalUpdate();
         }
       }
     }
