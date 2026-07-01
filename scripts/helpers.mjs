@@ -180,9 +180,7 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
       continue;
     }
 
-    const activation = item.system.activities
-      ? Object.values(item.system.activities)?.[0]?.activation?.type
-      : item.system.activation?.type;
+    const activation = Object.values(item.system.activities ?? {})[0]?.activation?.type;
 
     switch (activation) {
       case "bonus": bonusActions.push(itemData); break;
@@ -201,10 +199,7 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
     }
   }
 
-  const rawBiography =
-    system.details?.biography?.public ??
-    system.details?.biography?.value ??
-    "";
+  const rawBiography = system.details?.biography?.public ?? "";
 
   if (enrich) {
     const enrichItemList = async (list) =>

@@ -1,6 +1,6 @@
 /* ===================================================================
    BESTIARY JOURNAL — CSS
-   Supports Foundry VTT v13 light and dark themes.
+   Supports Foundry VTT v14 light and dark themes.
    =================================================================== */
 
 .bestiary-journal {
@@ -1188,7 +1188,7 @@
 
 /* ===================================================================
    ENRICHED CONTENT — Embeds, links, inline rolls, etc.
-   Source: Foundry VTT v13 enrichers + DnD5e Wiki Enrichers
+   Source: Foundry VTT enrichers + DnD5e Wiki Enrichers
    =================================================================== */
 
 /* Embedded journal entries / compendium content */

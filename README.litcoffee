@@ -1,7 +1,7 @@
-# 📖 Bestiary Journal — Модуль бестиария для Foundry VTT
+﻿# 📖 Bestiary Journal — Модуль бестиария для Foundry VTT
 
-![Foundry VTT](https://img.shields.io/badge/Foundry_VTT-v13.351-green?style=flat-square)
-![D&D 5e](https://img.shields.io/badge/D%26D_5e-v5.2.5-red?style=flat-square)
+![Foundry VTT](https://img.shields.io/badge/Foundry_VTT-v14.363-green?style=flat-square)
+![D&D 5e](https://img.shields.io/badge/D%26D_5e-v5.3.3-red?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
 
 Визуально богатый модуль бестиария для Foundry VTT, вдохновлённый бестиариями из AAA-игр. Позволяет создавать категоризированные разделы с существами, просматривать детальные карточки NPC с несколькими режимами отображения и гибко управлять видимостью контента для игроков.
@@ -63,3 +63,4 @@
 
 1. Скачайте или клонируйте репозиторий
 2. Поместите папку `bestiary-journal` в директорию модулей Foundry VTT:
+

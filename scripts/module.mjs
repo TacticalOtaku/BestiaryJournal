@@ -1,7 +1,7 @@
 import { BestiaryApp } from "./bestiary-app.mjs";
 import { BestiaryCreatureView } from "./creature-view.mjs";
 
-const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+const { ApplicationV2 } = foundry.applications.api;
 
 Hooks.once("init", () => {
   console.log("Bestiary Journal | Initializing module");
@@ -40,9 +40,6 @@ Hooks.once("init", () => {
     default: {}
   });
 
-  // ── Settings menu button ──
-  // Source: Foundry VTT v13 API — game.settings.registerMenu
-  // type must be an ApplicationV2 subclass in v13
   game.settings.registerMenu("bestiary-journal", "openBestiaryMenu", {
     name: "BESTIARY.Settings.OpenBestiary",
     label: "BESTIARY.Settings.OpenBestiaryLabel",
@@ -99,7 +96,6 @@ Hooks.once("ready", () => {
   });
 });
 
-// ── Sidebar button in Journal tab ──
 Hooks.on("renderSidebarTab", (app, html, data) => {
   if (app.tabName !== "journal") return;
   if (html.querySelector(".bestiary-sidebar-btn")) return;
@@ -123,15 +119,7 @@ Hooks.on("renderSidebarTab", (app, html, data) => {
 });
 
 /**
- * Settings menu launcher using ApplicationV2.
- *
- * Source: Foundry VTT v13 API — game.settings.registerMenu
- *   "type" must be an Application class. Foundry calls `new Type().render(true)`.
- *   We override render() to open the bestiary instead of showing a form.
- *
- * Source: Foundry VTT v13 API — ApplicationV2
- *   V1 FormApplication is deprecated in v13, removed in v16.
- *   Must use foundry.applications.api.ApplicationV2.
+ * Opens the bestiary from the module settings menu instead of rendering a form.
  */
 class BestiarySettingsLauncher extends ApplicationV2 {
 
@@ -142,24 +130,16 @@ class BestiarySettingsLauncher extends ApplicationV2 {
     }
   };
 
-  /** @override */
   async _renderHTML() {
     return document.createElement("div");
   }
 
-  /** @override */
   _replaceHTML(result, content, options) {}
 
-  /**
-   * Override render to open the bestiary and immediately close this launcher.
-   * @override
-   */
   render(force, options) {
-    // Open the bestiary
     if (game.bestiaryJournal) {
       game.bestiaryJournal.toggle();
     }
-    // Don't actually render this application — return without calling super
     return this;
   }
 }
