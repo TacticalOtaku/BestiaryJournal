@@ -1,55 +1,113 @@
-<section class="bestiary-main-content">
-  <header class="bestiary-header">
-    <h1><i class="fas fa-book-skull"></i> {{localize "BESTIARY.Title"}}</h1>
-  </header>
+<div class="bestiary-shell">
+  <aside class="library-sidebar" aria-label="{{localize 'BESTIARY.LibraryNavigation'}}">
+    <nav class="library-primary-nav">
+      <button type="button" class="library-nav-item {{#if isOverview}}is-active{{/if}}" data-action="setLibraryView" data-library-view="overview">
+        <i class="fas fa-table-cells-large"></i><span>{{localize "BESTIARY.AllCreatures"}}</span><strong>{{totalCreatures}}</strong>
+      </button>
+      <button type="button" class="library-nav-item {{#if isRecent}}is-active{{/if}}" data-action="setLibraryView" data-library-view="recent">
+        <i class="far fa-clock"></i><span>{{localize "BESTIARY.Recent"}}</span>
+      </button>
+      <button type="button" class="library-nav-item {{#if isFavorites}}is-active{{/if}}" data-action="setLibraryView" data-library-view="favorites">
+        <i class="far fa-star"></i><span>{{localize "BESTIARY.Favorites"}}</span><strong>{{favoriteCount}}</strong>
+      </button>
+    </nav>
 
-  <div class="bestiary-tiles-grid bestiary-scrollable">
-    {{#if noSections}}
-      <div class="bestiary-empty-hint">
-        <i class="fas fa-feather-pointed"></i>
-        <p>{{localize "BESTIARY.NoSections"}}</p>
-      </div>
-    {{/if}}
-
-    {{#each sections}}
-      <div class="bestiary-tile {{#if this.isHidden}}tile-hidden{{/if}}" data-section-id="{{this.id}}" data-hidden="{{this.isHidden}}" data-action="openSection">
-        <div class="tile-image-wrapper">
-          <img src="{{this.displayImage}}" alt="{{this.name}}" loading="lazy" />
-          <div class="tile-overlay"></div>
-        </div>
-        {{#if this.isHidden}}
-          <div class="tile-hidden-badge"><i class="fas fa-eye-slash"></i></div>
-        {{/if}}
-        <div class="tile-info">
-          {{#if this.name}}
-            <h3 class="tile-title">{{this.name}}</h3>
-          {{else}}
-            <h3 class="tile-title tile-untitled">—</h3>
-          {{/if}}
-          <span class="tile-count">{{this.creatureCount}} <i class="fas fa-dragon"></i></span>
-        </div>
-        {{#if ../isGM}}
-          <div class="tile-actions">
-            <button type="button" class="tile-action-btn" data-action="toggleSectionVisibility" data-tooltip="{{#if this.isHidden}}{{localize 'BESTIARY.ShowToPlayers'}}{{else}}{{localize 'BESTIARY.HideFromPlayers'}}{{/if}}">
-              <i class="fas {{#if this.isHidden}}fa-eye{{else}}fa-eye-slash{{/if}}"></i>
-            </button>
-            <button type="button" class="tile-action-btn" data-action="editSection" data-tooltip="{{localize 'BESTIARY.EditSection'}}">
-              <i class="fas fa-pen-to-square"></i>
-            </button>
-            <button type="button" class="tile-action-btn tile-action-delete" data-action="deleteSection" data-tooltip="{{localize 'BESTIARY.DeleteSection'}}">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        {{/if}}
-      </div>
-    {{/each}}
+    <div class="library-sidebar-heading"><span>{{localize "BESTIARY.Collections"}}</span><em>{{collectionCount}}</em></div>
+    <nav class="library-collection-nav">
+      {{#each sections}}
+        <button type="button" class="library-nav-item" data-action="openSection" data-section-id="{{this.id}}">
+          <i class="far fa-folder"></i><span title="{{this.name}}">{{this.name}}</span><strong>{{this.creatureCount}}</strong>
+        </button>
+      {{/each}}
+    </nav>
 
     {{#if isGM}}
-      <div class="bestiary-tile bestiary-tile-add" data-action="createSection">
-        <div class="tile-add-inner">
-          <i class="fas fa-plus"></i>
-        </div>
-      </div>
+      <button type="button" class="library-new-button" data-action="createSection"><i class="fas fa-plus"></i>{{localize "BESTIARY.NewCollection"}}</button>
     {{/if}}
-  </div>
-</section>
+  </aside>
+
+  <main class="library-workspace">
+    <header class="library-toolbar">
+      <div class="library-heading">
+        <p class="library-eyebrow">{{localize "BESTIARY.Library"}}</p>
+        <h1>{{#if isOverview}}{{localize "BESTIARY.Title"}}{{else}}{{viewTitle}}{{/if}}</h1>
+        <span>{{totalCreatures}} {{localize "BESTIARY.CreaturesInCollections"}} {{collectionCount}}</span>
+      </div>
+      <div class="library-toolbar-row">
+        <label class="library-search">
+          <i class="fas fa-magnifying-glass"></i>
+          <input type="search" class="library-search-input" placeholder="{{localize 'BESTIARY.SearchLibrary'}}" />
+          <button type="button" class="library-search-clear" data-action="clearSearch" aria-label="{{localize 'BESTIARY.ClearSearch'}}"><i class="fas fa-xmark"></i></button>
+        </label>
+        {{#unless isOverview}}
+          <div class="suite-segmented suite-view-switch" aria-label="{{localize 'BESTIARY.ViewMode'}}">
+            <button type="button" class="{{#if isGrid}}is-active{{/if}}" data-action="toggleCreatureLayout" data-layout="grid"><i class="fas fa-table-cells-large"></i></button>
+            <button type="button" class="{{#unless isGrid}}is-active{{/unless}}" data-action="toggleCreatureLayout" data-layout="list"><i class="fas fa-list"></i></button>
+          </div>
+        {{/unless}}
+      </div>
+    </header>
+
+    <div class="library-scroll bestiary-scrollable">
+      {{#if isOverview}}
+        <section class="library-section-block">
+          <div class="library-section-title"><div><h2>{{localize "BESTIARY.Collections"}}</h2><p>{{localize "BESTIARY.CollectionsHint"}}</p></div></div>
+          <div class="collection-grid">
+            {{#each sections}}
+              <article class="collection-card {{#if this.isHidden}}is-hidden{{/if}}" data-section-id="{{this.id}}" data-hidden="{{this.isHidden}}" data-search-text="{{this.searchText}}" data-action="openSection" tabindex="0">
+                <img src="{{this.displayImage}}" alt="{{this.name}}" loading="lazy" />
+                <div class="collection-scrim"></div>
+                <div class="collection-card-copy">
+                  <h3 title="{{this.name}}">{{this.name}}</h3>
+                  <p>{{this.creatureCount}} {{localize "BESTIARY.Creatures"}}{{#if this.updatedLabel}} · {{this.updatedLabel}}{{/if}}</p>
+                </div>
+                {{#if this.isHidden}}<span class="suite-visibility-badge"><i class="fas fa-eye-slash"></i></span>{{/if}}
+                {{#if ../isGM}}
+                  <button type="button" class="collection-menu-button" data-action="editSection" aria-label="{{localize 'BESTIARY.EditSection'}}"><i class="fas fa-ellipsis"></i></button>
+                {{/if}}
+              </article>
+            {{/each}}
+            {{#if isGM}}
+              <button type="button" class="collection-card collection-card-new" data-action="createSection">
+                <span><i class="fas fa-plus"></i></span><strong>{{localize "BESTIARY.NewCollection"}}</strong><small>{{localize "BESTIARY.CreateCollectionHint"}}</small>
+              </button>
+            {{/if}}
+          </div>
+        </section>
+
+        {{#if recentCreatures.length}}
+          <section class="library-section-block">
+            <div class="library-section-title"><div><h2>{{localize "BESTIARY.RecentlyAdded"}}</h2><p>{{localize "BESTIARY.RecentlyAddedHint"}}</p></div><button type="button" data-action="setLibraryView" data-library-view="recent">{{localize "BESTIARY.ShowAll"}}<i class="fas fa-arrow-right"></i></button></div>
+            <div class="recent-creature-strip">
+              {{#each recentCreatures}}
+                <article class="recent-creature-card" data-uuid="{{this.uuid}}" data-search-text="{{this.searchText}}" data-action="openCreature" draggable="true" tabindex="0">
+                  <img src="{{this.img}}" alt="{{this.name}}" loading="lazy" />
+                  <div class="collection-scrim"></div>
+                  <div><strong title="{{this.name}}">{{this.name}}</strong><span>{{this.typeLabel}}</span></div>
+                </article>
+              {{/each}}
+            </div>
+          </section>
+        {{/if}}
+
+        {{#if noSections}}
+          <div class="suite-empty-state"><i class="fas fa-folder-open"></i><h2>{{localize "BESTIARY.NoSections"}}</h2>{{#if isGM}}<button type="button" class="suite-primary-button" data-action="createSection"><i class="fas fa-plus"></i>{{localize "BESTIARY.NewCollection"}}</button>{{/if}}</div>
+        {{/if}}
+      {{else}}
+        <div class="library-creature-grid {{#unless isGrid}}is-list{{/unless}}">
+          {{#each displayedCreatures}}
+            <article class="library-creature-card {{#if this.isFavorite}}is-favorite{{/if}}" data-uuid="{{this.uuid}}" data-search-text="{{this.searchText}}" data-action="openCreature" draggable="true" tabindex="0">
+              <div class="library-creature-image"><img src="{{this.img}}" alt="{{this.name}}" loading="lazy" /><span class="creature-cr-chip">{{localize "BESTIARY.CRShort"}} {{this.crFormatted}}</span></div>
+              <div class="library-creature-copy"><h3 title="{{this.name}}">{{this.name}}</h3><p>{{this.typeLabel}}</p><small>{{this.collectionLabel}}</small></div>
+              <div class="library-creature-actions">
+                <button type="button" data-action="toggleFavorite" aria-label="{{localize 'BESTIARY.ToggleFavorite'}}"><i class="{{#if this.isFavorite}}fas{{else}}far{{/if}} fa-star"></i></button>
+                <button type="button" data-action="openSheet" aria-label="{{localize 'BESTIARY.OpenSheet'}}"><i class="fas fa-arrow-up-right-from-square"></i></button>
+              </div>
+            </article>
+          {{/each}}
+        </div>
+        {{#if noCreatures}}<div class="suite-empty-state"><i class="far fa-star"></i><h2>{{localize "BESTIARY.NoMatchingCreatures"}}</h2></div>{{/if}}
+      {{/if}}
+    </div>
+  </main>
+</div>

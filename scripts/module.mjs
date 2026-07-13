@@ -1,5 +1,6 @@
 import { BestiaryApp } from "./bestiary-app.mjs";
 import { BestiaryCreatureView } from "./creature-view.mjs";
+import { BestiarySectionView } from "./section-view.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -38,6 +39,22 @@ Hooks.once("init", () => {
     config: false,
     type: Object,
     default: {}
+  });
+
+  game.settings.register("bestiary-journal", "favoriteCreatures", {
+    name: "Favorite Creatures",
+    scope: "client",
+    config: false,
+    type: Array,
+    default: []
+  });
+
+  game.settings.register("bestiary-journal", "libraryViewMode", {
+    name: "Bestiary Library View Mode",
+    scope: "client",
+    config: false,
+    type: String,
+    default: "grid"
   });
 
   game.settings.registerMenu("bestiary-journal", "openBestiaryMenu", {
@@ -91,6 +108,12 @@ Hooks.once("ready", () => {
         if (app.actorUuid === data.uuid && app.rendered) {
           app.refreshFromExternalUpdate();
         }
+      }
+    }
+    if (data.action === "refreshBestiary") {
+      if (game.bestiaryJournal?.mainApp?.rendered) game.bestiaryJournal.mainApp.render();
+      for (const app of BestiarySectionView._instances) {
+        if (app.rendered) app.refreshFromExternalUpdate();
       }
     }
   });

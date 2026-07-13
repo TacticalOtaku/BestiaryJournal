@@ -6,7 +6,7 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
 
   static DEFAULT_OPTIONS = {
     id: "bestiary-tile-editor",
-    classes: ["bestiary-journal", "bestiary-tile-editor"],
+    classes: ["bestiary-journal", "bestiary-app", "bestiary-tile-editor"],
     tag: "form",
     window: {
       title: "BESTIARY.CreateSection",
@@ -83,6 +83,7 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
         section.name = data.name || "";
         section.image = data.image || "";
         section.hidden = !!data.hidden;
+        section.updatedAt = Date.now();
       }
     } else {
       bestiaryData.sections.push({
@@ -90,6 +91,7 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
         name: data.name || "",
         image: data.image || "",
         hidden: !!data.hidden,
+        updatedAt: Date.now(),
         creatures: []
       });
     }

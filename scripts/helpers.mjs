@@ -4,6 +4,7 @@ export function getBestiaryData() {
 
 export async function setBestiaryData(data) {
   await game.settings.set("bestiary-journal", "bestiaryData", data);
+  game.socket?.emit("module.bestiary-journal", { action: "refreshBestiary" });
 }
 
 export function generateId() {
@@ -123,17 +124,22 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
   }
 
   const speeds = {};
+  const movementTraits = [];
   const movement = system.attributes?.movement ?? {};
   for (const [key, val] of Object.entries(movement)) {
     if (key === "units" || key === "hover") continue;
-    if (val) speeds[key] = val;
+    if ((typeof val === "number" || typeof val === "string") && val !== "") speeds[key] = val;
   }
-  if (movement.hover) speeds.hover = true;
+  if (movement.hover) movementTraits.push(game.i18n.localize("BESTIARY.HoverMovement"));
+  const ignoredTerrain = movement.ignoredDifficultTerrain;
+  if (ignoredTerrain === true || ignoredTerrain?.size > 0 || ignoredTerrain?.length > 0) {
+    movementTraits.push(game.i18n.localize("BESTIARY.IgnoresDifficultTerrain"));
+  }
 
-  const resistances = _traitArray(system.traits?.dr);
-  const immunities = _traitArray(system.traits?.di);
-  const vulnerabilities = _traitArray(system.traits?.dv);
-  const conditionImmunities = _traitArray(system.traits?.ci);
+  const resistances = _traitArray(system.traits?.dr, CONFIG.DND5E.damageTypes);
+  const immunities = _traitArray(system.traits?.di, CONFIG.DND5E.damageTypes);
+  const vulnerabilities = _traitArray(system.traits?.dv, CONFIG.DND5E.damageTypes);
+  const conditionImmunities = _traitArray(system.traits?.ci, CONFIG.DND5E.conditionTypes);
 
   const senses = {};
   const sensesData = system.attributes?.senses ?? {};
@@ -143,12 +149,16 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
   }
   if (sensesData.special) senses.special = sensesData.special;
 
-  const languages = _traitArray(system.traits?.languages);
+  const languages = _traitArray(system.traits?.languages, CONFIG.DND5E.languages);
   const cr = system.details?.cr ?? 0;
   const xp = system.details?.xp?.value ?? CONFIG.DND5E.CR_EXP_LEVELS?.[cr] ?? 0;
-  const creatureType = system.details?.type?.value ?? "";
+  const creatureTypeKey = system.details?.type?.value ?? "";
+  const creatureType = CONFIG.DND5E.creatureTypes?.[creatureTypeKey]?.label
+    ?? CONFIG.DND5E.creatureTypes?.[creatureTypeKey]
+    ?? creatureTypeKey;
   const creatureSubtype = system.details?.type?.subtype ?? "";
-  const size = CONFIG.DND5E.actorSizes?.[system.traits?.size]?.label ?? system.traits?.size ?? "";
+  const sizeConfig = CONFIG.DND5E.actorSizes?.[system.traits?.size];
+  const size = sizeConfig?.label ?? sizeConfig ?? system.traits?.size ?? "";
   const alignment = system.details?.alignment ?? "";
 
   const hp = {
@@ -168,6 +178,8 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
     const rawDescription = item.system.description?.value ?? "";
     const itemMeta = extractItemMeta(item);
     const itemData = {
+      id: item.id,
+      uuid: item.uuid,
       name: item.name,
       description: rawDescription,
       img: item.img,
@@ -218,10 +230,10 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
     return {
       id: actor.id, uuid: actor.uuid, name: actor.name, img: actor.img,
       prototypeToken: actor.prototypeToken?.texture?.src ?? actor.img,
-      abilities, skills, speeds, speedUnits: movement.units ?? "ft",
+      abilities, skills, speeds, speedUnits: movement.units ?? "ft", movementTraits,
       resistances, immunities, vulnerabilities, conditionImmunities,
       senses, senseUnits: sensesData.units ?? senseRanges.units ?? "ft", languages,
-      cr, xp, creatureType, creatureSubtype, size, alignment, hp, ac,
+      cr, xp, creatureType, creatureTypeKey, creatureSubtype, size, alignment, hp, ac,
       features: ef, actions: ea, inventory: ei, bonusActions: eba, reactions: er,
       legendaryActions: ela, spells: es, biography: eb
     };
@@ -231,10 +243,10 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
   return {
     id: actor.id, uuid: actor.uuid, name: actor.name, img: actor.img,
     prototypeToken: actor.prototypeToken?.texture?.src ?? actor.img,
-    abilities, skills, speeds, speedUnits: movement.units ?? "ft",
+    abilities, skills, speeds, speedUnits: movement.units ?? "ft", movementTraits,
     resistances, immunities, vulnerabilities, conditionImmunities,
     senses, senseUnits: sensesData.units ?? senseRanges.units ?? "ft", languages,
-    cr, xp, creatureType, creatureSubtype, size, alignment, hp, ac,
+    cr, xp, creatureType, creatureTypeKey, creatureSubtype, size, alignment, hp, ac,
     features: strip(features), actions: strip(actions), inventory: strip(inventory), bonusActions: strip(bonusActions),
     reactions: strip(reactions), legendaryActions: strip(legendaryActions),
     spells: strip(spells), biography: rawBiography
@@ -526,10 +538,15 @@ function normalizeUnit(unit) {
   return map[unit] ?? unit;
 }
 
-function _traitArray(trait) {
+function _traitArray(trait, config = {}) {
   if (!trait) return [];
   const result = [];
-  if (trait.value) for (const v of trait.value) result.push(v);
+  if (trait.value) {
+    for (const value of trait.value) {
+      const configured = config?.[value];
+      result.push(configured?.label ?? configured ?? value);
+    }
+  }
   if (trait.custom) for (const c of trait.custom.split(";")) { const t = c.trim(); if (t) result.push(t); }
   return result;
 }
