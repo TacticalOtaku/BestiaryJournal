@@ -146,8 +146,8 @@
     "InFavorites": "In favorites",
     "AddToFavorites": "Add to favorites",
     "SendToChat": "Send to chat",
-    "AddToScene": "Add to scene",
-    "AddedToScene": "Added {name} to the scene.",
+    "OpenBestiaryCard": "Open bestiary card",
+    "CreatureUnavailable": "This bestiary card is hidden or its collection is unavailable.",
     "CoreStats": "Core statistics",
     "ClickToRoll": "Click a score to roll",
     "RollAbility": "Roll ability",
@@ -168,6 +168,12 @@
     "SpeedFly": "Fly",
     "SpeedSwim": "Swim",
     "SpeedSpecial": "Special movement",
+    "UnitFeet": "ft.",
+    "UnitMiles": "mi.",
+    "UnitMeters": "m",
+    "UnitPounds": "lb.",
+    "UnitKilograms": "kg",
+    "UnitTons": "tons",
     "HoverMovement": "Can hover",
     "IgnoresDifficultTerrain": "Ignores difficult terrain",
     "SpecialSenses": "Special senses",
@@ -192,6 +198,31 @@
     "UnsavedChanges": "Unsaved changes",
     "ConfirmDiscardChanges": "Discard unsaved view changes?",
     "SaveView": "Save view",
-    "ViewSaved": "Creature view saved."
+    "ViewSaved": "Creature view saved.",
+    "Data": {
+      "Abilities": { "str": "Strength", "dex": "Dexterity", "con": "Constitution", "int": "Intelligence", "wis": "Wisdom", "cha": "Charisma" },
+      "AbilityAbbreviations": { "str": "STR", "dex": "DEX", "con": "CON", "int": "INT", "wis": "WIS", "cha": "CHA" },
+      "Skills": {
+        "acr": "Acrobatics", "ani": "Animal Handling", "arc": "Arcana", "ath": "Athletics", "dec": "Deception", "his": "History",
+        "ins": "Insight", "itm": "Intimidation", "inv": "Investigation", "med": "Medicine", "nat": "Nature", "prc": "Perception",
+        "prf": "Performance", "per": "Persuasion", "rel": "Religion", "slt": "Sleight of Hand", "ste": "Stealth", "sur": "Survival"
+      },
+      "Senses": { "darkvision": "Darkvision", "blindsight": "Blindsight", "tremorsense": "Tremorsense", "truesight": "Truesight" },
+      "DamageTypes": {
+        "acid": "Acid", "bludgeoning": "Bludgeoning", "cold": "Cold", "fire": "Fire", "force": "Force", "lightning": "Lightning",
+        "necrotic": "Necrotic", "piercing": "Piercing", "poison": "Poison", "psychic": "Psychic", "radiant": "Radiant", "slashing": "Slashing", "thunder": "Thunder"
+      },
+      "Conditions": {
+        "blinded": "Blinded", "charmed": "Charmed", "deafened": "Deafened", "exhaustion": "Exhaustion", "frightened": "Frightened",
+        "grappled": "Grappled", "incapacitated": "Incapacitated", "invisible": "Invisible", "paralyzed": "Paralyzed", "petrified": "Petrified",
+        "poisoned": "Poisoned", "prone": "Prone", "restrained": "Restrained", "stunned": "Stunned", "unconscious": "Unconscious"
+      },
+      "CreatureTypes": {
+        "aberration": "Aberration", "beast": "Beast", "celestial": "Celestial", "construct": "Construct", "dragon": "Dragon", "elemental": "Elemental",
+        "fey": "Fey", "fiend": "Fiend", "giant": "Giant", "humanoid": "Humanoid", "monstrosity": "Monstrosity", "ooze": "Ooze", "plant": "Plant", "undead": "Undead"
+      },
+      "Sizes": { "tiny": "Tiny", "sm": "Small", "med": "Medium", "lg": "Large", "huge": "Huge", "grg": "Gargantuan" },
+      "Languages": {}
+    }
   }
 }
