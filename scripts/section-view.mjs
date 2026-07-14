@@ -1,5 +1,6 @@
-import { getBestiaryData, setBestiaryData, extractCreatureData, formatCR } from "./helpers.mjs";
+import { getBestiaryData, setBestiaryData, extractCreatureData, formatCR, formatDistanceUnit } from "./helpers.mjs";
 import { BestiaryCreatureView } from "./creature-view.mjs";
+import { playApplicationEntrance } from "./ui-effects.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -111,10 +112,11 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
   }
 
   _formatSpeed(creature) {
+    const unit = formatDistanceUnit(creature.speedUnits);
     return Object.entries(creature.speeds ?? {}).map(([key, value]) => {
       const labelKey = key === "walk" ? "Walk" : key.charAt(0).toUpperCase() + key.slice(1);
       const localized = game.i18n.localize(`BESTIARY.Speed${labelKey}`);
-      return `${localized}: ${value} ${creature.speedUnits}`;
+      return `${localized}: ${value} ${unit}`;
     }).join(" · ");
   }
 
@@ -124,6 +126,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     this._activateDragDrop();
     this._activateCards();
     this._applyClientState();
+    playApplicationEntrance(this, ".section-shell");
   }
 
   _activateSearchAndFilters() {
@@ -166,7 +169,10 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
   _activateCards() {
     for (const card of this.element.querySelectorAll("[data-creature-entry][data-uuid]")) {
-      card.addEventListener("dblclick", event => this._onOpenSheet(event, card));
+      card.addEventListener("dblclick", event => {
+        if (game.user.isGM) this._onOpenSheet(event, card);
+        else this._onOpenCreature(event, card);
+      });
       card.addEventListener("dragstart", event => {
         event.dataTransfer.setData("text/plain", JSON.stringify({ type: "Actor", uuid: card.dataset.uuid }));
       });
@@ -343,6 +349,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
   async _onOpenSheet(event, target) {
     event.stopPropagation();
+    if (!game.user.isGM) return;
     const uuid = target.closest?.("[data-uuid]")?.dataset.uuid ?? target.dataset?.uuid ?? this._selectedUuid;
     const actor = uuid ? await fromUuid(uuid) : null;
     actor?.sheet.render(true);

@@ -101,7 +101,7 @@
               <div class="library-creature-copy"><h3 title="{{this.name}}">{{this.name}}</h3><p>{{this.typeLabel}}</p><small>{{this.collectionLabel}}</small></div>
               <div class="library-creature-actions">
                 <button type="button" data-action="toggleFavorite" aria-label="{{localize 'BESTIARY.ToggleFavorite'}}"><i class="{{#if this.isFavorite}}fas{{else}}far{{/if}} fa-star"></i></button>
-                <button type="button" data-action="openSheet" aria-label="{{localize 'BESTIARY.OpenSheet'}}"><i class="fas fa-arrow-up-right-from-square"></i></button>
+                {{#if ../isGM}}<button type="button" data-action="openSheet" aria-label="{{localize 'BESTIARY.OpenSheet'}}"><i class="fas fa-arrow-up-right-from-square"></i></button>{{/if}}
               </div>
             </article>
           {{/each}}

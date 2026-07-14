@@ -2,6 +2,15 @@ export function getBestiaryData() {
   return game.settings.get("bestiary-journal", "bestiaryData") ?? { sections: [] };
 }
 
+export function canUserViewBestiaryCreature(uuid, user = game.user) {
+  if (!uuid) return false;
+  if (user?.isGM) return true;
+  return (getBestiaryData().sections ?? []).some(section => {
+    if (section.hidden) return false;
+    return (section.creatures ?? []).some(entry => entry.uuid === uuid && !entry.hidden);
+  });
+}
+
 export async function setBestiaryData(data) {
   await game.settings.set("bestiary-journal", "bestiaryData", data);
   game.socket?.emit("module.bestiary-journal", { action: "refreshBestiary" });
@@ -110,25 +119,33 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
 
   const abilities = {};
   for (const [key, abl] of Object.entries(system.abilities ?? {})) {
+    const value = _numericValue(abl.value) ?? 10;
+    const mod = _numericValue(abl.mod) ?? Math.floor((value - 10) / 2);
+    const save = _numericValue(abl.save) ?? mod;
     abilities[key] = {
-      value: abl.value, mod: abl.mod, save: abl.save,
-      label: CONFIG.DND5E.abilities[key]?.label ?? key.toUpperCase()
+      value, mod, save,
+      label: localizeDndLabel("Abilities", CONFIG.DND5E.abilities, key, key.toUpperCase())
     };
   }
 
   const skills = {};
   for (const [key, skill] of Object.entries(system.skills ?? {})) {
-    if (skill.value > 0 || skill.total !== skill.ability?.mod) {
-      skills[key] = { label: CONFIG.DND5E.skills[key]?.label ?? key, total: skill.total, value: skill.value };
+    if (Number(skill.value ?? 0) > 0) {
+      skills[key] = {
+        label: localizeDndLabel("Skills", CONFIG.DND5E.skills, key, key),
+        total: skill.total,
+        value: skill.value
+      };
     }
   }
 
   const speeds = {};
   const movementTraits = [];
   const movement = system.attributes?.movement ?? {};
-  for (const [key, val] of Object.entries(movement)) {
-    if (key === "units" || key === "hover") continue;
-    if ((typeof val === "number" || typeof val === "string") && val !== "") speeds[key] = val;
+  for (const key of ["walk", "burrow", "climb", "fly", "swim"]) {
+    const value = movement[key];
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric > 0) speeds[key] = numeric;
   }
   if (movement.hover) movementTraits.push(game.i18n.localize("BESTIARY.HoverMovement"));
   const ignoredTerrain = movement.ignoredDifficultTerrain;
@@ -136,10 +153,10 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
     movementTraits.push(game.i18n.localize("BESTIARY.IgnoresDifficultTerrain"));
   }
 
-  const resistances = _traitArray(system.traits?.dr, CONFIG.DND5E.damageTypes);
-  const immunities = _traitArray(system.traits?.di, CONFIG.DND5E.damageTypes);
-  const vulnerabilities = _traitArray(system.traits?.dv, CONFIG.DND5E.damageTypes);
-  const conditionImmunities = _traitArray(system.traits?.ci, CONFIG.DND5E.conditionTypes);
+  const resistances = _traitArray(system.traits?.dr, CONFIG.DND5E.damageTypes, "DamageTypes");
+  const immunities = _traitArray(system.traits?.di, CONFIG.DND5E.damageTypes, "DamageTypes");
+  const vulnerabilities = _traitArray(system.traits?.dv, CONFIG.DND5E.damageTypes, "DamageTypes");
+  const conditionImmunities = _traitArray(system.traits?.ci, CONFIG.DND5E.conditionTypes, "Conditions");
 
   const senses = {};
   const sensesData = system.attributes?.senses ?? {};
@@ -149,16 +166,13 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
   }
   if (sensesData.special) senses.special = sensesData.special;
 
-  const languages = _traitArray(system.traits?.languages, CONFIG.DND5E.languages);
+  const languages = _traitArray(system.traits?.languages, CONFIG.DND5E.languages, "Languages");
   const cr = system.details?.cr ?? 0;
   const xp = system.details?.xp?.value ?? CONFIG.DND5E.CR_EXP_LEVELS?.[cr] ?? 0;
   const creatureTypeKey = system.details?.type?.value ?? "";
-  const creatureType = CONFIG.DND5E.creatureTypes?.[creatureTypeKey]?.label
-    ?? CONFIG.DND5E.creatureTypes?.[creatureTypeKey]
-    ?? creatureTypeKey;
+  const creatureType = localizeDndLabel("CreatureTypes", CONFIG.DND5E.creatureTypes, creatureTypeKey, creatureTypeKey);
   const creatureSubtype = system.details?.type?.subtype ?? "";
-  const sizeConfig = CONFIG.DND5E.actorSizes?.[system.traits?.size];
-  const size = sizeConfig?.label ?? sizeConfig ?? system.traits?.size ?? "";
+  const size = localizeDndLabel("Sizes", CONFIG.DND5E.actorSizes, system.traits?.size, system.traits?.size ?? "");
   const alignment = system.details?.alignment ?? "";
 
   const hp = {
@@ -280,12 +294,12 @@ function extractItemMeta(item) {
     pushTag("BESTIARY.ItemDamage", labels.damageTypes ?? collectDamageSummary(activities));
     pushTag("BESTIARY.ItemProperties", joinList(collectWeaponProperties(system)), { isAccent: true });
     pushStat("BESTIARY.ItemQuantity", system.quantity);
-    pushStat("BESTIARY.ItemWeight", formatWeight(system.weight));
+    pushStat("BESTIARY.ItemWeight", formatWeight(system.weight, labels.weight));
   } else if (["equipment", "consumable", "tool", "loot", "container", "backpack"].includes(item.type)) {
     pushTag("BESTIARY.ItemType", localizeItemType(item.type, system.type?.value ?? labels.itemType));
     pushTag("BESTIARY.ItemProperties", joinList(collectEquipmentProperties(item, system)), { isAccent: true });
     pushStat("BESTIARY.ItemQuantity", system.quantity);
-    pushStat("BESTIARY.ItemWeight", formatWeight(system.weight));
+    pushStat("BESTIARY.ItemWeight", formatWeight(system.weight, labels.weight));
     pushStat("BESTIARY.ItemUses", formatUses(system.uses));
   } else if (item.type === "feat") {
     pushTag("BESTIARY.ItemType", localizeItemType(item.type, system.type?.value ?? labels.featType));
@@ -412,9 +426,31 @@ function formatUses(uses) {
   return `${Math.max(Number(max) - Number(spent || 0), 0)}/${max}`;
 }
 
-function formatWeight(weight) {
-  if (weight === null || weight === undefined || weight === "") return "";
-  return String(weight);
+function formatWeight(weight, fallback = "") {
+  if (weight === null || weight === undefined || weight === "") return _labelText(fallback);
+  if (typeof weight === "number" || typeof weight === "string") return String(weight);
+
+  if (typeof weight === "object") {
+    const value = _numericValue(weight.value ?? weight.amount ?? weight.weight);
+    const unitKey = _traitKey(weight.units ?? weight.unit ?? weight.type).toLowerCase();
+    const unit = _weightUnitLabel(unitKey);
+    if (value !== null && unit) return `${value} ${unit}`;
+
+    const fallbackText = _labelText(fallback);
+    if (fallbackText) return fallbackText;
+    if (value !== null) return String(value);
+
+    return _labelText(weight.label ?? weight.name);
+  }
+
+  return "";
+}
+
+function _weightUnitLabel(unit) {
+  if (["lb", "lbs", "pound", "pounds"].includes(unit)) return game.i18n.localize("BESTIARY.UnitPounds");
+  if (["kg", "kgs", "kilogram", "kilograms"].includes(unit)) return game.i18n.localize("BESTIARY.UnitKilograms");
+  if (["ton", "tons"].includes(unit)) return game.i18n.localize("BESTIARY.UnitTons");
+  return unit;
 }
 
 function collectDamageSummary(activities) {
@@ -528,27 +564,85 @@ function localizeRarity(rarity) {
   return CONFIG.DND5E.itemRarity?.[rarity] ?? rarity;
 }
 
-function normalizeUnit(unit) {
+export function formatDistanceUnit(unit) {
   if (!unit) return "";
   const map = {
-    ft: game.i18n.localize("DND5E.DistFt"),
-    mi: game.i18n.localize("DND5E.DistMi"),
-    m: "m"
+    ft: game.i18n.localize("BESTIARY.UnitFeet"),
+    mi: game.i18n.localize("BESTIARY.UnitMiles"),
+    m: game.i18n.localize("BESTIARY.UnitMeters")
   };
   return map[unit] ?? unit;
 }
 
-function _traitArray(trait, config = {}) {
+function normalizeUnit(unit) {
+  return formatDistanceUnit(unit);
+}
+
+function _traitArray(trait, config = {}, category = "") {
   if (!trait) return [];
-  const result = [];
+  const result = new Set();
   if (trait.value) {
     for (const value of trait.value) {
-      const configured = config?.[value];
-      result.push(configured?.label ?? configured ?? value);
+      const key = _traitKey(value);
+      const fallback = _labelText(value?.label ?? value?.name ?? key);
+      const label = localizeDndLabel(category, config, key, fallback);
+      if (label) result.add(label);
     }
   }
-  if (trait.custom) for (const c of trait.custom.split(";")) { const t = c.trim(); if (t) result.push(t); }
-  return result;
+  if (typeof trait.custom === "string") {
+    for (const custom of trait.custom.split(";")) {
+      const value = custom.trim();
+      if (value) result.add(value);
+    }
+  }
+  return [...result];
+}
+
+function _traitKey(value) {
+  if (value === null || value === undefined) return "";
+  if (typeof value !== "object") return String(value);
+  const key = value.value ?? value.key ?? value.id ?? value.type ?? value.name;
+  return typeof key === "object" ? _traitKey(key) : String(key ?? "");
+}
+
+function _labelText(value) {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string" || typeof value === "number") {
+    const text = String(value);
+    return game.i18n.has?.(text) ? game.i18n.localize(text) : text;
+  }
+  if (typeof value === "object") {
+    return _labelText(value.label ?? value.name ?? value.value ?? value.key ?? value.id);
+  }
+  return "";
+}
+
+function _numericValue(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string" && value.trim() !== "") {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+  if (value && typeof value === "object") {
+    for (const key of ["total", "value", "mod", "bonus"]) {
+      if (!(key in value)) continue;
+      const numeric = _numericValue(value[key]);
+      if (numeric !== null) return numeric;
+    }
+  }
+  return null;
+}
+
+export function localizeConfigLabel(config, key, fallback = "") {
+  if (!key) return _labelText(fallback);
+  const configured = config?.get?.(key) ?? config?.[key];
+  return _labelText(configured?.label ?? configured?.name ?? configured) || _labelText(fallback);
+}
+
+export function localizeDndLabel(category, config, key, fallback = "") {
+  const moduleKey = category && key ? `BESTIARY.Data.${category}.${key}` : "";
+  if (moduleKey && game.i18n.has?.(moduleKey)) return game.i18n.localize(moduleKey);
+  return localizeConfigLabel(config, key, fallback);
 }
 
 export function formatMod(mod) { return mod >= 0 ? `+${mod}` : `${mod}`; }

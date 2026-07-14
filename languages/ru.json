@@ -146,8 +146,8 @@
     "InFavorites": "В избранном",
     "AddToFavorites": "В избранное",
     "SendToChat": "В чат",
-    "AddToScene": "На сцену",
-    "AddedToScene": "{name} добавлен на сцену.",
+    "OpenBestiaryCard": "Открыть карточку в бестиарии",
+    "CreatureUnavailable": "Эта карточка скрыта или её коллекция недоступна.",
     "CoreStats": "Основные данные",
     "ClickToRoll": "Нажмите для броска",
     "RollAbility": "Совершить проверку",
@@ -168,6 +168,12 @@
     "SpeedFly": "Полёт",
     "SpeedSwim": "Плавание",
     "SpeedSpecial": "Особое перемещение",
+    "UnitFeet": "фт.",
+    "UnitMiles": "миль",
+    "UnitMeters": "м",
+    "UnitPounds": "фунт.",
+    "UnitKilograms": "кг",
+    "UnitTons": "т",
     "HoverMovement": "Может зависать в воздухе",
     "IgnoresDifficultTerrain": "Игнорирует труднопроходимую местность",
     "SpecialSenses": "Особые чувства",
@@ -192,7 +198,32 @@
     "UnsavedChanges": "Есть несохранённые изменения",
     "ConfirmDiscardChanges": "Отменить несохранённые изменения представления?",
     "SaveView": "Сохранить представление",
-    "ViewSaved": "Представление существа сохранено."
+    "ViewSaved": "Представление существа сохранено.",
+    "Data": {
+      "Abilities": { "str": "Сила", "dex": "Ловкость", "con": "Телосложение", "int": "Интеллект", "wis": "Мудрость", "cha": "Харизма" },
+      "AbilityAbbreviations": { "str": "СИЛ", "dex": "ЛОВ", "con": "ТЕЛ", "int": "ИНТ", "wis": "МДР", "cha": "ХАР" },
+      "Skills": {
+        "acr": "Акробатика", "ani": "Уход за животными", "arc": "Магия", "ath": "Атлетика", "dec": "Обман", "his": "История",
+        "ins": "Проницательность", "itm": "Запугивание", "inv": "Расследование", "med": "Медицина", "nat": "Природа", "prc": "Восприятие",
+        "prf": "Выступление", "per": "Убеждение", "rel": "Религия", "slt": "Ловкость рук", "ste": "Скрытность", "sur": "Выживание"
+      },
+      "Senses": { "darkvision": "Тёмное зрение", "blindsight": "Слепое зрение", "tremorsense": "Чувство вибрации", "truesight": "Истинное зрение" },
+      "DamageTypes": {
+        "acid": "Кислота", "bludgeoning": "Дробящий", "cold": "Холод", "fire": "Огонь", "force": "Силовой", "lightning": "Электричество",
+        "necrotic": "Некротический", "piercing": "Колющий", "poison": "Яд", "psychic": "Психический", "radiant": "Излучение", "slashing": "Рубящий", "thunder": "Звук"
+      },
+      "Conditions": {
+        "blinded": "Ослепление", "charmed": "Очарование", "deafened": "Глухота", "exhaustion": "Истощение", "frightened": "Испуг",
+        "grappled": "Схвачен", "incapacitated": "Недееспособность", "invisible": "Невидимость", "paralyzed": "Паралич", "petrified": "Окаменение",
+        "poisoned": "Отравление", "prone": "Сбит с ног", "restrained": "Опутан", "stunned": "Ошеломление", "unconscious": "Без сознания"
+      },
+      "CreatureTypes": {
+        "aberration": "Аберрация", "beast": "Зверь", "celestial": "Небожитель", "construct": "Конструкт", "dragon": "Дракон", "elemental": "Элементаль",
+        "fey": "Фея", "fiend": "Исчадие", "giant": "Великан", "humanoid": "Гуманоид", "monstrosity": "Монстр", "ooze": "Слизь", "plant": "Растение", "undead": "Нежить"
+      },
+      "Sizes": { "tiny": "Крошечный", "sm": "Маленький", "med": "Средний", "lg": "Большой", "huge": "Огромный", "grg": "Громадный" },
+      "Languages": {}
+    }
   }
 }
 

@@ -3,15 +3,15 @@
     <div class="suite-empty-state"><i class="fas fa-triangle-exclamation"></i><h2>{{localize "BESTIARY.CreatureLoadError"}}</h2></div>
   {{else}}
     <div class="creature-detail-view detail-{{detailLevel}}">
-      <nav class="detail-level-nav" aria-label="{{localize 'BESTIARY.DisplayMode'}}">
+      {{#if showDetailNav}}<nav class="detail-level-nav" aria-label="{{localize 'BESTIARY.DisplayMode'}}">
         {{#if canToggleDetail}}
           <button type="button" class="detail-level-btn {{#if isMinimal}}is-active{{/if}}" data-action="setDetailLevel" data-level="minimal">{{localize "BESTIARY.ViewMinimal"}}</button>
           <button type="button" class="detail-level-btn {{#if isStandard}}is-active{{/if}}" data-action="setDetailLevel" data-level="standard">{{localize "BESTIARY.ViewStandard"}}</button>
           <button type="button" class="detail-level-btn {{#if isExpanded}}is-active{{/if}}" data-action="setDetailLevel" data-level="expanded">{{localize "BESTIARY.ViewExpanded"}}</button>
           {{#if isGM}}<button type="button" class="detail-level-btn {{#if isCustom}}is-active{{/if}}" data-action="setDetailLevel" data-level="custom"><i class="fas fa-sliders"></i>{{localize "BESTIARY.ViewCustom"}}</button>{{/if}}
         {{/if}}
-        <button type="button" class="detail-open-sheet" data-action="openSheet"><i class="fas fa-arrow-up-right-from-square"></i><span>{{localize "BESTIARY.OpenSheet"}}</span></button>
-      </nav>
+        {{#if isGM}}<button type="button" class="detail-open-sheet" data-action="openSheet"><i class="fas fa-arrow-up-right-from-square"></i><span>{{localize "BESTIARY.OpenSheet"}}</span></button>{{/if}}
+      </nav>{{/if}}
 
       {{#unless isCustom}}
         <header class="creature-profile-card">
@@ -40,8 +40,7 @@
         <div class="creature-quick-actions">
           <button type="button" data-action="toggleFavorite"><i class="{{#if isFavorite}}fas{{else}}far{{/if}} fa-star"></i>{{#if isFavorite}}{{localize "BESTIARY.InFavorites"}}{{else}}{{localize "BESTIARY.AddToFavorites"}}{{/if}}</button>
           <button type="button" data-action="sendToChat"><i class="far fa-message"></i>{{localize "BESTIARY.SendToChat"}}</button>
-          {{#if canAddToScene}}<button type="button" data-action="addToScene"><i class="fas fa-crosshairs"></i>{{localize "BESTIARY.AddToScene"}}</button>{{/if}}
-          <button type="button" class="is-primary" data-action="openSheet"><i class="far fa-address-card"></i>{{localize "BESTIARY.OpenSheet"}}</button>
+          {{#if isGM}}<button type="button" class="is-primary" data-action="openSheet"><i class="far fa-address-card"></i>{{localize "BESTIARY.OpenSheet"}}</button>{{/if}}
         </div>
       {{/unless}}
 

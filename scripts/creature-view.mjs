@@ -2,8 +2,9 @@ import {
   extractCreatureData, formatMod, formatCR, isGmOnlyDetailToggle,
   getCreatureDetailLevel, setCreatureDetailLevel,
   getCreatureCustomDisplay, setCreatureCustomDisplay, DISPLAY_BLOCKS,
-  getBestiaryData
+  getBestiaryData, localizeDndLabel, formatDistanceUnit
 } from "./helpers.mjs";
+import { animateDisclosure, playApplicationEntrance } from "./ui-effects.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -49,7 +50,6 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       cancelCustomBlocks: function () { this._cancelCustomBlocks(); },
       toggleFavorite: function () { this._onToggleFavorite(); },
       sendToChat: function () { this._onSendToChat(); },
-      addToScene: function () { this._onAddToScene(); },
       rollAbility: function (event, target) { this._onRollAbility(event, target); },
       useActivity: function (event, target) { this._onUseActivity(event, target); },
       scrollToSection: function (event, target) { this._onScrollToSection(event, target); }
@@ -111,7 +111,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
 
     const abilityEntries = Object.entries(creature.abilities).map(([key, ability]) => ({
       key,
-      label: CONFIG.DND5E.abilities?.[key]?.abbreviation ?? ability.label,
+      label: localizeDndLabel("AbilityAbbreviations", {}, key, CONFIG.DND5E.abilities?.[key]?.abbreviation ?? ability.label),
       fullLabel: ability.label,
       value: ability.value,
       mod: formatMod(ability.mod),
@@ -120,13 +120,17 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     })).filter(ability => currentLevel !== "custom" || ability.visible);
 
     const skillEntries = Object.values(creature.skills).map(skill => ({ label: skill.label, total: formatMod(skill.total) }));
+    const speedUnit = formatDistanceUnit(creature.speedUnits);
+    const senseUnit = formatDistanceUnit(creature.senseUnits);
     const speedEntries = Object.entries(creature.speeds).map(([key, value]) => ({
       label: game.i18n.localize(`BESTIARY.Speed${key.charAt(0).toUpperCase()}${key.slice(1)}`),
-      value: `${value} ${creature.speedUnits}`
+      value: `${value} ${speedUnit}`
     }));
     const senseEntries = Object.entries(creature.senses).map(([key, value]) => ({
-      label: key === "special" ? game.i18n.localize("BESTIARY.SpecialSenses") : (CONFIG.DND5E.senses?.[key]?.label ?? CONFIG.DND5E.senses?.[key] ?? key),
-      value: typeof value === "number" ? `${value} ${creature.senseUnits}` : value
+      label: key === "special"
+        ? game.i18n.localize("BESTIARY.SpecialSenses")
+        : localizeDndLabel("Senses", CONFIG.DND5E.senses, key, key),
+      value: typeof value === "number" ? `${value} ${senseUnit}` : value
     }));
 
     const markItems = (list, sectionKey) => list.map(item => {
@@ -226,10 +230,10 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       showStandardContent: currentLevel === "standard" || currentLevel === "expanded",
       showExpandedContent: currentLevel === "expanded",
       canToggleDetail,
+      showDetailNav: canToggleDetail || isGM,
       isGM,
       isFavorite: favorites.has(this.actorUuid),
       customDirty: this._customDirty,
-      canAddToScene: isGM && !!globalThis.canvas?.scene,
       error: false
     };
   }
@@ -239,6 +243,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     for (const checkbox of this.element.querySelectorAll(".custom-block-row input[data-block-key]")) {
       checkbox.addEventListener("change", event => this._onToggleCustomBlock(event, event.currentTarget));
     }
+    playApplicationEntrance(this, ".creature-detail-view");
   }
 
   async _onSetDetailLevel(event, target) {
@@ -253,6 +258,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   }
 
   async _onOpenSheet() {
+    if (!game.user.isGM) return;
     const actor = await fromUuid(this.actorUuid);
     actor?.sheet.render(true);
   }
@@ -267,24 +273,36 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   async _onSendToChat() {
     const actor = await fromUuid(this.actorUuid);
     if (!actor) return;
+
+    const card = document.createElement("div");
+    card.className = "bestiary-chat-card";
+
+    const portrait = document.createElement("img");
+    portrait.src = actor.img;
+    portrait.alt = actor.name;
+
+    const copy = document.createElement("div");
+    const name = document.createElement("strong");
+    name.textContent = actor.name;
+
+    const action = document.createElement("p");
+    const link = document.createElement("a");
+    link.href = "#";
+    link.className = "bestiary-creature-link";
+    link.dataset.bestiaryCreatureUuid = actor.uuid;
+    const icon = document.createElement("i");
+    icon.className = "fas fa-book-skull";
+    link.append(icon, document.createTextNode(game.i18n.localize("BESTIARY.OpenBestiaryCard")));
+
+    action.appendChild(link);
+    copy.append(name, action);
+    card.append(portrait, copy);
+
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
-      content: `<div class="bestiary-chat-card"><img src="${actor.img}" alt=""><div><strong>${actor.name}</strong><p>@UUID[${actor.uuid}]{${game.i18n.localize("BESTIARY.OpenSheet")}}</p></div></div>`
+      content: card.outerHTML,
+      flags: { "bestiary-journal": { creatureUuid: actor.uuid } }
     });
-  }
-
-  async _onAddToScene() {
-    const actor = await fromUuid(this.actorUuid);
-    const activeCanvas = globalThis.canvas;
-    if (!actor || !activeCanvas?.scene || !game.user.isGM) return;
-    const dimensions = activeCanvas.scene.dimensions;
-    const center = activeCanvas.grid.getSnappedPoint({
-      x: dimensions.sceneX + dimensions.sceneWidth / 2,
-      y: dimensions.sceneY + dimensions.sceneHeight / 2
-    });
-    const token = await actor.getTokenDocument(center);
-    await activeCanvas.scene.createEmbeddedDocuments("Token", [token.toObject()]);
-    ui.notifications.info(game.i18n.format("BESTIARY.AddedToScene", { name: actor.name }));
   }
 
   async _onRollAbility(event, target) {
@@ -405,7 +423,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const body = itemElement?.querySelector(".creature-item-body");
     const icon = itemElement?.querySelector(".creature-item-chevron");
     itemElement?.classList.toggle("is-expanded", expanded);
-    body?.classList.toggle("is-collapsed", !expanded);
+    animateDisclosure(body, expanded);
     icon?.classList.toggle("fa-chevron-up", expanded);
     icon?.classList.toggle("fa-chevron-down", !expanded);
   }
@@ -413,7 +431,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   _toggleSectionElement(sectionKey, expanded) {
     const section = this.element?.querySelector(`[data-content-section="${sectionKey}"]`);
     section?.classList.toggle("is-expanded", expanded);
-    section?.querySelector(".accordion-section-body")?.classList.toggle("is-collapsed", !expanded);
+    animateDisclosure(section?.querySelector(".accordion-section-body"), expanded);
     const icon = section?.querySelector(".section-chevron");
     icon?.classList.toggle("fa-chevron-up", expanded);
     icon?.classList.toggle("fa-chevron-down", !expanded);

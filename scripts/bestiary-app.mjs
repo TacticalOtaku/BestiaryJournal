@@ -2,6 +2,7 @@ import { getBestiaryData, setBestiaryData, extractCreatureData, formatCR } from 
 import { BestiaryTileEditor } from "./tile-editor.mjs";
 import { BestiarySectionView } from "./section-view.mjs";
 import { BestiaryCreatureView } from "./creature-view.mjs";
+import { playApplicationEntrance } from "./ui-effects.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -126,6 +127,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this._activateSearch();
     this._activateContextMenus();
     this._activateCreatureDrag();
+    playApplicationEntrance(this, ".bestiary-shell");
   }
 
   _activateSearch() {
@@ -196,7 +198,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _showContextMenu(event, items) {
     document.querySelectorAll(".bestiary-context-menu").forEach(element => element.remove());
     const menu = document.createElement("nav");
-    menu.className = "bestiary-context-menu";
+    menu.className = "bestiary-context-menu bestiary-app";
     menu.style.left = `${event.clientX}px`;
     menu.style.top = `${event.clientY}px`;
     menu.innerHTML = `<ol class="context-items"></ol>`;
@@ -209,6 +211,9 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       list.appendChild(row);
     }
     document.body.appendChild(menu);
+    const bounds = menu.getBoundingClientRect();
+    menu.style.left = `${Math.max(8, Math.min(event.clientX, window.innerWidth - bounds.width - 8))}px`;
+    menu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - bounds.height - 8))}px`;
     const close = click => {
       if (!menu.contains(click.target)) {
         menu.remove();
@@ -255,6 +260,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _onOpenSheet(event, target) {
     event.stopPropagation();
+    if (!game.user.isGM) return;
     const uuid = target.closest("[data-uuid]")?.dataset.uuid;
     const actor = uuid ? await fromUuid(uuid) : null;
     actor?.sheet.render(true);

@@ -1,8 +1,10 @@
 import { BestiaryApp } from "./bestiary-app.mjs";
 import { BestiaryCreatureView } from "./creature-view.mjs";
 import { BestiarySectionView } from "./section-view.mjs";
+import { canUserViewBestiaryCreature } from "./helpers.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
+const bestiaryChatLinks = new Set();
 
 Hooks.once("init", () => {
   console.log("Bestiary Journal | Initializing module");
@@ -99,6 +101,22 @@ Hooks.once("ready", () => {
     toggle() {
       if (this.mainApp?.rendered) this.close();
       else this.open();
+    },
+    openCreature(uuid) {
+      if (!uuid) return;
+      if (!canUserViewBestiaryCreature(uuid)) {
+        ui.notifications.warn(game.i18n.localize("BESTIARY.CreatureUnavailable"));
+        return;
+      }
+      const current = [...BestiaryCreatureView._instances]
+        .find(app => app.actorUuid === uuid && app.rendered);
+      if (current) {
+        current.bringToFront();
+        return current;
+      }
+      const app = new BestiaryCreatureView({ uuid });
+      app.render(true);
+      return app;
     }
   };
 
@@ -115,9 +133,51 @@ Hooks.once("ready", () => {
       for (const app of BestiarySectionView._instances) {
         if (app.rendered) app.refreshFromExternalUpdate();
       }
+      _refreshBestiaryChatLinks();
     }
   });
 });
+
+Hooks.on("renderChatMessageHTML", (message, html) => {
+  const flaggedUuid = message.getFlag("bestiary-journal", "creatureUuid");
+  for (const link of html.querySelectorAll("a.bestiary-creature-link")) {
+    const uuid = link.dataset.bestiaryCreatureUuid || flaggedUuid;
+    if (!uuid) continue;
+    link.dataset.bestiaryCreatureUuid = uuid;
+    bestiaryChatLinks.add(link);
+    _refreshBestiaryChatLink(link);
+    link.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      game.bestiaryJournal?.openCreature(uuid);
+    });
+  }
+});
+
+function _refreshBestiaryChatLink(link) {
+  const canView = canUserViewBestiaryCreature(link.dataset.bestiaryCreatureUuid);
+  link.classList.toggle("is-disabled", !canView);
+  if (canView) {
+    link.removeAttribute("aria-disabled");
+    link.removeAttribute("title");
+    delete link.dataset.tooltip;
+  } else {
+    const unavailable = game.i18n.localize("BESTIARY.CreatureUnavailable");
+    link.setAttribute("aria-disabled", "true");
+    link.title = unavailable;
+    link.dataset.tooltip = unavailable;
+  }
+}
+
+function _refreshBestiaryChatLinks() {
+  for (const link of bestiaryChatLinks) {
+    if (!link.isConnected) {
+      bestiaryChatLinks.delete(link);
+      continue;
+    }
+    _refreshBestiaryChatLink(link);
+  }
+}
 
 Hooks.on("renderSidebarTab", (app, html, data) => {
   if (app.tabName !== "journal") return;
