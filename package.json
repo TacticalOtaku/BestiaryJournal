@@ -1,0 +1,15 @@
+{
+  "name": "bestiary-journal",
+  "version": "0.1.6",
+  "private": true,
+  "type": "module",
+  "description": "Development checks for the Bestiary Journal Foundry VTT module.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test",
+    "check": "node tools/check-project.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
