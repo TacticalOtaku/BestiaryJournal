@@ -1,7 +1,10 @@
 import { BestiaryApp } from "./bestiary-app.mjs";
 import { BestiaryCreatureView } from "./creature-view.mjs";
 import { BestiarySectionView } from "./section-view.mjs";
-import { canUserViewBestiaryCreature } from "./helpers.mjs";
+import {
+  canUserViewBestiaryCreature,
+  handleBestiaryStoreSocket
+} from "./bestiary-store.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 const bestiaryChatLinks = new Set();
@@ -14,7 +17,7 @@ Hooks.once("init", () => {
     scope: "world",
     config: false,
     type: Object,
-    default: { sections: [] }
+    default: { revision: 0, sections: [] }
   });
 
   game.settings.register("bestiary-journal", "gmOnlyDetailToggle", {
@@ -120,7 +123,8 @@ Hooks.once("ready", () => {
     }
   };
 
-  game.socket.on("module.bestiary-journal", (data) => {
+  game.socket.on("module.bestiary-journal", async (data) => {
+    if (await handleBestiaryStoreSocket(data)) return;
     if (data.action === "refreshCreatureView") {
       for (const app of BestiaryCreatureView._instances) {
         if (app.actorUuid === data.uuid && app.rendered) {

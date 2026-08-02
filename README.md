@@ -63,4 +63,55 @@
 
 1. Скачайте или клонируйте репозиторий
 2. Поместите папку `bestiary-journal` в директорию модулей Foundry VTT:
+   - Windows: `%LOCALAPPDATA%\FoundryVTT\Data\modules\bestiary-journal`
+   - Linux: `~/.local/share/FoundryVTT/Data/modules/bestiary-journal`
+   - macOS: `~/Library/Application Support/FoundryVTT/Data/modules/bestiary-journal`
+3. Перезапустите Foundry VTT.
+4. Откройте настройки мира и включите **Bestiary Journal** в списке модулей.
 
+### Установка по manifest URL
+
+В окне установки модулей Foundry VTT укажите:
+
+```text
+https://raw.githubusercontent.com/TacticalOtaku/BestiaryJournal/main/module.json
+```
+
+---
+
+## 🚀 Быстрый старт
+
+1. Откройте бестиарий сочетанием `Shift + B` или через кнопку в разделе журналов.
+2. Создайте коллекцию.
+3. Откройте коллекцию и перетащите в неё NPC-актёров из боковой панели.
+4. Настройте видимость коллекций, существ и блоков карточки.
+
+Данные бестиария хранятся в настройках мира Foundry VTT. Избранное и режим списка сохраняются отдельно для каждого клиента.
+
+---
+
+## 🛠️ Разработка
+
+Модуль не требует сборки или сторонних runtime-зависимостей. Для проверок нужен Node.js 20 или новее.
+
+```bash
+npm test
+npm run check
+```
+
+- `npm test` запускает unit и characterization tests на встроенном `node:test`.
+- `npm run check` проверяет синтаксис ES-модулей, JSON, пути манифеста, импорты, локализации и уникальные ApplicationV2 ID.
+
+Код разделён на несколько границ:
+
+- `bestiary-domain.mjs` — чистые правила видимости и reducer команд;
+- `bestiary-store.mjs` — сериализация world-изменений через авторитетного активного GM; удалённые команды подтверждаются server-persisted флагом пользователя и не передаются в socket payload;
+- `client-preferences.mjs` и `creature-display.mjs` — настройки клиента и карточек;
+- `foundry-runtime.mjs` — адаптер нестабильных API Foundry/D&D 5e;
+- UI-приложения отвечают только за подготовку view-model и взаимодействие с DOM.
+
+---
+
+## 📄 Лицензия
+
+Проект распространяется по лицензии [MIT](LICENSE).

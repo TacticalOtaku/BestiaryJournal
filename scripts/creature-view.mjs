@@ -1,9 +1,26 @@
 import {
-  extractCreatureData, formatMod, formatCR, isGmOnlyDetailToggle,
-  getCreatureDetailLevel, setCreatureDetailLevel,
-  getCreatureCustomDisplay, setCreatureCustomDisplay, DISPLAY_BLOCKS,
-  getBestiaryData, localizeDndLabel, formatDistanceUnit
+  extractCreatureData, formatMod, formatCR,
+  localizeDndLabel, formatDistanceUnit
 } from "./helpers.mjs";
+import {
+  DISPLAY_BLOCKS,
+  getCreatureCustomDisplay,
+  getCreatureDetailLevel,
+  isGmOnlyDetailToggle,
+  setCreatureCustomDisplay,
+  setCreatureDetailLevel
+} from "./creature-display.mjs";
+import { getCreatureCollections } from "./bestiary-domain.mjs";
+import { getBestiaryData } from "./bestiary-store.mjs";
+import {
+  getFavoriteCreatureUuids,
+  toggleFavoriteCreature
+} from "./client-preferences.mjs";
+import {
+  getDnd5eConfig,
+  localize,
+  resolveUuid
+} from "./foundry-runtime.mjs";
 import { animateDisclosure, playApplicationEntrance } from "./ui-effects.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -31,7 +48,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   static _instances = new Set();
 
   static DEFAULT_OPTIONS = {
-    id: "bestiary-creature-view",
+    id: "bestiary-creature-view-{id}",
     classes: ["bestiary-journal", "bestiary-app", "bestiary-creature-view"],
     tag: "div",
     window: { title: "Creature", icon: "fas fa-dragon", resizable: true, minimizable: true },
@@ -61,7 +78,9 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   };
 
   constructor(options = {}) {
-    super(options);
+    const uniqueId = options.uniqueId
+      ?? foundry.utils.randomID(16);
+    super({ ...options, uniqueId });
     this.actorUuid = options.uuid;
     this._expandedItems = new Set();
     this._expandedSections = new Set(["features", "actions"]);
@@ -75,7 +94,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   }
 
   get title() {
-    return this._title ?? game.i18n.localize("BESTIARY.Creature");
+    return this._title ?? localize("BESTIARY.Creature");
   }
 
   _makeVisibilityChecker(level, customVisible) {
@@ -90,50 +109,126 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   }
 
   async _prepareContext() {
-    const actor = await fromUuid(this.actorUuid);
+    const actor = await resolveUuid(this.actorUuid);
     if (!actor) return { error: true };
 
-    const creature = await extractCreatureData(actor, { enrich: true });
+    const creature = this._decorateCreature(
+      await extractCreatureData(actor, { enrich: true })
+    );
+    const display = this._prepareDisplayState();
+    const stats = this._buildStatEntries(creature, display);
+    const contentSections = this._buildContentSections(creature, display.show);
+    const groupedDisplayBlocks = this._buildDisplayGroups(display.customVisible);
+    const collections = getCreatureCollections(
+      getBestiaryData(),
+      this.actorUuid,
+      display.isGM
+    );
+    const showBlock = this._buildBlockVisibility(creature, stats, display.show);
+
+    return {
+      creature,
+      ...stats,
+      contentSections,
+      standardFeatures: this._markItems(creature.features.slice(0, 4), "features"),
+      showAbilities: display.show("abilities") && stats.abilityEntries.length > 0,
+      showBlock,
+      showDefenses: showBlock.resistances || showBlock.immunities || showBlock.vulnerabilities || showBlock.conditionImmunities,
+      collections,
+      groupedDisplayBlocks,
+      detailLevel: display.currentLevel,
+      isMinimal: display.currentLevel === "minimal",
+      isStandard: display.currentLevel === "standard",
+      isExpanded: display.currentLevel === "expanded",
+      isCustom: display.currentLevel === "custom",
+      showStandardContent: ["standard", "expanded"].includes(display.currentLevel),
+      showExpandedContent: display.currentLevel === "expanded",
+      canToggleDetail: display.canToggleDetail,
+      showDetailNav: display.canToggleDetail || display.isGM,
+      isGM: display.isGM,
+      isFavorite: display.favorites.has(this.actorUuid),
+      customDirty: this._customDirty,
+      error: false
+    };
+  }
+
+  _decorateCreature(creature) {
     this._title = creature.name;
-    creature.crFormatted = formatCR(creature.cr);
-    creature.typeLabel = [creature.size, creature.creatureType, creature.creatureSubtype ? `(${creature.creatureSubtype})` : ""].filter(Boolean).join(" · ");
-    creature.hpPercent = creature.hp.max > 0 ? Math.max(0, Math.min(100, Math.round((creature.hp.value / creature.hp.max) * 100))) : 0;
-    creature.lowHp = creature.hp.max > 0 && creature.hp.value / creature.hp.max <= 0.25;
+    const hpRatio = creature.hp.max > 0
+      ? creature.hp.value / creature.hp.max
+      : 0;
+    return {
+      ...creature,
+      crFormatted: formatCR(creature.cr),
+      typeLabel: [
+        creature.size,
+        creature.creatureType,
+        creature.creatureSubtype ? `(${creature.creatureSubtype})` : ""
+      ].filter(Boolean).join(" · "),
+      hpPercent: Math.max(0, Math.min(100, Math.round(hpRatio * 100))),
+      lowHp: creature.hp.max > 0 && hpRatio <= 0.25
+    };
+  }
 
+  _prepareDisplayState() {
     const currentLevel = this.detailLevel;
-    const savedCustom = getCreatureCustomDisplay(this.actorUuid);
-    if (!this._customDraft) this._customDraft = [...savedCustom];
+    if (!this._customDraft) {
+      this._customDraft = [...getCreatureCustomDisplay(this.actorUuid)];
+    }
     const customVisible = this._customDraft;
-    const show = this._makeVisibilityChecker(currentLevel, customVisible);
     const isGM = game.user.isGM;
-    const canToggleDetail = !isGmOnlyDetailToggle() || isGM;
-    const favorites = new Set(game.settings.get("bestiary-journal", "favoriteCreatures") ?? []);
+    return {
+      currentLevel,
+      customVisible,
+      isGM,
+      show: this._makeVisibilityChecker(currentLevel, customVisible),
+      canToggleDetail: !isGmOnlyDetailToggle() || isGM,
+      favorites: getFavoriteCreatureUuids()
+    };
+  }
 
-    const abilityEntries = Object.entries(creature.abilities).map(([key, ability]) => ({
-      key,
-      label: localizeDndLabel("AbilityAbbreviations", {}, key, CONFIG.DND5E.abilities?.[key]?.abbreviation ?? ability.label),
-      fullLabel: ability.label,
-      value: ability.value,
-      mod: formatMod(ability.mod),
-      save: formatMod(ability.save),
-      visible: show(key)
-    })).filter(ability => currentLevel !== "custom" || ability.visible);
+  _buildStatEntries(creature, display) {
+    const dnd5e = getDnd5eConfig();
+    const abilityEntries = Object.entries(creature.abilities)
+      .map(([key, ability]) => ({
+        key,
+        label: localizeDndLabel("AbilityAbbreviations", {}, key, dnd5e.abilities?.[key]?.abbreviation ?? ability.label),
+        fullLabel: ability.label,
+        value: ability.value,
+        mod: formatMod(ability.mod),
+        save: formatMod(ability.save),
+        visible: display.show(key)
+      }))
+      .filter(ability => display.currentLevel !== "custom" || ability.visible);
+    return {
+      abilityEntries,
+      skillEntries: Object.values(creature.skills)
+        .map(skill => ({ label: skill.label, total: formatMod(skill.total) })),
+      speedEntries: this._buildSpeedEntries(creature),
+      senseEntries: this._buildSenseEntries(creature, dnd5e)
+    };
+  }
 
-    const skillEntries = Object.values(creature.skills).map(skill => ({ label: skill.label, total: formatMod(skill.total) }));
-    const speedUnit = formatDistanceUnit(creature.speedUnits);
-    const senseUnit = formatDistanceUnit(creature.senseUnits);
-    const speedEntries = Object.entries(creature.speeds).map(([key, value]) => ({
-      label: game.i18n.localize(`BESTIARY.Speed${key.charAt(0).toUpperCase()}${key.slice(1)}`),
-      value: `${value} ${speedUnit}`
+  _buildSpeedEntries(creature) {
+    const unit = formatDistanceUnit(creature.speedUnits);
+    return Object.entries(creature.speeds).map(([key, value]) => ({
+      label: localize(`BESTIARY.Speed${key.charAt(0).toUpperCase()}${key.slice(1)}`),
+      value: `${value} ${unit}`
     }));
-    const senseEntries = Object.entries(creature.senses).map(([key, value]) => ({
+  }
+
+  _buildSenseEntries(creature, dnd5e) {
+    const unit = formatDistanceUnit(creature.senseUnits);
+    return Object.entries(creature.senses).map(([key, value]) => ({
       label: key === "special"
-        ? game.i18n.localize("BESTIARY.SpecialSenses")
-        : localizeDndLabel("Senses", CONFIG.DND5E.senses, key, key),
-      value: typeof value === "number" ? `${value} ${senseUnit}` : value
+        ? localize("BESTIARY.SpecialSenses")
+        : localizeDndLabel("Senses", dnd5e.senses, key, key),
+      value: typeof value === "number" ? `${value} ${unit}` : value
     }));
+  }
 
-    const markItems = (list, sectionKey) => list.map(item => {
+  _markItems(list, sectionKey) {
+    return list.map(item => {
       const itemKey = `${sectionKey}:${item.id ?? item.name}`;
       return {
         ...item,
@@ -143,98 +238,81 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
         hasActivity: (item.activities?.length ?? 0) > 0
       };
     });
+  }
 
-    const sectionDefinitions = [
-      ["features", "BESTIARY.Features", "fa-wand-magic-sparkles", creature.features],
-      ["actions", "BESTIARY.Actions", "fa-khanda", creature.actions],
-      ["bonusActions", "BESTIARY.BonusActions", "fa-bolt", creature.bonusActions],
-      ["reactions", "BESTIARY.Reactions", "fa-shield", creature.reactions],
-      ["legendaryActions", "BESTIARY.LegendaryActions", "fa-crown", creature.legendaryActions],
-      ["spells", "BESTIARY.Spellcasting", "fa-wand-sparkles", creature.spells],
-      ["inventory", "BESTIARY.Inventory", "fa-bag-shopping", creature.inventory]
+  _buildContentSections(creature, show) {
+    const definitions = [
+      ["features", "BESTIARY.Features", "fa-wand-magic-sparkles"],
+      ["actions", "BESTIARY.Actions", "fa-khanda"],
+      ["bonusActions", "BESTIARY.BonusActions", "fa-bolt"],
+      ["reactions", "BESTIARY.Reactions", "fa-shield"],
+      ["legendaryActions", "BESTIARY.LegendaryActions", "fa-crown"],
+      ["spells", "BESTIARY.Spellcasting", "fa-wand-sparkles"],
+      ["inventory", "BESTIARY.Inventory", "fa-bag-shopping"]
     ];
-    const contentSections = sectionDefinitions
-      .filter(([key, , , items]) => show(key) && (items?.length ?? 0) > 0)
-      .map(([key, label, icon, items]) => ({
+    const sections = definitions
+      .filter(([key]) => show(key) && creature[key]?.length)
+      .map(([key, label, icon]) => ({
         key,
-        label: game.i18n.localize(label),
+        label: localize(label),
         icon,
-        count: items.length,
+        count: creature[key].length,
         expanded: this._expandedSections.has(key),
-        items: markItems(items, key),
+        items: this._markItems(creature[key], key),
         isSpells: key === "spells"
       }));
     if (show("biography") && creature.biography) {
-      contentSections.push({
-        key: "biography",
-        label: game.i18n.localize("BESTIARY.Biography"),
-        icon: "fa-feather-pointed",
-        count: null,
-        expanded: this._expandedSections.has("biography"),
-        isBiography: true,
-        biography: creature.biography
-      });
+      sections.push(this._buildBiographySection(creature.biography));
     }
+    return sections;
+  }
 
-    const displayBlocksConfig = DISPLAY_BLOCKS.map(block => ({
-      ...block,
-      localizedLabel: game.i18n.localize(block.label) || block.label,
-      visible: customVisible.includes(block.key),
-      isChild: !!block.group
-    }));
-    const groupedDisplayBlocks = CUSTOM_DISPLAY_GROUPS.map(group => {
-      const blocks = group.blocks.map(key => displayBlocksConfig.find(block => block.key === key)).filter(Boolean);
+  _buildBiographySection(biography) {
+    return {
+      key: "biography",
+      label: localize("BESTIARY.Biography"),
+      icon: "fa-feather-pointed",
+      count: null,
+      expanded: this._expandedSections.has("biography"),
+      isBiography: true,
+      biography
+    };
+  }
+
+  _buildDisplayGroups(customVisible) {
+    const blocksByKey = new Map(DISPLAY_BLOCKS.map(block => [
+      block.key,
+      {
+        ...block,
+        localizedLabel: localize(block.label) || block.label,
+        visible: customVisible.includes(block.key),
+        isChild: !!block.group
+      }
+    ]));
+    return CUSTOM_DISPLAY_GROUPS.map(group => {
+      const blocks = group.blocks.map(key => blocksByKey.get(key)).filter(Boolean);
       const selectedCount = blocks.filter(block => block.visible).length;
       return {
         ...group,
-        label: game.i18n.localize(group.label),
-        description: game.i18n.localize(group.description),
+        label: localize(group.label),
+        description: localize(group.description),
         blocks,
         selectedCount,
         allSelected: selectedCount === blocks.length,
         partiallySelected: selectedCount > 0 && selectedCount < blocks.length
       };
     });
+  }
 
-    const collections = getBestiaryData().sections
-      .filter(section => section.creatures?.some(entry => entry.uuid === this.actorUuid))
-      .map(section => section.name);
-    const showBlock = {
-      skills: show("skills") && skillEntries.length > 0,
-      senses: show("senses") && senseEntries.length > 0,
+  _buildBlockVisibility(creature, stats, show) {
+    return {
+      skills: show("skills") && stats.skillEntries.length > 0,
+      senses: show("senses") && stats.senseEntries.length > 0,
       languages: show("languages") && creature.languages.length > 0,
       resistances: show("resistances") && creature.resistances.length > 0,
       immunities: show("immunities") && creature.immunities.length > 0,
       vulnerabilities: show("vulnerabilities") && creature.vulnerabilities.length > 0,
       conditionImmunities: show("conditionImmunities") && creature.conditionImmunities.length > 0
-    };
-
-    return {
-      creature,
-      abilityEntries,
-      skillEntries,
-      speedEntries,
-      senseEntries,
-      contentSections,
-      standardFeatures: markItems(creature.features.slice(0, 4), "features"),
-      showAbilities: show("abilities") && abilityEntries.length > 0,
-      showBlock,
-      showDefenses: showBlock.resistances || showBlock.immunities || showBlock.vulnerabilities || showBlock.conditionImmunities,
-      collections,
-      groupedDisplayBlocks,
-      detailLevel: currentLevel,
-      isMinimal: currentLevel === "minimal",
-      isStandard: currentLevel === "standard",
-      isExpanded: currentLevel === "expanded",
-      isCustom: currentLevel === "custom",
-      showStandardContent: currentLevel === "standard" || currentLevel === "expanded",
-      showExpandedContent: currentLevel === "expanded",
-      canToggleDetail,
-      showDetailNav: canToggleDetail || isGM,
-      isGM,
-      isFavorite: favorites.has(this.actorUuid),
-      customDirty: this._customDirty,
-      error: false
     };
   }
 
@@ -259,19 +337,17 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
 
   async _onOpenSheet() {
     if (!game.user.isGM) return;
-    const actor = await fromUuid(this.actorUuid);
+    const actor = await resolveUuid(this.actorUuid);
     actor?.sheet.render(true);
   }
 
   async _onToggleFavorite() {
-    const favorites = new Set(game.settings.get("bestiary-journal", "favoriteCreatures") ?? []);
-    favorites.has(this.actorUuid) ? favorites.delete(this.actorUuid) : favorites.add(this.actorUuid);
-    await game.settings.set("bestiary-journal", "favoriteCreatures", [...favorites]);
+    await toggleFavoriteCreature(this.actorUuid);
     await this._refreshPreservingScroll();
   }
 
   async _onSendToChat() {
-    const actor = await fromUuid(this.actorUuid);
+    const actor = await resolveUuid(this.actorUuid);
     if (!actor) return;
 
     const card = document.createElement("div");
@@ -306,7 +382,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   }
 
   async _onRollAbility(event, target) {
-    const actor = await fromUuid(this.actorUuid);
+    const actor = await resolveUuid(this.actorUuid);
     const ability = target.dataset.ability;
     if (!actor || !ability) return;
     if (typeof actor.rollAbilityCheck === "function") await actor.rollAbilityCheck(ability, { event });
@@ -315,7 +391,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
 
   async _onUseActivity(event, target) {
     event.stopPropagation();
-    const actor = await fromUuid(this.actorUuid);
+    const actor = await resolveUuid(this.actorUuid);
     const item = actor?.items.get(target.dataset.itemId);
     if (!item) return;
     const activities = item.system?.activities;

@@ -1,4 +1,5 @@
-import { generateId, getBestiaryData, setBestiaryData } from "./helpers.mjs";
+import { BESTIARY_COMMANDS } from "./bestiary-domain.mjs";
+import { dispatchBestiaryCommand } from "./bestiary-store.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -75,28 +76,27 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
 
   async _onFormSubmit(event, form, formData) {
     const data = foundry.utils.expandObject(formData.object);
-    const bestiaryData = getBestiaryData();
-
     if (this.sectionData) {
-      const section = bestiaryData.sections.find(s => s.id === this.sectionData.id);
-      if (section) {
-        section.name = data.name || "";
-        section.image = data.image || "";
-        section.hidden = !!data.hidden;
-        section.updatedAt = Date.now();
-      }
+      await dispatchBestiaryCommand({
+        type: BESTIARY_COMMANDS.UPDATE_SECTION,
+        sectionId: this.sectionData.id,
+        patch: {
+          name: data.name || "",
+          image: data.image || "",
+          hidden: !!data.hidden
+        }
+      });
     } else {
-      bestiaryData.sections.push({
-        id: generateId(),
-        name: data.name || "",
-        image: data.image || "",
-        hidden: !!data.hidden,
-        updatedAt: Date.now(),
-        creatures: []
+      await dispatchBestiaryCommand({
+        type: BESTIARY_COMMANDS.CREATE_SECTION,
+        section: {
+          name: data.name || "",
+          image: data.image || "",
+          hidden: !!data.hidden
+        }
       });
     }
 
-    await setBestiaryData(bestiaryData);
     if (this.onSaveCallback) this.onSaveCallback();
   }
 }

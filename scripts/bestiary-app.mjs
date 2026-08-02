@@ -1,4 +1,18 @@
-import { getBestiaryData, setBestiaryData, extractCreatureData, formatCR } from "./helpers.mjs";
+import { extractCreatureData, formatCR } from "./helpers.mjs";
+import {
+  BESTIARY_COMMANDS,
+  mergeCreatureEntries,
+  selectVisibleCreatureEntries,
+  selectVisibleSections
+} from "./bestiary-domain.mjs";
+import { dispatchBestiaryCommand, getBestiaryData } from "./bestiary-store.mjs";
+import {
+  getFavoriteCreatureUuids,
+  getLibraryViewMode,
+  setLibraryViewMode,
+  toggleFavoriteCreature
+} from "./client-preferences.mjs";
+import { resolveUuid } from "./foundry-runtime.mjs";
 import { BestiaryTileEditor } from "./tile-editor.mjs";
 import { BestiarySectionView } from "./section-view.mjs";
 import { BestiaryCreatureView } from "./creature-view.mjs";
@@ -41,44 +55,54 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options = {}) {
     super(options);
     this._activeView = "overview";
-    this._creatureLayout = game.settings.get("bestiary-journal", "libraryViewMode") || "grid";
+    this._creatureLayout = getLibraryViewMode();
   }
 
   async _prepareContext() {
     const data = getBestiaryData();
     const isGM = game.user.isGM;
-    const favoriteUuids = new Set(game.settings.get("bestiary-journal", "favoriteCreatures") ?? []);
-    const visibleSections = data.sections.filter(section => isGM || !section.hidden);
+    const visibleSections = selectVisibleSections(data, isGM);
+    const sections = this._buildSectionCards(visibleSections, isGM);
+    const creatures = await this._resolveLibraryCreatures(visibleSections, isGM);
+    const favoriteCreatures = creatures.filter(creature => creature.isFavorite);
+    const displayedCreatures = this._activeView === "favorites"
+      ? favoriteCreatures
+      : creatures;
+    return this._buildLibraryContext({
+      sections,
+      creatures,
+      favoriteCreatures,
+      displayedCreatures,
+      isGM
+    });
+  }
 
-    const sections = visibleSections.map(section => {
-      const visibleCreatures = (section.creatures ?? []).filter(entry => isGM || !entry.hidden);
-      const updatedAt = Math.max(section.updatedAt ?? 0, ...visibleCreatures.map(entry => entry.addedAt ?? 0));
+  _buildSectionCards(visibleSections, isGM) {
+    return visibleSections.map(section => {
+      const entries = selectVisibleCreatureEntries(section, isGM);
+      const updatedAt = Math.max(
+        section.updatedAt ?? 0,
+        ...entries.map(entry => entry.addedAt ?? 0)
+      );
       return {
         ...section,
-        creatureCount: visibleCreatures.length,
+        creatureCount: entries.length,
         displayImage: section.image || "icons/svg/book.svg",
         isHidden: !!section.hidden,
         searchText: section.name.toLocaleLowerCase(),
-        updatedLabel: updatedAt ? new Date(updatedAt).toLocaleDateString(game.i18n.lang) : ""
+        updatedLabel: updatedAt
+          ? new Date(updatedAt).toLocaleDateString(game.i18n.lang)
+          : ""
       };
     });
+  }
 
-    const creatureEntries = new Map();
-    for (const section of visibleSections) {
-      for (const entry of section.creatures ?? []) {
-        if (!isGM && entry.hidden) continue;
-        const current = creatureEntries.get(entry.uuid) ?? { uuid: entry.uuid, addedAt: 0, collections: [] };
-        current.addedAt = Math.max(current.addedAt, entry.addedAt ?? 0);
-        current.collections.push(section.name);
-        current.hidden = !!entry.hidden;
-        creatureEntries.set(entry.uuid, current);
-      }
-    }
-
+  async _resolveLibraryCreatures(visibleSections, isGM) {
+    const favorites = getFavoriteCreatureUuids();
     const creatures = [];
-    for (const entry of creatureEntries.values()) {
+    for (const entry of mergeCreatureEntries(visibleSections, isGM)) {
       try {
-        const actor = await fromUuid(entry.uuid);
+        const actor = await resolveUuid(entry.uuid);
         if (!actor) continue;
         const creature = await extractCreatureData(actor);
         creatures.push({
@@ -87,7 +111,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
           crFormatted: formatCR(creature.cr),
           typeLabel: [creature.size, creature.creatureType].filter(Boolean).join(" · "),
           collectionLabel: entry.collections.join(", "),
-          isFavorite: favoriteUuids.has(entry.uuid),
+          isFavorite: favorites.has(entry.uuid),
           searchText: [creature.name, creature.creatureType, creature.size, ...entry.collections].join(" ").toLocaleLowerCase()
         });
       } catch (error) {
@@ -95,14 +119,13 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
     creatures.sort((a, b) => b.addedAt - a.addedAt);
+    return creatures;
+  }
 
-    const recentCreatures = creatures.slice(0, 8);
-    const favoriteCreatures = creatures.filter(creature => creature.isFavorite);
-    const displayedCreatures = this._activeView === "favorites" ? favoriteCreatures : creatures;
-
+  _buildLibraryContext({ sections, creatures, favoriteCreatures, displayedCreatures, isGM }) {
     return {
       sections,
-      recentCreatures,
+      recentCreatures: creatures.slice(0, 8),
       displayedCreatures,
       totalCreatures: creatures.length,
       favoriteCount: favoriteCreatures.length,
@@ -230,11 +253,11 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.render();
   }
 
-  _onToggleCreatureLayout(event, target) {
+  async _onToggleCreatureLayout(event, target) {
     const layout = target.dataset.layout;
     if (!["grid", "list"].includes(layout)) return;
     this._creatureLayout = layout;
-    game.settings.set("bestiary-journal", "libraryViewMode", layout);
+    await setLibraryViewMode(layout);
     const content = this.element.querySelector(".library-creature-grid");
     content?.classList.toggle("is-list", layout === "list");
     for (const button of this.element.querySelectorAll("[data-layout]")) {
@@ -262,7 +285,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     event.stopPropagation();
     if (!game.user.isGM) return;
     const uuid = target.closest("[data-uuid]")?.dataset.uuid;
-    const actor = uuid ? await fromUuid(uuid) : null;
+    const actor = uuid ? await resolveUuid(uuid) : null;
     actor?.sheet.render(true);
   }
 
@@ -270,9 +293,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     event.stopPropagation();
     const uuid = target.closest("[data-uuid]")?.dataset.uuid;
     if (!uuid) return;
-    const favorites = new Set(game.settings.get("bestiary-journal", "favoriteCreatures") ?? []);
-    favorites.has(uuid) ? favorites.delete(uuid) : favorites.add(uuid);
-    await game.settings.set("bestiary-journal", "favoriteCreatures", [...favorites]);
+    await toggleFavoriteCreature(uuid);
     this.render();
   }
 
@@ -305,19 +326,18 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       content: `<p>${game.i18n.localize("BESTIARY.ConfirmDelete")}</p>`
     });
     if (!confirmed) return;
-    const data = getBestiaryData();
-    data.sections = data.sections.filter(section => section.id !== sectionId);
-    await setBestiaryData(data);
+    await dispatchBestiaryCommand({
+      type: BESTIARY_COMMANDS.DELETE_SECTION,
+      sectionId
+    });
     this.render();
   }
 
   async _toggleSectionVisibilityById(sectionId) {
-    const data = getBestiaryData();
-    const section = data.sections.find(item => item.id === sectionId);
-    if (!section) return;
-    section.hidden = !section.hidden;
-    section.updatedAt = Date.now();
-    await setBestiaryData(data);
+    await dispatchBestiaryCommand({
+      type: BESTIARY_COMMANDS.TOGGLE_SECTION_VISIBILITY,
+      sectionId
+    });
     this.render();
   }
 }
