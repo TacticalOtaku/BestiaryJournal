@@ -1,0 +1,32 @@
+<section class="tier-settings-shell">
+  <header class="tier-settings-header">
+    <div>
+      <p class="creature-kicker">{{localize "BESTIARY.Tier.WorldKicker"}}</p>
+      <h1>{{localize "BESTIARY.Tier.WorldTitle"}}</h1>
+      <p class="tier-settings-hint">{{hint}}</p>
+    </div>
+    <button type="button" class="suite-secondary-button" data-action="restoreDefaults">
+      <i class="fas fa-rotate-left"></i>{{localize "BESTIARY.Restore"}}
+    </button>
+  </header>
+
+  <div class="tier-settings-body bestiary-scrollable">
+    {{#each groups}}
+      <section class="tier-group">
+        <h4><i class="fas {{this.icon}}"></i>{{this.label}}<small>{{this.hint}}</small></h4>
+        {{#each this.blocks}}
+          <label class="tier-row {{#if this.isChild}}is-child{{/if}} {{#if this.isNever}}is-never{{/if}}">
+            <span>{{this.label}}</span>
+            <select data-block-tier="{{this.key}}">
+              {{#each this.choices}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
+            </select>
+          </label>
+        {{/each}}
+      </section>
+    {{/each}}
+  </div>
+
+  <footer class="sheet-footer flexrow">
+    <button type="submit" class="suite-primary-button"><i class="fas fa-check"></i>{{localize "BESTIARY.Save"}}</button>
+  </footer>
+</section>

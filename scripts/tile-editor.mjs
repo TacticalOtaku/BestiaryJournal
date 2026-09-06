@@ -1,102 +1,118 @@
 import { BESTIARY_COMMANDS } from "./bestiary-domain.mjs";
 import { dispatchBestiaryCommand } from "./bestiary-store.mjs";
+import { openFilePicker } from "./foundry-runtime.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
+/**
+ * Creates and edits both collections and the families nested inside them —
+ * the two share the same shape (name, cover, hidden), so they share one form.
+ */
 export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static DEFAULT_OPTIONS = {
     id: "bestiary-tile-editor",
     classes: ["bestiary-journal", "bestiary-app", "bestiary-tile-editor"],
     tag: "form",
-    window: {
-      title: "BESTIARY.CreateSection",
-      icon: "fas fa-plus-circle",
-      resizable: false
-    },
-    position: {
-      width: 480,
-      height: "auto"
-    },
+    window: { title: "BESTIARY.CreateSection", icon: "fas fa-plus-circle", resizable: false },
+    position: { width: 520, height: "auto" },
     form: {
       handler: function (event, form, formData) { return this._onFormSubmit(event, form, formData); },
       submitOnChange: false,
       closeOnSubmit: true
     },
     actions: {
-      pickImage: function (event, target) { this._onPickImage(event, target); }
+      pickImage: function (event, target) { this._onPickImage(event, target); },
+      clearImage: function () { this._onClearImage(); }
     }
   };
 
   static PARTS = {
-    form: {
-      template: "modules/bestiary-journal/templates/tile-editor.hbs"
-    }
+    form: { template: "modules/bestiary-journal/templates/tile-editor.hbs" }
   };
 
   constructor(options = {}) {
-    const isEdit = !!options.sectionData;
+    const mode = options.mode === "family" ? "family" : "section";
+    const isEdit = !!options.tileData;
     super(foundry.utils.mergeObject(options, {
       window: {
-        title: isEdit ? "BESTIARY.EditSection" : "BESTIARY.CreateSection"
+        title: isEdit
+          ? (mode === "family" ? "BESTIARY.Families.Edit" : "BESTIARY.EditSection")
+          : (mode === "family" ? "BESTIARY.Families.Create" : "BESTIARY.CreateSection")
       }
     }));
-    this.sectionData = options.sectionData ?? null;
+    this.mode = mode;
+    this.sectionId = options.sectionId ?? null;
+    this.tileData = options.tileData ?? null;
     this.onSaveCallback = options.onSave ?? null;
-    this._selectedImage = this.sectionData?.image ?? "";
+    this._selectedImage = this.tileData?.image ?? "";
   }
 
-  async _prepareContext(options) {
+  async _prepareContext() {
     return {
-      section: this.sectionData,
+      isFamily: this.mode === "family",
       image: this._selectedImage,
-      name: this.sectionData?.name ?? "",
-      isEdit: !!this.sectionData,
-      isHidden: this.sectionData?.hidden ?? false
+      name: this.tileData?.name ?? "",
+      isEdit: !!this.tileData,
+      isHidden: this.tileData?.hidden ?? false,
+      nameLabel: this.mode === "family" ? "BESTIARY.Families.Name" : "BESTIARY.SectionName",
+      imageLabel: this.mode === "family" ? "BESTIARY.Families.Image" : "BESTIARY.SectionImage",
+      hint: this.mode === "family" ? "BESTIARY.Families.Hint" : "BESTIARY.CollectionsHint"
     };
   }
 
-  async _onPickImage(event, target) {
-    const fp = new FilePicker({
+  _onPickImage() {
+    openFilePicker({
       type: "image",
       current: this._selectedImage,
-      callback: (path) => {
-        this._selectedImage = path;
-        const preview = this.element.querySelector(".tile-editor-preview img");
-        if (preview) {
-          preview.src = path;
-          preview.style.display = path ? "block" : "none";
-        }
-        const input = this.element.querySelector('input[name="image"]');
-        if (input) input.value = path;
-      }
+      callback: path => this._applyImage(path)
     });
-    fp.render(true);
+  }
+
+  _onClearImage() {
+    this._applyImage("");
+  }
+
+  _applyImage(path) {
+    this._selectedImage = path ?? "";
+    const preview = this.element.querySelector(".tile-editor-preview img");
+    if (preview) {
+      preview.src = this._selectedImage;
+      preview.classList.toggle("is-empty", !this._selectedImage);
+    }
+    this.element.querySelector(".tile-editor-preview")
+      ?.classList.toggle("is-empty", !this._selectedImage);
+    const input = this.element.querySelector('input[name="image"]');
+    if (input) input.value = this._selectedImage;
   }
 
   async _onFormSubmit(event, form, formData) {
     const data = foundry.utils.expandObject(formData.object);
-    if (this.sectionData) {
-      await dispatchBestiaryCommand({
-        type: BESTIARY_COMMANDS.UPDATE_SECTION,
-        sectionId: this.sectionData.id,
-        patch: {
-          name: data.name || "",
-          image: data.image || "",
-          hidden: !!data.hidden
-        }
-      });
+    const patch = {
+      name: data.name || "",
+      image: data.image || "",
+      hidden: !!data.hidden
+    };
+
+    if (this.mode === "family") {
+      await dispatchBestiaryCommand(this.tileData
+        ? {
+            type: BESTIARY_COMMANDS.UPDATE_FAMILY,
+            sectionId: this.sectionId,
+            familyId: this.tileData.id,
+            patch
+          }
+        : {
+            type: BESTIARY_COMMANDS.CREATE_FAMILY,
+            sectionId: this.sectionId,
+            family: patch
+          });
     } else {
-      await dispatchBestiaryCommand({
-        type: BESTIARY_COMMANDS.CREATE_SECTION,
-        section: {
-          name: data.name || "",
-          image: data.image || "",
-          hidden: !!data.hidden
-        }
-      });
+      await dispatchBestiaryCommand(this.tileData
+        ? { type: BESTIARY_COMMANDS.UPDATE_SECTION, sectionId: this.tileData.id, patch }
+        : { type: BESTIARY_COMMANDS.CREATE_SECTION, section: patch });
     }
 
-    if (this.onSaveCallback) this.onSaveCallback();
+    this.onSaveCallback?.();
   }
 }

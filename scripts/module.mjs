@@ -1,68 +1,99 @@
 import { BestiaryApp } from "./bestiary-app.mjs";
 import { BestiaryCreatureView } from "./creature-view.mjs";
 import { BestiarySectionView } from "./section-view.mjs";
+import { BestiaryTierSettings } from "./tier-settings.mjs";
 import {
   canUserViewBestiaryCreature,
-  handleBestiaryStoreSocket
+  handleBestiaryStoreSocket,
+  isAuthorityGm
 } from "./bestiary-store.mjs";
+import { runMigrations } from "./migrations.mjs";
 
+const MODULE_ID = "bestiary-journal";
 const { ApplicationV2 } = foundry.applications.api;
 const bestiaryChatLinks = new Set();
 
 Hooks.once("init", () => {
   console.log("Bestiary Journal | Initializing module");
 
-  game.settings.register("bestiary-journal", "bestiaryData", {
-    name: "Bestiary Data",
-    scope: "world",
-    config: false,
-    type: Object,
+  registerWorldStores();
+  registerWorldOptions();
+  registerClientPreferences();
+  registerMenus();
+  registerKeybindings();
+  registerHandlebarsHelpers();
+});
+
+function registerWorldStores() {
+  game.settings.register(MODULE_ID, "bestiaryData", {
+    name: "Bestiary Data", scope: "world", config: false, type: Object,
     default: { revision: 0, sections: [] }
   });
-
-  game.settings.register("bestiary-journal", "gmOnlyDetailToggle", {
-    name: "BESTIARY.Settings.GmOnlyDetailToggle",
-    hint: "BESTIARY.Settings.GmOnlyDetailToggleHint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false,
-    requiresReload: false
+  game.settings.register(MODULE_ID, "bestiaryKnowledge", {
+    name: "Bestiary Knowledge", scope: "world", config: false, type: Object,
+    default: { revision: 0, users: {} }
+  });
+  game.settings.register(MODULE_ID, "bestiarySocial", {
+    name: "Bestiary Comments", scope: "world", config: false, type: Object,
+    default: { revision: 0, comments: [], shares: [] }
+  });
+  game.settings.register(MODULE_ID, "tierBlockConfig", {
+    name: "Bestiary Tier Block Config", scope: "world", config: false, type: Object, default: {}
+  });
+  game.settings.register(MODULE_ID, "dataVersion", {
+    name: "Bestiary Data Version", scope: "world", config: false, type: Number, default: 0
   });
 
-  game.settings.register("bestiary-journal", "creatureDetailLevels", {
-    name: "Creature Detail Levels",
-    scope: "world",
-    config: false,
-    type: Object,
-    default: {}
+  // Legacy stores, kept so the one-time migration can read them.
+  game.settings.register(MODULE_ID, "creatureDetailLevels", {
+    name: "Legacy Detail Levels", scope: "world", config: false, type: Object, default: {}
   });
-
-  game.settings.register("bestiary-journal", "creatureCustomDisplay", {
-    name: "Creature Custom Display Config",
-    scope: "world",
-    config: false,
-    type: Object,
-    default: {}
+  game.settings.register(MODULE_ID, "creatureCustomDisplay", {
+    name: "Legacy Custom Display", scope: "world", config: false, type: Object, default: {}
   });
-
-  game.settings.register("bestiary-journal", "favoriteCreatures", {
-    name: "Favorite Creatures",
-    scope: "client",
-    config: false,
-    type: Array,
-    default: []
+  game.settings.register(MODULE_ID, "gmOnlyDetailToggle", {
+    name: "Legacy GM Only Detail Toggle", scope: "world", config: false, type: Boolean, default: false
   });
+}
 
-  game.settings.register("bestiary-journal", "libraryViewMode", {
-    name: "Bestiary Library View Mode",
-    scope: "client",
-    config: false,
-    type: String,
-    default: "grid"
+function registerWorldOptions() {
+  game.settings.register(MODULE_ID, "allowPlayerSharing", {
+    name: "BESTIARY.Settings.AllowSharing",
+    hint: "BESTIARY.Settings.AllowSharingHint",
+    scope: "world", config: true, type: Boolean, default: true
   });
+  game.settings.register(MODULE_ID, "researchRollEnabled", {
+    name: "BESTIARY.Settings.ResearchRoll",
+    hint: "BESTIARY.Settings.ResearchRollHint",
+    scope: "world", config: true, type: Boolean, default: true
+  });
+  game.settings.register(MODULE_ID, "researchSingleAttempt", {
+    name: "BESTIARY.Settings.SingleAttempt",
+    hint: "BESTIARY.Settings.SingleAttemptHint",
+    scope: "world", config: true, type: Boolean, default: false
+  });
+}
 
-  game.settings.registerMenu("bestiary-journal", "openBestiaryMenu", {
+function registerClientPreferences() {
+  game.settings.register(MODULE_ID, "favoriteCreatures", {
+    name: "Favorite Creatures", scope: "client", config: false, type: Array, default: []
+  });
+  game.settings.register(MODULE_ID, "libraryViewMode", {
+    name: "Library View Mode", scope: "client", config: false, type: String, default: "grid"
+  });
+  game.settings.register(MODULE_ID, "previewAsUser", {
+    name: "Preview As User", scope: "client", config: false, type: String, default: ""
+  });
+  game.settings.register(MODULE_ID, "collapsedFamilies", {
+    name: "Collapsed Families", scope: "client", config: false, type: Array, default: []
+  });
+  game.settings.register(MODULE_ID, "commentChannel", {
+    name: "Preferred Comment Channel", scope: "client", config: false, type: String, default: "private"
+  });
+}
+
+function registerMenus() {
+  game.settings.registerMenu(MODULE_ID, "openBestiaryMenu", {
     name: "BESTIARY.Settings.OpenBestiary",
     label: "BESTIARY.Settings.OpenBestiaryLabel",
     hint: "BESTIARY.Settings.OpenBestiaryHint",
@@ -70,8 +101,18 @@ Hooks.once("init", () => {
     type: BestiarySettingsLauncher,
     restricted: false
   });
+  game.settings.registerMenu(MODULE_ID, "tierSettingsMenu", {
+    name: "BESTIARY.Settings.TierMenu",
+    label: "BESTIARY.Settings.TierMenuLabel",
+    hint: "BESTIARY.Settings.TierMenuHint",
+    icon: "fas fa-layer-group",
+    type: BestiaryTierSettings,
+    restricted: true
+  });
+}
 
-  game.keybindings.register("bestiary-journal", "openBestiary", {
+function registerKeybindings() {
+  game.keybindings.register(MODULE_ID, "openBestiary", {
     name: "BESTIARY.Keybinding.Open",
     hint: "BESTIARY.Keybinding.OpenHint",
     editable: [{ key: "KeyB", modifiers: ["Shift"] }],
@@ -80,16 +121,20 @@ Hooks.once("init", () => {
     restricted: false,
     precedence: CONST.KEYBINDING_PRECEDENCE.NORMAL
   });
+}
 
-  Handlebars.registerHelper("eq", (a, b) => a === b);
-  Handlebars.registerHelper("not", (a) => !a);
-  Handlebars.registerHelper("includes", (arr, val) => {
-    if (Array.isArray(arr)) return arr.includes(val);
-    return false;
-  });
-});
+function registerHandlebarsHelpers() {
+  Handlebars.registerHelper("bjEq", (a, b) => a === b);
+  Handlebars.registerHelper("bjNe", (a, b) => a !== b);
+  Handlebars.registerHelper("bjNot", value => !value);
+  Handlebars.registerHelper("bjGt", (a, b) => Number(a) > Number(b));
+  Handlebars.registerHelper("bjAnd", (...args) => args.slice(0, -1).every(Boolean));
+  Handlebars.registerHelper("bjOr", (...args) => args.slice(0, -1).some(Boolean));
+  Handlebars.registerHelper("bjIncludes", (list, value) => Array.isArray(list) && list.includes(value));
+  Handlebars.registerHelper("bjConcat", (...args) => args.slice(0, -1).join(""));
+}
 
-Hooks.once("ready", () => {
+Hooks.once("ready", async () => {
   console.log("Bestiary Journal | Module ready");
 
   game.bestiaryJournal = {
@@ -105,7 +150,7 @@ Hooks.once("ready", () => {
       if (this.mainApp?.rendered) this.close();
       else this.open();
     },
-    openCreature(uuid) {
+    openCreature(uuid, options = {}) {
       if (!uuid) return;
       if (!canUserViewBestiaryCreature(uuid)) {
         ui.notifications.warn(game.i18n.localize("BESTIARY.CreatureUnavailable"));
@@ -117,39 +162,41 @@ Hooks.once("ready", () => {
         current.bringToFront();
         return current;
       }
-      const app = new BestiaryCreatureView({ uuid });
+      const app = new BestiaryCreatureView({ uuid, ...options });
       app.render(true);
       return app;
     }
   };
 
-  game.socket.on("module.bestiary-journal", async (data) => {
+  if (game.user.isGM && isAuthorityGm()) await runMigrations();
+
+  game.socket.on(`module.${MODULE_ID}`, async data => {
     if (await handleBestiaryStoreSocket(data)) return;
-    if (data.action === "refreshCreatureView") {
-      for (const app of BestiaryCreatureView._instances) {
-        if (app.actorUuid === data.uuid && app.rendered) {
-          app.refreshFromExternalUpdate();
-        }
-      }
-    }
-    if (data.action === "refreshBestiary") {
-      if (game.bestiaryJournal?.mainApp?.rendered) game.bestiaryJournal.mainApp.render();
-      for (const app of BestiarySectionView._instances) {
-        if (app.rendered) app.refreshFromExternalUpdate();
-      }
-      _refreshBestiaryChatLinks();
-    }
+    if (data.action === "refreshBestiary") refreshBestiaryViews();
   });
+
+  Hooks.on("bestiaryJournalRefresh", () => refreshBestiaryViews());
 });
 
+function refreshBestiaryViews() {
+  if (game.bestiaryJournal?.mainApp?.rendered) game.bestiaryJournal.mainApp.render();
+  for (const app of BestiarySectionView._instances) {
+    if (app.rendered) app.refreshFromExternalUpdate();
+  }
+  for (const app of BestiaryCreatureView._instances) {
+    if (app.rendered) app.refreshFromExternalUpdate();
+  }
+  refreshBestiaryChatLinks();
+}
+
 Hooks.on("renderChatMessageHTML", (message, html) => {
-  const flaggedUuid = message.getFlag("bestiary-journal", "creatureUuid");
+  const flaggedUuid = message.getFlag(MODULE_ID, "creatureUuid");
   for (const link of html.querySelectorAll("a.bestiary-creature-link")) {
     const uuid = link.dataset.bestiaryCreatureUuid || flaggedUuid;
     if (!uuid) continue;
     link.dataset.bestiaryCreatureUuid = uuid;
     bestiaryChatLinks.add(link);
-    _refreshBestiaryChatLink(link);
+    refreshBestiaryChatLink(link);
     link.addEventListener("click", event => {
       event.preventDefault();
       event.stopPropagation();
@@ -158,7 +205,7 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   }
 });
 
-function _refreshBestiaryChatLink(link) {
+function refreshBestiaryChatLink(link) {
   const canView = canUserViewBestiaryCreature(link.dataset.bestiaryCreatureUuid);
   link.classList.toggle("is-disabled", !canView);
   if (canView) {
@@ -173,17 +220,17 @@ function _refreshBestiaryChatLink(link) {
   }
 }
 
-function _refreshBestiaryChatLinks() {
+function refreshBestiaryChatLinks() {
   for (const link of bestiaryChatLinks) {
     if (!link.isConnected) {
       bestiaryChatLinks.delete(link);
       continue;
     }
-    _refreshBestiaryChatLink(link);
+    refreshBestiaryChatLink(link);
   }
 }
 
-Hooks.on("renderSidebarTab", (app, html, data) => {
+Hooks.on("renderSidebarTab", (app, html) => {
   if (app.tabName !== "journal") return;
   if (html.querySelector(".bestiary-sidebar-btn")) return;
 
@@ -191,9 +238,7 @@ Hooks.on("renderSidebarTab", (app, html, data) => {
     ?? html.querySelector(".directory-header .action-buttons");
   if (!headerActions) return;
 
-  const bindings = game.keybindings.get("bestiary-journal", "openBestiary");
-  const keyHint = _formatKeybinding(bindings);
-
+  const keyHint = formatKeybinding(game.keybindings.get(MODULE_ID, "openBestiary"));
   const btn = document.createElement("button");
   btn.type = "button";
   btn.classList.add("bestiary-sidebar-btn");
@@ -205,50 +250,37 @@ Hooks.on("renderSidebarTab", (app, html, data) => {
   headerActions.appendChild(btn);
 });
 
-/**
- * Opens the bestiary from the module settings menu instead of rendering a form.
- */
+/** Opens the bestiary from the module settings menu instead of a form. */
 class BestiarySettingsLauncher extends ApplicationV2 {
-
   static DEFAULT_OPTIONS = {
     id: "bestiary-settings-launcher",
-    window: {
-      title: "BESTIARY.Title"
-    }
+    window: { title: "BESTIARY.Title" }
   };
 
   async _renderHTML() {
     return document.createElement("div");
   }
 
-  _replaceHTML(result, content, options) {}
+  _replaceHTML() {}
 
-  render(force, options) {
-    if (game.bestiaryJournal) {
-      game.bestiaryJournal.toggle();
-    }
+  render() {
+    game.bestiaryJournal?.toggle();
     return this;
   }
 }
 
-function _formatKeybinding(bindings) {
+function formatKeybinding(bindings) {
   if (!bindings?.length) return "";
   const binding = bindings[0];
   const parts = [];
-  if (binding.modifiers?.length) {
-    for (const mod of binding.modifiers) {
-      switch (mod) {
-        case "Control": parts.push("Ctrl"); break;
-        case "Shift": parts.push("Shift"); break;
-        case "Alt": parts.push("Alt"); break;
-        default: parts.push(mod);
-      }
-    }
+  for (const mod of binding.modifiers ?? []) {
+    if (mod === "Control") parts.push("Ctrl");
+    else parts.push(mod);
   }
   let keyLabel = binding.key ?? "";
   if (keyLabel.startsWith("Key")) keyLabel = keyLabel.slice(3);
   else if (keyLabel.startsWith("Digit")) keyLabel = keyLabel.slice(5);
-  else if (keyLabel.startsWith("Numpad")) keyLabel = "Num" + keyLabel.slice(6);
+  else if (keyLabel.startsWith("Numpad")) keyLabel = `Num${keyLabel.slice(6)}`;
   parts.push(keyLabel);
   return parts.join(" + ");
 }

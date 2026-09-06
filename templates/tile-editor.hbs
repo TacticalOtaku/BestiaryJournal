@@ -1,17 +1,24 @@
 <section class="tile-editor-form">
-  <div class="tile-editor-preview">
-    <img src="{{image}}" alt="" style="{{#unless image}}display:none;{{/unless}}" />
-    <button type="button" class="btn-pick-image" data-action="pickImage">
-      <i class="fas fa-image"></i>
-      {{localize "BESTIARY.SectionImage"}}
-    </button>
+  <div class="tile-editor-preview {{#unless image}}is-empty{{/unless}}">
+    <img src="{{image}}" alt="" class="{{#unless image}}is-empty{{/unless}}" />
+    <div class="tile-editor-preview-actions">
+      <button type="button" class="btn-pick-image" data-action="pickImage">
+        <i class="fas fa-image"></i>{{localize imageLabel}}
+      </button>
+      {{#if image}}
+        <button type="button" class="btn-clear-image" data-action="clearImage" data-tooltip="{{localize 'BESTIARY.Entry.ClearImage'}}">
+          <i class="fas fa-xmark"></i>
+        </button>
+      {{/if}}
+    </div>
   </div>
 
   <input type="hidden" name="image" value="{{image}}" />
 
   <div class="form-group">
-    <label>{{localize "BESTIARY.SectionName"}}</label>
-    <input type="text" name="name" value="{{name}}" placeholder="{{localize 'BESTIARY.SectionName'}}" autofocus />
+    <label>{{localize nameLabel}}</label>
+    <input type="text" name="name" value="{{name}}" placeholder="{{localize nameLabel}}" autofocus />
+    <p class="form-hint">{{localize hint}}</p>
   </div>
 
   <div class="form-group form-group-checkbox">
@@ -23,7 +30,7 @@
   </div>
 
   <footer class="sheet-footer flexrow">
-    <button type="submit" class="btn-save">
+    <button type="submit" class="suite-primary-button">
       <i class="fas fa-check"></i> {{localize "BESTIARY.Save"}}
     </button>
   </footer>
