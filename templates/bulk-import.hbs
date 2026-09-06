@@ -1,0 +1,81 @@
+<div class="bulk-import-shell">
+  <header class="bulk-import-header">
+    <div>
+      <p class="creature-kicker">{{sectionName}}</p>
+      <h1>{{localize "BESTIARY.Import.Title"}}</h1>
+      <p class="bulk-import-lead">{{localize "BESTIARY.Import.Lead"}}</p>
+    </div>
+  </header>
+
+  <div class="bulk-import-controls">
+    <label class="bulk-field">
+      <span>{{localize "BESTIARY.Import.Source"}}</span>
+      <select class="bulk-source-select">
+        {{#each sources}}<option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
+      </select>
+    </label>
+
+    <label class="bulk-field">
+      <span>{{localize "BESTIARY.Families.Title"}}</span>
+      <select class="bulk-family-select">
+        {{#each families}}<option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>{{/each}}
+      </select>
+    </label>
+
+    <label class="library-search bulk-search">
+      <i class="fas fa-magnifying-glass"></i>
+      <input type="search" class="bulk-search-input" placeholder="{{localize 'BESTIARY.Import.Search'}}" value="{{query}}" />
+    </label>
+
+    <div class="bulk-cr-range">
+      <label><span>{{localize "BESTIARY.From"}}</span><input type="number" min="0" step="0.125" data-cr-bound="min" value="{{crMin}}" /></label>
+      <label><span>{{localize "BESTIARY.To"}}</span><input type="number" min="0" step="0.125" data-cr-bound="max" value="{{crMax}}" /></label>
+    </div>
+  </div>
+
+  {{#if isCompendium}}
+    <label class="bulk-copy-field">
+      <input type="checkbox" class="bulk-copy-toggle" {{#if copyToWorld}}checked{{/if}} />
+      <span>{{localize "BESTIARY.Import.CopyToWorld"}}</span>
+      <small>{{localize "BESTIARY.Import.CopyToWorldHint"}}</small>
+    </label>
+  {{/if}}
+
+  <div class="bulk-import-bar">
+    <div class="bulk-import-counts">
+      <span><strong class="bulk-visible-count">{{totalCount}}</strong> {{localize "BESTIARY.Import.Shown"}}</span>
+      <span><strong class="bulk-selected-count">{{selectedCount}}</strong> {{localize "BESTIARY.Import.Selected"}}</span>
+    </div>
+    <div class="bulk-import-bulk-actions">
+      <button type="button" class="suite-secondary-button" data-action="toggleAll" data-mode="all">{{localize "BESTIARY.SelectAll"}}</button>
+      <button type="button" class="suite-secondary-button" data-action="toggleAll" data-mode="none">{{localize "BESTIARY.ClearAll"}}</button>
+    </div>
+  </div>
+
+  <div class="bulk-import-list bestiary-scrollable">
+    {{#if loading}}
+      <div class="suite-empty-state"><i class="fas fa-spinner fa-spin"></i><h2>{{localize "BESTIARY.Import.Loading"}}</h2></div>
+    {{else}}
+      {{#each entries}}
+        <label class="bulk-import-row {{#if this.alreadyAdded}}is-present{{/if}}" data-entry-row data-cr="{{this.cr}}" data-search-text="{{this.searchText}}">
+          <input type="checkbox" data-entry-uuid="{{this.uuid}}" {{#if this.selected}}checked{{/if}} {{#if this.alreadyAdded}}disabled{{/if}} />
+          <img src="{{this.img}}" alt="" loading="lazy" />
+          <span class="bulk-row-name">{{this.name}}</span>
+          <span class="bulk-row-meta">{{this.folder}}</span>
+          <span class="bulk-row-cr">{{localize "BESTIARY.CRShort"}} {{this.crLabel}}</span>
+          {{#if this.alreadyAdded}}<em class="bulk-row-flag">{{localize "BESTIARY.Import.AlreadyAdded"}}</em>{{/if}}
+        </label>
+      {{/each}}
+      {{#unless entries.length}}
+        <div class="suite-empty-state"><i class="fas fa-inbox"></i><h2>{{localize "BESTIARY.Import.Empty"}}</h2></div>
+      {{/unless}}
+    {{/if}}
+  </div>
+
+  <footer class="bulk-import-footer">
+    <button type="button" class="suite-secondary-button" data-action="closeDialog">{{localize "BESTIARY.Cancel"}}</button>
+    <button type="button" class="suite-primary-button" data-action="importSelected" disabled>
+      <i class="fas fa-plus"></i>{{localize "BESTIARY.Import.Confirm"}}
+    </button>
+  </footer>
+</div>

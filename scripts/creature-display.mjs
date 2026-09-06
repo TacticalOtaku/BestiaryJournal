@@ -1,79 +1,107 @@
+import {
+  DISPLAY_BLOCKS,
+  DISPLAY_GROUPS,
+  NEVER_TIER,
+  TIER_CHOICES,
+  clampTier,
+  defaultBlockTiers,
+  getBlockDefinition,
+  getTierDefinition,
+  resolveBlockTiers
+} from "./research-model.mjs";
+import { localize } from "./foundry-runtime.mjs";
+
 const MODULE_ID = "bestiary-journal";
-const SOCKET_NAME = `module.${MODULE_ID}`;
-const VALID_LEVELS = ["minimal", "standard", "expanded", "custom"];
 
-export const DISPLAY_BLOCKS = [
-  { key: "abilities", label: "BESTIARY.Abilities" },
-  { key: "str", label: "STR", group: "abilities" },
-  { key: "dex", label: "DEX", group: "abilities" },
-  { key: "con", label: "CON", group: "abilities" },
-  { key: "int", label: "INT", group: "abilities" },
-  { key: "wis", label: "WIS", group: "abilities" },
-  { key: "cha", label: "CHA", group: "abilities" },
-  { key: "skills", label: "BESTIARY.Skills" },
-  { key: "senses", label: "BESTIARY.Senses" },
-  { key: "languages", label: "BESTIARY.Languages" },
-  { key: "resistances", label: "BESTIARY.Resistances" },
-  { key: "immunities", label: "BESTIARY.Immunities" },
-  { key: "vulnerabilities", label: "BESTIARY.Vulnerabilities" },
-  { key: "conditionImmunities", label: "BESTIARY.ConditionImmunities" },
-  { key: "features", label: "BESTIARY.Features" },
-  { key: "actions", label: "BESTIARY.Actions" },
-  { key: "inventory", label: "BESTIARY.Inventory" },
-  { key: "bonusActions", label: "BESTIARY.BonusActions" },
-  { key: "reactions", label: "BESTIARY.Reactions" },
-  { key: "legendaryActions", label: "BESTIARY.LegendaryActions" },
-  { key: "spells", label: "BESTIARY.Spellcasting" },
-  { key: "biography", label: "BESTIARY.Biography" }
-];
-
-const ALL_BLOCK_KEYS = DISPLAY_BLOCKS.map(block => block.key);
-
-export function isGmOnlyDetailToggle() {
-  return game.settings.get(MODULE_ID, "gmOnlyDetailToggle") ?? false;
+/** World-wide reveal thresholds, layered on top of the built-in defaults. */
+export function getWorldBlockTiers() {
+  const stored = game.settings.get(MODULE_ID, "tierBlockConfig");
+  return stored && typeof stored === "object" ? stored : {};
 }
 
-export function getCreatureDetailLevel(uuid, localLevels) {
-  if (isGmOnlyDetailToggle()) {
-    const levels = game.settings.get(MODULE_ID, "creatureDetailLevels") ?? {};
-    return VALID_LEVELS.includes(levels[uuid]) ? levels[uuid] : "minimal";
+export async function setWorldBlockTiers(tiers) {
+  if (!game.user.isGM) return false;
+  const cleaned = {};
+  for (const block of DISPLAY_BLOCKS) {
+    if (!(block.key in (tiers ?? {}))) continue;
+    cleaned[block.key] = clampTier(tiers[block.key], block.tier);
   }
-  const local = localLevels.get(uuid);
-  return VALID_LEVELS.includes(local) ? local : "minimal";
+  await game.settings.set(MODULE_ID, "tierBlockConfig", cleaned);
+  return true;
 }
 
-export async function setCreatureDetailLevel(uuid, level, localLevels) {
-  if (!VALID_LEVELS.includes(level)) {
-    console.warn(`Bestiary | Invalid detail level: "${level}"`);
-    return;
+/** Effective thresholds for one creature: built-ins → world → entry override. */
+export function getEntryBlockTiers(entry) {
+  return resolveBlockTiers(getWorldBlockTiers(), entry?.blockTiers);
+}
+
+export function getDefaultBlockTiers() {
+  return defaultBlockTiers();
+}
+
+export function localizedTierChoices(selected, { includeNever = true, includeInherit = false } = {}) {
+  const choices = [];
+  if (includeInherit) {
+    choices.push({
+      value: "",
+      label: localize("BESTIARY.Tier.Inherit"),
+      icon: "fa-link",
+      selected: selected === "" || selected === null || selected === undefined
+    });
   }
-  if (!isGmOnlyDetailToggle()) {
-    localLevels.set(uuid, level);
-    return;
+  for (const choice of TIER_CHOICES) {
+    if (!includeNever && choice.value === NEVER_TIER) continue;
+    choices.push({
+      value: choice.value,
+      key: choice.key,
+      label: localize(choice.label),
+      hint: localize(choice.hint),
+      icon: choice.icon,
+      selected: Number(selected) === choice.value
+    });
   }
-  if (!game.user.isGM) return;
-
-  const levels = {
-    ...(game.settings.get(MODULE_ID, "creatureDetailLevels") ?? {})
-  };
-  levels[uuid] = level;
-  await game.settings.set(MODULE_ID, "creatureDetailLevels", levels);
-  game.socket.emit(SOCKET_NAME, { action: "refreshCreatureView", uuid });
+  return choices;
 }
 
-export function getCreatureCustomDisplay(uuid) {
-  const allConfigs = {
-    ...(game.settings.get(MODULE_ID, "creatureCustomDisplay") ?? {})
-  };
-  return allConfigs[uuid] ?? [...ALL_BLOCK_KEYS];
+/**
+ * View model for the tier editor: every block grouped, with its effective
+ * threshold and whether the creature overrides the world default.
+ */
+export function buildTierMatrix(effectiveTiers, entryOverrides = {}, baseTiers = null) {
+  const base = baseTiers ?? resolveBlockTiers(getWorldBlockTiers(), null);
+  return DISPLAY_GROUPS.map(group => {
+    const blocks = DISPLAY_BLOCKS
+      .filter(block => block.group === group.key)
+      .map(block => {
+        const tier = clampTier(effectiveTiers?.[block.key], block.tier);
+        const definition = getTierDefinition(tier);
+        return {
+          key: block.key,
+          label: localize(block.label) || block.label,
+          isChild: !!block.parent,
+          parent: block.parent ?? null,
+          tier,
+          tierKey: definition.key,
+          tierLabel: localize(definition.label),
+          isNever: tier >= NEVER_TIER,
+          isOverridden: Object.prototype.hasOwnProperty.call(entryOverrides ?? {}, block.key)
+            && clampTier(entryOverrides[block.key], block.tier) !== clampTier(base[block.key], block.tier),
+          choices: localizedTierChoices(tier)
+        };
+      });
+    return {
+      key: group.key,
+      label: localize(group.label),
+      hint: localize(group.hint),
+      icon: group.icon,
+      blocks,
+      hiddenCount: blocks.filter(block => block.isNever).length,
+      overrideCount: blocks.filter(block => block.isOverridden).length
+    };
+  }).filter(group => group.blocks.length);
 }
 
-export async function setCreatureCustomDisplay(uuid, visibleBlocks) {
-  if (!game.user.isGM) return;
-  const allConfigs = {
-    ...(game.settings.get(MODULE_ID, "creatureCustomDisplay") ?? {})
-  };
-  allConfigs[uuid] = visibleBlocks.filter(block => ALL_BLOCK_KEYS.includes(block));
-  await game.settings.set(MODULE_ID, "creatureCustomDisplay", allConfigs);
-  game.socket.emit(SOCKET_NAME, { action: "refreshCreatureView", uuid });
+export function blockLabel(key) {
+  const definition = getBlockDefinition(key);
+  return definition ? localize(definition.label) || definition.label : key;
 }

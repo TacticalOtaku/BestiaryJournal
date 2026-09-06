@@ -1,4 +1,4 @@
-/* Bestiary Journal — Foundry shell integration and enriched content */
+/* Bestiary Journal — Foundry shell integration, chat cards and enriched content */
 
 .bestiary-sidebar-btn {
   display: flex;
@@ -15,13 +15,66 @@
 }
 
 .bestiary-sidebar-btn:hover {
-  border-color: var(--color-warm-1, #d5a94c);
-  background: rgb(213 169 76 / 10%);
-  color: var(--color-warm-1, #d5a94c);
+  border-color: #b4723a;
+  background: rgb(180 114 58 / 12%);
+  color: #b4723a;
 }
 
+/* ── Chat cards ── */
+
+.bestiary-chat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 10px;
+  background: rgb(24 20 17 / 6%);
+}
+
+.bestiary-chat-card img {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.bestiary-chat-card strong { display: block; font-size: 0.95rem; }
+.bestiary-chat-card p { margin: 4px 0 0; }
+
+.bestiary-creature-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.bestiary-creature-link.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.bestiary-research-card {
+  padding: 10px 12px;
+  border-left: 3px solid #8a8b93;
+  border-radius: 8px;
+  background: rgb(24 20 17 / 6%);
+}
+
+.bestiary-research-card.is-success { border-left-color: #2f7d5c; }
+.bestiary-research-card.is-failure { border-left-color: #b33b43; }
+.bestiary-research-card strong { display: block; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; }
+.bestiary-research-card p { margin: 6px 0 0; font-size: 0.88rem; }
+.bestiary-research-outcome { font-weight: 600; }
+
+/* ── Enriched content inside creature cards ── */
+
 .creature-item-description .content-embed,
-.creature-biography-content .content-embed {
+.creature-biography-content .content-embed,
+.comment-text .content-embed {
   margin: 8px 0;
   padding: 10px 14px;
   border: 1px solid var(--suite-border);
@@ -38,107 +91,22 @@
   font-style: italic;
 }
 
-.creature-item-description .content-link,
-.creature-biography-content .content-link {
-  border-bottom: 1px dotted currentColor;
-  color: var(--suite-accent);
-  cursor: pointer;
-  text-decoration: none;
-}
+.creature-item-description p:first-child,
+.creature-biography-content p:first-child { margin-top: 0; }
+.creature-item-description p:last-child,
+.creature-biography-content p:last-child { margin-bottom: 0; }
 
-.creature-item-description .content-link:hover,
-.creature-biography-content .content-link:hover {
-  color: var(--suite-text);
-}
-
-.creature-item-description .inline-roll,
-.creature-biography-content .inline-roll {
-  padding: 1px 5px;
-  border: 1px solid color-mix(in srgb, var(--suite-accent) 38%, transparent);
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--suite-accent) 16%, transparent);
-  color: var(--suite-accent);
-  cursor: pointer;
-  font-weight: 650;
-}
-
-.creature-item-description .inline-roll:hover,
-.creature-biography-content .inline-roll:hover {
-  background: color-mix(in srgb, var(--suite-accent) 28%, transparent);
-}
-
-.creature-item-description .roll-link,
-.creature-biography-content .roll-link {
-  color: var(--suite-accent);
-  cursor: pointer;
-  font-weight: 650;
+.creature-item-description a.content-link,
+.creature-biography-content a.content-link,
+.comment-text a.content-link {
+  border-color: var(--suite-border);
+  background: var(--suite-hover);
 }
 
 .creature-item-description table,
-.creature-biography-content table {
-  width: 100%;
-  margin: 8px 0;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-
-.creature-item-description th,
-.creature-item-description td,
-.creature-biography-content th,
-.creature-biography-content td {
-  padding: 4px 8px;
+.creature-biography-content table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.creature-item-description th, .creature-item-description td,
+.creature-biography-content th, .creature-biography-content td {
+  padding: 5px 8px;
   border: 1px solid var(--suite-border);
-  text-align: left;
-}
-
-.creature-item-description th,
-.creature-biography-content th {
-  background: var(--suite-surface);
-  color: var(--suite-accent);
-  font-weight: 650;
-}
-
-.creature-item-description :is(h1, h2, h3, h4),
-.creature-biography-content :is(h1, h2, h3, h4) {
-  margin: 10px 0 6px;
-  color: var(--suite-accent);
-  font-family: var(--suite-font-display, "Signika", sans-serif);
-}
-
-.creature-item-description h1,
-.creature-biography-content h1 { font-size: 1.2rem; }
-.creature-item-description h2,
-.creature-biography-content h2 { font-size: 1.1rem; }
-.creature-item-description h3,
-.creature-biography-content h3 { font-size: 1rem; }
-.creature-item-description h4,
-.creature-biography-content h4 { font-size: 0.95rem; }
-
-.creature-item-description :is(ul, ol),
-.creature-biography-content :is(ul, ol) {
-  margin: 6px 0;
-  padding-left: 20px;
-}
-
-.creature-item-description li,
-.creature-biography-content li {
-  margin-bottom: 3px;
-}
-
-.creature-item-description img,
-.creature-biography-content img {
-  max-width: 100%;
-  height: auto;
-  margin: 8px 0;
-  border-radius: var(--suite-radius-sm);
-}
-
-.creature-item-description blockquote,
-.creature-biography-content blockquote {
-  margin: 8px 0;
-  padding: 8px 14px;
-  border-left: 3px solid var(--suite-accent);
-  background: var(--suite-surface);
-  color: var(--suite-muted);
-  font-style: italic;
 }

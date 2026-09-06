@@ -49,3 +49,54 @@ export function animateDisclosure(element, expanded) {
     disclosureAnimations.delete(element);
   };
 }
+
+/**
+ * Lightweight right-click menu shared by the library and collection views.
+ * Items are `{name, icon, callback, danger}` or `{separator: true}`.
+ */
+export function showContextMenu(event, items) {
+  document.querySelectorAll(".bestiary-context-menu").forEach(element => element.remove());
+
+  const menu = document.createElement("nav");
+  menu.className = "bestiary-context-menu bestiary-app";
+  const list = document.createElement("ol");
+  list.className = "context-items";
+  menu.appendChild(list);
+
+  for (const item of items) {
+    if (item.separator) {
+      const divider = document.createElement("li");
+      divider.className = "context-separator";
+      list.appendChild(divider);
+      continue;
+    }
+    const row = document.createElement("li");
+    row.className = `context-item${item.danger ? " is-danger" : ""}`;
+    const icon = document.createElement("i");
+    icon.className = `fas ${item.icon}`;
+    const label = document.createElement("span");
+    label.textContent = item.name;
+    row.append(icon, label);
+    row.addEventListener("click", () => {
+      menu.remove();
+      item.callback?.();
+    });
+    list.appendChild(row);
+  }
+
+  menu.style.left = `${event.clientX}px`;
+  menu.style.top = `${event.clientY}px`;
+  document.body.appendChild(menu);
+
+  const bounds = menu.getBoundingClientRect();
+  menu.style.left = `${Math.max(8, Math.min(event.clientX, window.innerWidth - bounds.width - 8))}px`;
+  menu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - bounds.height - 8))}px`;
+
+  const close = click => {
+    if (menu.contains(click.target)) return;
+    menu.remove();
+    document.removeEventListener("pointerdown", close);
+  };
+  setTimeout(() => document.addEventListener("pointerdown", close), 0);
+  return menu;
+}

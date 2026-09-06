@@ -1,0 +1,78 @@
+<section class="entry-editor-form">
+  {{#if error}}
+    <div class="suite-empty-state"><i class="fas fa-triangle-exclamation"></i><h2>{{localize "BESTIARY.Entry.Missing"}}</h2></div>
+  {{else}}
+    <header class="entry-editor-heading">
+      <p class="creature-kicker">{{sectionName}}</p>
+      <h1>{{name}}</h1>
+    </header>
+
+    <div class="entry-editor-grid">
+      <div class="entry-editor-frame">
+        <div class="entry-focus-stage" data-tooltip="{{localize 'BESTIARY.Entry.FocusHint'}}">
+          <div class="{{preview.frameClass}}">
+            {{#if preview.useBackdrop}}<div class="bestiary-frame-backdrop" style="{{preview.backdropStyle}}"></div>{{/if}}
+            <img src="{{preview.src}}" alt="{{name}}" style="{{preview.imageStyle}}" />
+          </div>
+          <span class="entry-focus-dot {{#if isCover}}is-active{{/if}}" style="left: {{focusX}}%; top: {{focusY}}%;"></span>
+        </div>
+
+        <div class="entry-frame-controls">
+          <div class="suite-segmented">
+            <button type="button" data-action="setImageSource" data-source="portrait" class="{{#if isPortraitSource}}is-active{{/if}}"><i class="fas fa-image"></i>{{localize "BESTIARY.Entry.Portrait"}}</button>
+            <button type="button" data-action="setImageSource" data-source="token" class="{{#unless isPortraitSource}}is-active{{/unless}}"><i class="fas fa-chess-pawn"></i>{{localize "BESTIARY.Entry.Token"}}</button>
+          </div>
+          <div class="suite-segmented">
+            <button type="button" data-fit="contain" data-action="setFit" class="{{#unless isCover}}is-active{{/unless}}"><i class="fas fa-compress"></i>{{localize "BESTIARY.Entry.FitContain"}}</button>
+            <button type="button" data-fit="cover" data-action="setFit" class="{{#if isCover}}is-active{{/if}}"><i class="fas fa-crop-simple"></i>{{localize "BESTIARY.Entry.FitCover"}}</button>
+          </div>
+          <button type="button" class="suite-secondary-button" data-action="centerFocus"><i class="fas fa-crosshairs"></i>{{localize "BESTIARY.Entry.CenterFocus"}}</button>
+          <p class="form-hint">{{localize "BESTIARY.Entry.FitHint"}}</p>
+        </div>
+      </div>
+
+      <div class="entry-editor-fields">
+        <div class="form-group">
+          <label>{{localize "BESTIARY.Families.Title"}}</label>
+          <select name="familyId" class="entry-family-select">
+            {{#each families}}<option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>{{/each}}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>{{localize "BESTIARY.Research.Dc"}}</label>
+          <div class="entry-dc-row">
+            <input type="number" name="dc" value="{{dc}}" min="1" max="40" placeholder="{{dcPlaceholder}}" />
+            <button type="button" class="suite-secondary-button" data-action="suggestDc"><i class="fas fa-wand-magic-sparkles"></i>{{localize "BESTIARY.Research.SuggestDc"}}</button>
+          </div>
+          <p class="form-hint">{{localize "BESTIARY.Research.DcHint"}}</p>
+        </div>
+
+        <div class="form-group">
+          <label>{{localize "BESTIARY.Research.Skills"}}</label>
+          <div class="entry-skill-grid">
+            {{#each skills}}
+              <label class="entry-skill-option">
+                <input type="checkbox" name="skills" value="{{this.value}}" {{#if this.selected}}checked{{/if}} />
+                <span>{{this.label}}</span>
+              </label>
+            {{/each}}
+          </div>
+          <p class="form-hint">{{localize "BESTIARY.Research.SkillsHint"}}</p>
+        </div>
+
+        <div class="form-group form-group-checkbox">
+          <label><input type="checkbox" name="hidden" {{#if hidden}}checked{{/if}} /><i class="fas fa-eye-slash"></i>{{localize "BESTIARY.HiddenFromPlayers"}}</label>
+        </div>
+        <div class="form-group form-group-checkbox">
+          <label><input type="checkbox" name="locked" {{#if locked}}checked{{/if}} /><i class="fas fa-lock"></i>{{localize "BESTIARY.Lock.Field"}}</label>
+          <p class="form-hint">{{localize "BESTIARY.Lock.Hint"}}</p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="sheet-footer flexrow">
+      <button type="submit" class="suite-primary-button"><i class="fas fa-check"></i>{{localize "BESTIARY.Save"}}</button>
+    </footer>
+  {{/if}}
+</section>
