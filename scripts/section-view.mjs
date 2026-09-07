@@ -27,6 +27,7 @@ import { BestiaryCreatureView } from "./creature-view.mjs";
 import { BestiaryTileEditor } from "./tile-editor.mjs";
 import { BestiaryEntryEditor } from "./entry-editor.mjs";
 import { BestiaryBulkImport } from "./bulk-import.mjs";
+import { BestiaryBulkResearch } from "./bulk-research.mjs";
 import { exportBestiary, exportCreatureEntry } from "./transfer.mjs";
 import { playApplicationEntrance, showContextMenu } from "./ui-effects.mjs";
 
@@ -63,6 +64,11 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       deleteFamily: function (event, target) { this._onDeleteFamily(event, target); },
       toggleFamily: function (event, target) { this._onToggleFamily(event, target); },
       openBulkImport: function (event, target) { this._onOpenBulkImport(event, target); },
+      openBulkResearch: function (event, target) {
+        if (!game.user.isGM) return;
+        const familyId = target.dataset.familyId;
+        new BestiaryBulkResearch({ sectionId: this.sectionId, familyId: familyId === UNGROUPED_ID ? null : familyId }).render(true);
+      },
       exportSection: function () { this._onExportSection(); },
       exportEntry: function (event, target) { this._onExportEntry(event, target); }
     }

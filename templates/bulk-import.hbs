@@ -60,7 +60,7 @@
         <label class="bulk-import-row {{#if this.alreadyAdded}}is-present{{/if}}" data-entry-row data-cr="{{this.cr}}" data-search-text="{{this.searchText}}">
           <input type="checkbox" data-entry-uuid="{{this.uuid}}" {{#if this.selected}}checked{{/if}} {{#if this.alreadyAdded}}disabled{{/if}} />
           <img src="{{this.img}}" alt="" loading="lazy" />
-          <span class="bulk-row-name">{{this.name}}</span>
+          <span class="bulk-row-name">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</span>
           <span class="bulk-row-meta">{{this.folder}}</span>
           <span class="bulk-row-cr">{{localize "BESTIARY.CRShort"}} {{this.crLabel}}</span>
           {{#if this.alreadyAdded}}<em class="bulk-row-flag">{{localize "BESTIARY.Import.AlreadyAdded"}}</em>{{/if}}

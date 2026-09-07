@@ -401,6 +401,25 @@
       "CreatureTypes": {},
       "Sizes": {},
       "Languages": {}
+    },
+    "BulkResearch": {
+      "Title": "Check settings",
+      "Hint": "Change research checks for multiple entries. Locked entries are skipped; other settings are preserved.",
+      "Scope": "Apply to",
+      "Collection": "Current collection",
+      "Family": "Family in this collection",
+      "All": "Entire bestiary",
+      "Dc": "Difficulty class (DC)",
+      "Skills": "Allowed skills",
+      "Keep": "Keep existing values",
+      "SetDc": "Set the same DC",
+      "AutoDc": "Automatic DC by challenge rating",
+      "SetSkills": "Choose allowed skills",
+      "AutoSkills": "Automatic skill by creature type",
+      "Summary": "{count} entries in scope · {skipped} locked entries skipped",
+      "Apply": "Apply settings",
+      "PickSkill": "Select at least one skill, or choose automatic selection.",
+      "Done": "Research settings applied to unlocked entries in the selected scope."
     }
   }
 }

@@ -52,7 +52,7 @@
         <div class="creature-profile-main">
           <div class="creature-profile-heading">
             <p class="creature-kicker">{{localize "BESTIARY.CreatureProfile"}}</p>
-            <h1 class="{{#unless creature.knowsName}}is-unknown{{/unless}}">{{creature.displayName}}</h1>
+            <h1 class="{{#unless creature.knowsName}}is-unknown{{/unless}}">{{#each (bjNameParts creature.displayName)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h1>
             <p class="creature-type-line">{{creature.typeLabel}}{{#if creature.showAlignment}} · {{creature.alignment}}{{/if}}</p>
           </div>
 
@@ -104,14 +104,13 @@
             <section class="creature-content-card ability-section">
               <header>
                 <div><p>{{localize "BESTIARY.CoreStats"}}</p><h2>{{localize "BESTIARY.Abilities"}}</h2></div>
-                <span>{{localize "BESTIARY.ClickToRoll"}}</span>
               </header>
               <div class="ability-scores-grid">
                 {{#each abilityEntries}}
-                  <button type="button" class="ability-score" data-action="rollAbility" data-ability="{{this.key}}" aria-label="{{localize 'BESTIARY.RollAbility'}} {{this.fullLabel}}">
+                  <div class="ability-score" title="{{this.fullLabel}}">
                     <span>{{this.label}}</span><strong>{{this.value}}</strong><em>{{this.mod}}</em>
                     <small>{{localize "BESTIARY.SaveShort"}} {{this.save}}</small>
-                  </button>
+                  </div>
                 {{/each}}
               </div>
             </section>
@@ -179,7 +178,7 @@
                             <div class="creature-item-header">
                               <img class="item-icon" src="{{this.img}}" alt="" />
                               <div class="item-heading">
-                                <strong>{{this.name}}</strong>
+                                <strong>{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</strong>
                                 <div class="item-inline-meta">
                                   {{#if this.primaryActivity.typeLabel}}<span>{{this.primaryActivity.typeLabel}}</span>{{/if}}
                                   {{#if this.primaryActivity.attack}}<span>{{this.primaryActivity.attack}}</span>{{/if}}
@@ -197,9 +196,6 @@
                                 </label>
                               {{/if}}
 
-                              {{#if this.hasActivity}}
-                                <button type="button" class="item-use-button" data-action="useActivity" data-item-id="{{this.id}}" data-activity-id="{{this.primaryActivity.id}}"><i class="fas fa-dice-d20"></i>{{localize "BESTIARY.Roll"}}</button>
-                              {{/if}}
                               <i class="fas creature-item-chevron {{#if this.expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
                             </div>
 
@@ -214,7 +210,7 @@
                                 <div class="creature-item-activities">
                                   {{#each this.activities}}
                                     <div class="activity-row">
-                                      <div><strong>{{this.name}}</strong><span>{{this.typeLabel}}</span></div>
+                                      <div><strong>{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</strong><span>{{this.typeLabel}}</span></div>
                                       <div>
                                         {{#if this.activationLabel}}<span>{{this.activationLabel}}</span>{{/if}}
                                         {{#if this.attack}}<span>{{localize "BESTIARY.ItemAttack"}} {{this.attack}}</span>{{/if}}
@@ -253,7 +249,7 @@
             {{#if isRailKnowledge}}
               {{#if isGM}}
                 <section class="rail-card">
-                  <header><h3>{{localize "BESTIARY.Knowledge.PartyTitle"}}</h3><p>{{localize "BESTIARY.Knowledge.PartyHint"}}</p></header>
+                  <header class="party-assignment-heading"><h3>{{localize "BESTIARY.Knowledge.PartyTitle"}}</h3><p>{{localize "BESTIARY.Knowledge.PartyHint"}}</p></header>
                   <div class="party-quick-set">
                     {{#each partyTierOptions}}
                       <button type="button" data-action="setPartyTier" data-tier="{{this.value}}" {{#if ../locked}}disabled{{/if}}><i class="fas {{this.icon}}"></i>{{this.label}}</button>
@@ -278,7 +274,7 @@
                             {{#if this.blocked}} · {{localize "BESTIARY.Knowledge.Blocked"}}{{/if}}
                           </small>
                         </div>
-                        <select data-user-tier="{{this.id}}" {{#if ../locked}}disabled{{/if}}>
+                        <select data-user-tier="{{this.id}}" aria-label="{{localize 'BESTIARY.Knowledge.Column'}}: {{this.name}}" {{#if ../locked}}disabled{{/if}}>
                           {{#each this.tierOptions}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
                         </select>
                       </li>

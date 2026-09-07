@@ -40,7 +40,7 @@ export function getPlayerUsers() {
       id: user.id,
       name: user.name,
       color: user.color?.css ?? user.color ?? "#7a7a7a",
-      avatar: user.avatar ?? user.character?.img ?? "icons/svg/mystery-man.svg",
+      avatar: user.character?.img || user.avatar || "icons/svg/mystery-man.svg",
       characterName: user.character?.name ?? "",
       active: !!user.active
     }))

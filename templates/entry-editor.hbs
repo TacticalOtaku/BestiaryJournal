@@ -4,7 +4,7 @@
   {{else}}
     <header class="entry-editor-heading">
       <p class="creature-kicker">{{sectionName}}</p>
-      <h1>{{name}}</h1>
+      <h1>{{#each (bjNameParts name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h1>
     </header>
 
     <div class="entry-editor-grid">
