@@ -127,7 +127,7 @@ body.theme-dark .bestiary-app {
 .bestiary-scrollable::-webkit-scrollbar { width: 8px; height: 8px; }
 .bestiary-scrollable::-webkit-scrollbar-track { background: transparent; }
 .bestiary-scrollable::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--suite-muted) 45%, transparent); border-radius: 99px; }
-.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+:where(.bestiary-app) .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 @keyframes suite-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .suite-entering { animation: suite-rise 320ms var(--suite-ease) both; }
@@ -206,12 +206,12 @@ body.theme-dark .bestiary-app {
 /* Context menu */
 .bestiary-context-menu { position: fixed; z-index: 9999; min-width: 216px; padding: 6px; border: 1px solid var(--suite-border-strong); border-radius: var(--suite-radius); background: var(--suite-raised); box-shadow: var(--suite-shadow); }
 .bestiary-context-menu ol { list-style: none; margin: 0; padding: 0; }
-.context-item { display: flex; align-items: center; gap: 10px; padding: 8px 11px; border-radius: var(--suite-radius-sm); color: var(--suite-text); cursor: pointer; font-size: .87rem; }
-.context-item:hover { background: var(--suite-hover); }
-.context-item > i { width: 16px; color: var(--suite-subtle); }
-.context-item.is-danger { color: var(--suite-danger); }
-.context-item.is-danger > i { color: var(--suite-danger); }
-.context-separator { height: 1px; margin: 5px 8px; background: var(--suite-border); }
+:where(.bestiary-app) .context-item { display: flex; align-items: center; gap: 10px; padding: 8px 11px; border-radius: var(--suite-radius-sm); color: var(--suite-text); cursor: pointer; font-size: .87rem; }
+:where(.bestiary-app) .context-item:hover { background: var(--suite-hover); }
+:where(.bestiary-app) .context-item > i { width: 16px; color: var(--suite-subtle); }
+:where(.bestiary-app) .context-item.is-danger { color: var(--suite-danger); }
+:where(.bestiary-app) .context-item.is-danger > i { color: var(--suite-danger); }
+:where(.bestiary-app) .context-separator { height: 1px; margin: 5px 8px; background: var(--suite-border); }
 
 /* ── Library shell ──────────────────────────────────────────────────────── */
 
@@ -641,16 +641,20 @@ body.theme-dark .bestiary-app {
 .btn-pick-image { flex: 1; min-height: 36px; border: 1px solid var(--suite-border-strong); border-radius: var(--suite-radius-sm); background: var(--suite-raised); color: var(--suite-text); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .btn-clear-image { width: 36px; min-height: 36px; border: 1px solid var(--suite-border-strong); border-radius: var(--suite-radius-sm); background: var(--suite-raised); color: var(--suite-danger); }
 
-.form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-group > label { color: var(--suite-muted); font-size: .8rem; }
-.form-group input[type="text"], .form-group input[type="number"], .form-group select {
+/* Foundry shares these class names. Keep our overrides inside Bestiary windows;
+   :where() preserves the original specificity of the component rules. */
+:where(.bestiary-app) .form-group { display: flex; flex-direction: column; gap: 6px; }
+:where(.bestiary-app) .form-group > label { color: var(--suite-muted); font-size: .8rem; }
+:where(.bestiary-app) .form-group input[type="text"],
+:where(.bestiary-app) .form-group input[type="number"],
+:where(.bestiary-app) .form-group select {
   height: 38px; padding: 0 11px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm);
   background: var(--suite-surface); color: inherit;
 }
-.form-group-checkbox > label { display: flex; align-items: center; gap: 9px; color: var(--suite-text); font-size: .86rem; }
-.form-group-checkbox i { color: var(--suite-subtle); }
-.form-hint { margin: 0; color: var(--suite-subtle); font-size: .76rem; line-height: 1.5; }
-.sheet-footer { display: flex; justify-content: flex-end; gap: 9px; padding-top: 4px; }
+:where(.bestiary-app) .form-group-checkbox > label { display: flex; align-items: center; gap: 9px; color: var(--suite-text); font-size: .86rem; }
+:where(.bestiary-app) .form-group-checkbox i { color: var(--suite-subtle); }
+:where(.bestiary-app) .form-hint { margin: 0; color: var(--suite-subtle); font-size: .76rem; line-height: 1.5; }
+:where(.bestiary-app) .sheet-footer { display: flex; justify-content: flex-end; gap: 9px; padding-top: 4px; }
 
 .entry-editor-heading h1 { font-size: 1.35rem; }
 .entry-editor-grid { display: grid; grid-template-columns: minmax(220px, 260px) minmax(0, 1fr); gap: 18px; }
