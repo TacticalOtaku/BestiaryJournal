@@ -60,8 +60,7 @@ import {
   getDnd5eConfig,
   getPlayerUsers,
   localize,
-  resolveUuid,
-  usesLegacyDnd5eRollApi
+  resolveUuid
 } from "./foundry-runtime.mjs";
 import { BestiaryEntryEditor } from "./entry-editor.mjs";
 import { animateDisclosure, playApplicationEntrance } from "./ui-effects.mjs";
@@ -96,8 +95,6 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       toggleSection: function (event, target) { this._onToggleSection(event, target); },
       toggleFavorite: function () { this._onToggleFavorite(); },
       sendToChat: function () { this._onSendToChat(); },
-      rollAbility: function (event, target) { this._onRollAbility(event, target); },
-      useActivity: function (event, target) { this._onUseActivity(event, target); },
       setRail: function (event, target) { this._onSetRail(event, target); },
       setCommentChannel: function (event, target) { this._onSetCommentChannel(event, target); },
       submitComment: function () { this._onSubmitComment(); },
@@ -701,7 +698,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     }).render(true);
   }
 
-  // ── Rolls and chat ──
+  // ── Chat ──
 
   async _onSendToChat() {
     const actor = await resolveUuid(this.actorUuid);
@@ -738,37 +735,10 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     });
   }
 
-  async _onRollAbility(event, target) {
-    const actor = await resolveUuid(this.actorUuid);
-    const ability = target.dataset.ability;
-    if (!actor || !ability) return;
-
-    // dnd5e 4.0+ takes a config object; 3.x named it rollAbilityTest and took
-    // the ability id positionally.
-    if (typeof actor.rollAbilityCheck === "function" && !usesLegacyDnd5eRollApi()) {
-      await actor.rollAbilityCheck({ ability, event });
-    } else if (typeof actor.rollAbilityTest === "function") {
-      await actor.rollAbilityTest(ability, { event });
-    } else if (typeof actor.system?.abilities?.[ability]?.roll === "function") {
-      await actor.system.abilities[ability].roll({ event });
-    }
-  }
-
-  async _onUseActivity(event, target) {
-    event.stopPropagation();
-    const actor = await resolveUuid(this.actorUuid);
-    const item = actor?.items.get(target.dataset.itemId);
-    if (!item) return;
-    const activities = item.system?.activities;
-    const activity = activities?.get?.(target.dataset.activityId) ?? activities?.[target.dataset.activityId];
-    if (typeof activity?.use === "function") await activity.use({ event });
-    else if (typeof item.use === "function") await item.use({ event });
-  }
-
   // ── Disclosure ──
 
   _onExpandItem(event, target) {
-    if (event.target.closest("[data-action='useActivity'], select, .item-tier-control")) return;
+    if (event.target.closest("select, .item-tier-control")) return;
     const itemElement = target.closest("[data-item-key]");
     const itemKey = itemElement?.dataset.itemKey;
     if (!itemKey) return;

@@ -2,6 +2,7 @@ import {
   GM_TIER,
   MAX_RESEARCH_TIER,
   MIN_RESEARCH_TIER,
+  RESEARCH_SKILLS,
   clampKnownTier,
   clampTier
 } from "./research-model.mjs";
@@ -35,6 +36,7 @@ export const BESTIARY_COMMANDS = Object.freeze({
   REMOVE_CREATURE: "removeCreature",
   TOGGLE_CREATURE_VISIBILITY: "toggleCreatureVisibility",
   UPDATE_CREATURE_ENTRY: "updateCreatureEntry",
+  BULK_UPDATE_RESEARCH: "bulkUpdateResearch",
   SET_CREATURE_LOCK: "setCreatureLock",
   MOVE_CREATURE: "moveCreature",
   IMPORT_SNAPSHOT: "importSnapshot",
@@ -438,6 +440,7 @@ const COMMAND_HANDLERS = {
   [BESTIARY_COMMANDS.REMOVE_CREATURE]: handleRemoveCreature,
   [BESTIARY_COMMANDS.TOGGLE_CREATURE_VISIBILITY]: handleToggleCreatureVisibility,
   [BESTIARY_COMMANDS.UPDATE_CREATURE_ENTRY]: handleUpdateCreatureEntry,
+  [BESTIARY_COMMANDS.BULK_UPDATE_RESEARCH]: handleBulkUpdateResearch,
   [BESTIARY_COMMANDS.SET_CREATURE_LOCK]: handleSetCreatureLock,
   [BESTIARY_COMMANDS.MOVE_CREATURE]: handleMoveCreature,
   [BESTIARY_COMMANDS.IMPORT_SNAPSHOT]: handleImportSnapshot,
@@ -644,6 +647,47 @@ function handleUpdateCreatureEntry(state, command, { now }) {
   }
   section.updatedAt = now();
   return TOUCHED_DATA;
+}
+
+/** Resolve explicit bulk scope without expanding an invalid selection to all entries. */
+export function selectResearchTargets(data, { scope, sectionId, familyId }) {
+  if (!["all", "section", "family"].includes(scope)) throw new Error("Invalid research scope");
+  const sections = scope === "all" ? data.sections : data.sections.filter(section => section.id === sectionId);
+  if (scope !== "all" && !sections.length) throw new Error("Research collection not found");
+  if (scope === "family" && (familyId === undefined || (familyId !== null && !sections[0].families.some(family => family.id === familyId)))) {
+    throw new Error("Research family not found");
+  }
+  return sections.flatMap(section => section.creatures
+    .filter(entry => scope !== "family" || entry.familyId === familyId)
+    .map(entry => ({ section, entry, locked: !!section.locked || !!entry.locked })));
+}
+
+function handleBulkUpdateResearch(state, command, { now }) {
+  if (!command.isGM) throw new Error("Bulk research settings are reserved for the Game Master");
+  const targets = selectResearchTargets(state.data, command);
+  const patch = command.patch ?? {};
+  const hasDc = Object.hasOwn(patch, "dc");
+  const hasSkills = Object.hasOwn(patch, "skills");
+  if (hasDc && patch.dc !== null && (!Number.isInteger(patch.dc) || patch.dc < 0 || patch.dc > 100)) {
+    throw new Error("Research DC must be an integer between 0 and 100, or null for automatic");
+  }
+  if (hasSkills && (!Array.isArray(patch.skills) || patch.skills.some(skill => !RESEARCH_SKILLS.includes(skill)))) {
+    throw new Error("Invalid research skills");
+  }
+  if (!hasDc && !hasSkills) return TOUCHED_NONE;
+  let changed = false;
+  for (const { section, entry, locked } of targets) {
+    if (locked) continue;
+    const research = {
+      dc: hasDc ? patch.dc : entry.research.dc,
+      skills: hasSkills ? [...new Set(patch.skills)] : entry.research.skills
+    };
+    if (research.dc === entry.research.dc && JSON.stringify(research.skills) === JSON.stringify(entry.research.skills)) continue;
+    entry.research = research;
+    section.updatedAt = now();
+    changed = true;
+  }
+  return changed ? TOUCHED_DATA : TOUCHED_NONE;
 }
 
 function handleSetCreatureLock(state, command, { now }) {

@@ -1,0 +1,41 @@
+<section class="bulk-research-form">
+  <header class="bulk-research-heading">
+    <p>{{sectionName}}</p>
+    <h1>{{localize "BESTIARY.BulkResearch.Title"}}</h1>
+    <p>{{localize "BESTIARY.BulkResearch.Hint"}}</p>
+  </header>
+  <div class="bulk-research-fields">
+    <label class="form-group"><span>{{localize "BESTIARY.BulkResearch.Scope"}}</span>
+      <select name="scope">{{#each scopes}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}</select>
+    </label>
+    <label class="form-group" data-family-field><span>{{localize "BESTIARY.BulkResearch.Family"}}</span>
+      <select name="familyId">{{#each families}}<option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>{{/each}}</select>
+    </label>
+    <div class="bulk-research-divider"></div>
+    <label class="form-group"><span>{{localize "BESTIARY.BulkResearch.Dc"}}</span>
+      <select name="dcMode">
+        <option value="keep">{{localize "BESTIARY.BulkResearch.Keep"}}</option>
+        <option value="set">{{localize "BESTIARY.BulkResearch.SetDc"}}</option>
+        <option value="auto">{{localize "BESTIARY.BulkResearch.AutoDc"}}</option>
+      </select>
+    </label>
+    <label class="form-group" data-dc-value hidden><span>{{localize "BESTIARY.BulkResearch.Dc"}}</span>
+      <input type="number" name="dc" min="0" max="100" step="1" value="15" disabled />
+    </label>
+    <label class="form-group"><span>{{localize "BESTIARY.BulkResearch.Skills"}}</span>
+      <select name="skillsMode">
+        <option value="keep">{{localize "BESTIARY.BulkResearch.Keep"}}</option>
+        <option value="set">{{localize "BESTIARY.BulkResearch.SetSkills"}}</option>
+        <option value="auto">{{localize "BESTIARY.BulkResearch.AutoSkills"}}</option>
+      </select>
+    </label>
+    <fieldset class="bulk-research-skills" data-skills hidden disabled>
+      <legend>{{localize "BESTIARY.BulkResearch.Skills"}}</legend>
+      {{#each skills}}<label><input type="checkbox" name="skills" value="{{this.value}}" /><span>{{this.label}}</span></label>{{/each}}
+    </fieldset>
+  </div>
+  <footer class="bulk-research-footer">
+    <p data-summary role="status"></p>
+    <button type="submit" class="suite-primary-button" disabled><i class="fas fa-check"></i>{{localize "BESTIARY.BulkResearch.Apply"}}</button>
+  </footer>
+</section>

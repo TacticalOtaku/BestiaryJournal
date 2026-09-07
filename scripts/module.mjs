@@ -8,6 +8,7 @@ import {
   isAuthorityGm
 } from "./bestiary-store.mjs";
 import { runMigrations } from "./migrations.mjs";
+import { splitDisplayName } from "./display-names.mjs";
 
 const MODULE_ID = "bestiary-journal";
 const { ApplicationV2 } = foundry.applications.api;
@@ -132,6 +133,7 @@ function registerHandlebarsHelpers() {
   Handlebars.registerHelper("bjOr", (...args) => args.slice(0, -1).some(Boolean));
   Handlebars.registerHelper("bjIncludes", (list, value) => Array.isArray(list) && list.includes(value));
   Handlebars.registerHelper("bjConcat", (...args) => args.slice(0, -1).join(""));
+  Handlebars.registerHelper("bjNameParts", splitDisplayName);
 }
 
 Hooks.once("ready", async () => {

@@ -87,7 +87,7 @@
                 <img src="{{this.displayImage}}" alt="{{this.name}}" loading="lazy" />
                 <div class="collection-scrim"></div>
                 <div class="collection-card-copy">
-                  <h3 title="{{this.name}}">{{this.name}}</h3>
+                  <h3 title="{{this.name}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h3>
                   <p>
                     <span>{{this.creatureCount}} {{localize "BESTIARY.Creatures"}}</span>
                     {{#if this.familyCount}}<span>· {{this.familyCount}} {{localize "BESTIARY.Families.Short"}}</span>{{/if}}
@@ -128,7 +128,7 @@
                   </div>
                   <div class="collection-scrim"></div>
                   <div class="recent-creature-copy">
-                    <strong title="{{this.name}}">{{this.name}}</strong>
+                    <strong title="{{this.name}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</strong>
                     <span>{{this.typeLabel}}</span>
                   </div>
                   {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}"><i class="fas {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
@@ -157,7 +157,7 @@
                 <span class="creature-cr-chip">{{localize "BESTIARY.CRShort"}} {{this.crFormatted}}</span>
               </div>
               <div class="library-creature-copy">
-                <h3 title="{{this.name}}">{{this.name}}</h3>
+                <h3 title="{{this.name}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h3>
                 <p>{{this.typeLabel}}</p>
                 <small>{{this.collectionLabel}}</small>
               </div>
