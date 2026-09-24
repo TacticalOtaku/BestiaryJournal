@@ -1,5 +1,5 @@
 import { BESTIARY_COMMANDS } from "./bestiary-domain.mjs";
-import { dispatchBestiaryCommand } from "./bestiary-store.mjs";
+import { runCommand } from "./command-feedback.mjs";
 import { openFilePicker } from "./foundry-runtime.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -11,7 +11,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static DEFAULT_OPTIONS = {
-    id: "bestiary-tile-editor",
+    id: "bestiary-tile-editor-{id}",
     classes: ["bestiary-journal", "bestiary-app", "bestiary-tile-editor"],
     tag: "form",
     window: { title: "BESTIARY.CreateSection", icon: "fas fa-plus-circle", resizable: false },
@@ -34,7 +34,8 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
   constructor(options = {}) {
     const mode = options.mode === "family" ? "family" : "section";
     const isEdit = !!options.tileData;
-    super(foundry.utils.mergeObject(options, {
+    const uniqueId = options.uniqueId ?? foundry.utils.randomID(16);
+    super(foundry.utils.mergeObject({ ...options, uniqueId }, {
       window: {
         title: isEdit
           ? (mode === "family" ? "BESTIARY.Families.Edit" : "BESTIARY.EditSection")
@@ -44,7 +45,6 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
     this.mode = mode;
     this.sectionId = options.sectionId ?? null;
     this.tileData = options.tileData ?? null;
-    this.onSaveCallback = options.onSave ?? null;
     this._selectedImage = this.tileData?.image ?? "";
   }
 
@@ -89,13 +89,13 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
   async _onFormSubmit(event, form, formData) {
     const data = foundry.utils.expandObject(formData.object);
     const patch = {
-      name: data.name || "",
+      name: String(data.name ?? "").trim(),
       image: data.image || "",
       hidden: !!data.hidden
     };
 
     if (this.mode === "family") {
-      await dispatchBestiaryCommand(this.tileData
+      await runCommand(this.tileData
         ? {
             type: BESTIARY_COMMANDS.UPDATE_FAMILY,
             sectionId: this.sectionId,
@@ -106,13 +106,13 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
             type: BESTIARY_COMMANDS.CREATE_FAMILY,
             sectionId: this.sectionId,
             family: patch
-          });
+          },
+      { unchanged: "BESTIARY.Lock.Blocked" });
     } else {
-      await dispatchBestiaryCommand(this.tileData
+      await runCommand(this.tileData
         ? { type: BESTIARY_COMMANDS.UPDATE_SECTION, sectionId: this.tileData.id, patch }
-        : { type: BESTIARY_COMMANDS.CREATE_SECTION, section: patch });
+        : { type: BESTIARY_COMMANDS.CREATE_SECTION, section: patch },
+      { unchanged: "BESTIARY.Lock.Blocked" });
     }
-
-    this.onSaveCallback?.();
   }
 }

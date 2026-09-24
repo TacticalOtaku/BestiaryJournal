@@ -1,5 +1,6 @@
 import { BESTIARY_COMMANDS, selectVisibleFamilies } from "./bestiary-domain.mjs";
-import { dispatchBestiaryCommand, getBestiaryData } from "./bestiary-store.mjs";
+import { getBestiaryData } from "./bestiary-store.mjs";
+import { runCommand } from "./command-feedback.mjs";
 import { formatCR } from "./helpers.mjs";
 import { localize } from "./foundry-runtime.mjs";
 import { playApplicationEntrance } from "./ui-effects.mjs";
@@ -15,7 +16,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static DEFAULT_OPTIONS = {
-    id: "bestiary-bulk-import",
+    id: "bestiary-bulk-import-{id}",
     classes: ["bestiary-journal", "bestiary-app", "bestiary-bulk-import"],
     tag: "div",
     window: { title: "BESTIARY.Import.Title", icon: "fas fa-layer-group", resizable: true },
@@ -33,10 +34,9 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
   };
 
   constructor(options = {}) {
-    super(options);
+    super({ ...options, uniqueId: options.uniqueId ?? foundry.utils.randomID(16) });
     this.sectionId = options.sectionId;
     this.familyId = options.familyId ?? "";
-    this.onImported = options.onImported ?? null;
     this._sourceId = "world";
     this._entries = [];
     this._selected = new Set();
@@ -51,7 +51,10 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
   async _prepareContext() {
     const data = getBestiaryData();
     const section = data.sections.find(item => item.id === this.sectionId);
-    if (!this._loaded && !this._loading) await this._loadSource();
+    // Big compendiums take a moment: show the spinner, load, then redraw.
+    if (!this._loaded && !this._loading) {
+      this._loadSource().then(() => { if (this.rendered) this.render(); });
+    }
 
     return {
       sources: this._buildSources(),
@@ -239,36 +242,56 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
   }
 
   async _onImport() {
-    if (!this._selected.size) return;
-    const chosen = this._entries.filter(entry => this._selected.has(entry.uuid));
-    const prepared = this._copyToWorld && this._sourceId !== "world"
-      ? await this._copyIntoWorld(chosen)
-      : chosen;
+    if (!this._selected.size || this._importing) return;
+    this._importing = true;
+    const button = this.element?.querySelector("[data-action='importSelected']");
+    if (button) button.disabled = true;
+    try {
+      const chosen = this._entries.filter(entry => this._selected.has(entry.uuid));
+      const prepared = this._copyToWorld && this._sourceId !== "world"
+        ? await this._copyIntoWorld(chosen)
+        : chosen;
+      const present = new Set(getBestiaryData().sections
+        .find(item => item.id === this.sectionId)?.creatures.map(entry => entry.uuid) ?? []);
+      const fresh = prepared.filter(entry => !present.has(entry.uuid));
+      if (!fresh.length) {
+        ui.notifications.info(localize("BESTIARY.Import.NothingNew"));
+        return;
+      }
 
-    await dispatchBestiaryCommand({
-      type: BESTIARY_COMMANDS.ADD_CREATURES,
-      sectionId: this.sectionId,
-      familyId: this.familyId || null,
-      entries: prepared.map(entry => ({
-        uuid: entry.uuid,
-        label: entry.name,
-        thumb: entry.img
-      }))
-    });
-
-    ui.notifications.info(game.i18n.format("BESTIARY.Import.Done", { count: prepared.length }));
-    this.onImported?.();
-    this.close();
+      const result = await runCommand({
+        type: BESTIARY_COMMANDS.ADD_CREATURES,
+        sectionId: this.sectionId,
+        familyId: this.familyId || null,
+        entries: fresh.map(entry => ({ uuid: entry.uuid, label: entry.name, thumb: entry.img }))
+      }, { unchanged: "BESTIARY.Lock.Blocked" });
+      if (!result?.changed) return;
+      ui.notifications.info(game.i18n.format("BESTIARY.Import.Done", { count: fresh.length }));
+      this.close();
+    } finally {
+      this._importing = false;
+      if (this.rendered) this._updateCounter();
+    }
   }
 
+  /**
+   * Copies compendium actors the way the core "Import" does, keeping the link
+   * to their source. An actor already imported from the same entry is reused
+   * instead of duplicated — matched by source, never by a coincidental name.
+   */
   async _copyIntoWorld(entries) {
     const created = [];
     for (const entry of entries) {
       try {
+        const existing = game.actors.find(actor =>
+          (actor._stats?.compendiumSource ?? actor.flags?.core?.sourceId) === entry.uuid);
+        if (existing) {
+          created.push({ ...entry, uuid: existing.uuid });
+          continue;
+        }
         const source = await fromUuid(entry.uuid);
         if (!source) continue;
-        const existing = game.actors.find(actor => actor.name === source.name && actor.type === "npc");
-        const actor = existing ?? await Actor.create(source.toObject(), { keepId: false });
+        const actor = await Actor.implementation.create(game.actors.fromCompendium(source, { clearFolder: true }));
         if (actor) created.push({ ...entry, uuid: actor.uuid });
       } catch (error) {
         console.warn(`Bestiary | Could not copy ${entry.uuid} into the world`, error);

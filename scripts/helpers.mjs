@@ -13,7 +13,7 @@ export async function enrichText(text, options = {}) {
     const relativeTo = options.item ?? options.actor ?? undefined;
     return await enrichHtml(text, {
       secrets: false, documents: true, links: true, rolls: true,
-      embeds: true, async: true, relativeTo,
+      embeds: true, relativeTo,
       rollData: options.actor?.getRollData?.() ?? {}
     });
   } catch (e) {
@@ -34,7 +34,10 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
     ...extractTraitsAndSenses(system),
     ...extractIdentityAndVitals(system),
     ...categorizeActorItems(actor),
-    biography: system.details?.biography?.public ?? ""
+    // dnd5e keeps a player-facing biography next to the full one; prefer it
+    // when the GM wrote one, otherwise fall back to the main text (its
+    // secret blocks are stripped during enrichment).
+    biography: system.details?.biography?.public || system.details?.biography?.value || ""
   };
   return enrich
     ? enrichCreatureData(creature, actor)
@@ -77,6 +80,9 @@ function extractMovement(system) {
 
   const movementTraits = [];
   if (movement.hover) movementTraits.push(localize("BESTIARY.HoverMovement"));
+  if (typeof movement.special === "string" && movement.special.trim()) {
+    movementTraits.push(`${localize("BESTIARY.SpeedSpecial")}: ${movement.special.trim()}`);
+  }
   const ignoredTerrain = movement.ignoredDifficultTerrain;
   if (ignoredTerrain === true || ignoredTerrain?.size > 0 || ignoredTerrain?.length > 0) {
     movementTraits.push(localize("BESTIARY.IgnoresDifficultTerrain"));
@@ -406,7 +412,7 @@ function formatUses(uses) {
   if (!uses) return "";
   const spent = uses.spent ?? 0;
   const max = uses.max ?? uses.value ?? "";
-  if (max === "" || max === null || max === undefined || max === 0) return "";
+  if (max === "" || max === null || max === undefined || !Number(max)) return "";
   return `${Math.max(Number(max) - Number(spent || 0), 0)}/${max}`;
 }
 
@@ -490,7 +496,8 @@ function localizeItemType(baseType, subtype) {
     const localized = configMap[baseType]?.[subtype]?.label ?? configMap[baseType]?.[subtype];
     if (localized) return localized;
   }
-  return localize(`TYPES.Item.${baseType}`) || baseType;
+  const key = `TYPES.Item.${baseType}`;
+  return hasTranslation(key) ? localize(key) : baseType;
 }
 
 function localizeActivityType(type) {
@@ -512,18 +519,18 @@ function localizeActivityType(type) {
 }
 
 function localizeActivationType(type, cost) {
-  if (!type) return "";
+  if (!type || type === "none") return "";
   const map = {
     action: "BESTIARY.ActivityAction",
-    attack: "BESTIARY.ActivityAttack",
     bonus: "BESTIARY.ActivityBonus",
     reaction: "BESTIARY.ActivityReaction",
-    legendary: "BESTIARY.ActivityLegendary",
-    minute: "DND5E.TimeMinutePl",
-    hour: "DND5E.TimeHourPl",
-    day: "DND5E.TimeDayPl"
+    legendary: "BESTIARY.ActivityLegendary"
   };
-  const label = localize(map[type] ?? type);
+  // The module's own wording for the common types, the system's labels
+  // (already localized by dnd5e) for everything else.
+  const label = map[type]
+    ? localize(map[type])
+    : _labelText(getDnd5eConfig().activityActivationTypes?.[type]?.label) || type;
   return cost && cost > 1 ? `${cost} ${label}` : label;
 }
 

@@ -20,7 +20,7 @@
         <div class="entry-frame-controls">
           <div class="suite-segmented">
             <button type="button" data-action="setImageSource" data-source="portrait" class="{{#if isPortraitSource}}is-active{{/if}}"><i class="fas fa-image"></i>{{localize "BESTIARY.Entry.Portrait"}}</button>
-            <button type="button" data-action="setImageSource" data-source="token" class="{{#unless isPortraitSource}}is-active{{/unless}}"><i class="fas fa-chess-pawn"></i>{{localize "BESTIARY.Entry.Token"}}</button>
+            <button type="button" data-action="setImageSource" data-source="token" class="{{#unless isPortraitSource}}is-active{{/unless}}" {{#unless hasToken}}disabled data-tooltip="{{localize 'BESTIARY.Entry.NoToken'}}"{{/unless}}><i class="fas fa-chess-pawn"></i>{{localize "BESTIARY.Entry.Token"}}</button>
           </div>
           <div class="suite-segmented">
             <button type="button" data-fit="contain" data-action="setFit" class="{{#unless isCover}}is-active{{/unless}}"><i class="fas fa-compress"></i>{{localize "BESTIARY.Entry.FitContain"}}</button>
@@ -42,7 +42,7 @@
         <div class="form-group">
           <label>{{localize "BESTIARY.Research.Dc"}}</label>
           <div class="entry-dc-row">
-            <input type="number" name="dc" value="{{dc}}" min="1" max="40" placeholder="{{dcPlaceholder}}" />
+            <input type="number" name="dc" value="{{dc}}" min="0" max="100" step="1" placeholder="{{dcPlaceholder}}" />
             <button type="button" class="suite-secondary-button" data-action="suggestDc"><i class="fas fa-wand-magic-sparkles"></i>{{localize "BESTIARY.Research.SuggestDc"}}</button>
           </div>
           <p class="form-hint">{{localize "BESTIARY.Research.DcHint"}}</p>
@@ -58,7 +58,7 @@
               </label>
             {{/each}}
           </div>
-          <p class="form-hint">{{localize "BESTIARY.Research.SkillsHint"}}</p>
+          <p class="form-hint">{{localize "BESTIARY.Research.SkillsHint"}} {{autoSkillLabel}}</p>
         </div>
 
         <div class="form-group form-group-checkbox">

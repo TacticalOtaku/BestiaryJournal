@@ -39,7 +39,8 @@ export class BestiaryTierSettings extends HandlebarsApplicationMixin(Application
   async _prepareContext() {
     this._draft ??= resolveBlockTiers(getWorldBlockTiers(), null);
     return {
-      groups: buildTierMatrix(this._draft, {}, defaultBlockTiers()),
+      // Highlight what this world changed against the built-in ladder.
+      groups: buildTierMatrix(this._draft, this._draft, defaultBlockTiers()),
       hint: localize("BESTIARY.Tier.WorldHint")
     };
   }
@@ -61,7 +62,7 @@ export class BestiaryTierSettings extends HandlebarsApplicationMixin(Application
 
   async _onFormSubmit() {
     await setWorldBlockTiers(this._draft);
+    // The setting's onChange refreshes every client, this one included.
     ui.notifications.info(localize("BESTIARY.Tier.WorldSaved"));
-    Hooks.callAll("bestiaryJournalRefresh", { changed: { data: true } });
   }
 }

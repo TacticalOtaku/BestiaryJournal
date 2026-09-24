@@ -197,3 +197,24 @@ export function suggestResearchDc(cr) {
   if (!Number.isFinite(numeric) || numeric <= 0) return 10;
   return Math.min(25, 10 + Math.ceil(numeric / 2));
 }
+
+/**
+ * The identification check for one creature entry: its explicit DC and skills,
+ * or the CR-scaled DC and type-appropriate skill when the GM left them unset.
+ * Pure, so the authoritative GM and every client compute the same numbers.
+ */
+export function resolveResearchConfig(entry, creature) {
+  const configured = entry?.research ?? {};
+  const explicit = Array.isArray(configured.skills)
+    ? configured.skills.filter(skill => RESEARCH_SKILLS.includes(skill))
+    : [];
+  const skills = explicit.length ? explicit : [suggestResearchSkill(creature?.creatureTypeKey)];
+  const hasDc = configured.dc !== null && configured.dc !== undefined && configured.dc !== ""
+    && Number.isFinite(Number(configured.dc));
+  return {
+    dc: hasDc ? Number(configured.dc) : suggestResearchDc(creature?.cr),
+    skills,
+    isDcExplicit: hasDc,
+    isSkillsExplicit: explicit.length > 0
+  };
+}

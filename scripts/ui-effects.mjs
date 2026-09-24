@@ -52,13 +52,17 @@ export function animateDisclosure(element, expanded) {
 
 /**
  * Lightweight right-click menu shared by the library and collection views.
- * Items are `{name, icon, callback, danger}` or `{separator: true}`.
+ * Items are `{name, icon, callback, danger, disabled}` or `{separator: true}`.
+ * Closes on an outside click, Escape, scrolling or losing window focus.
  */
+let closeOpenMenu = null;
+
 export function showContextMenu(event, items) {
-  document.querySelectorAll(".bestiary-context-menu").forEach(element => element.remove());
+  closeOpenMenu?.();
 
   const menu = document.createElement("nav");
   menu.className = "bestiary-context-menu bestiary-app";
+  menu.setAttribute("role", "menu");
   const list = document.createElement("ol");
   list.className = "context-items";
   menu.appendChild(list);
@@ -67,19 +71,31 @@ export function showContextMenu(event, items) {
     if (item.separator) {
       const divider = document.createElement("li");
       divider.className = "context-separator";
+      divider.setAttribute("role", "separator");
       list.appendChild(divider);
       continue;
     }
     const row = document.createElement("li");
-    row.className = `context-item${item.danger ? " is-danger" : ""}`;
+    row.className = `context-item${item.danger ? " is-danger" : ""}${item.disabled ? " is-disabled" : ""}`;
+    row.setAttribute("role", "menuitem");
+    row.tabIndex = item.disabled ? -1 : 0;
+    if (item.disabled) row.setAttribute("aria-disabled", "true");
     const icon = document.createElement("i");
     icon.className = `fas ${item.icon}`;
     const label = document.createElement("span");
     label.textContent = item.name;
     row.append(icon, label);
-    row.addEventListener("click", () => {
-      menu.remove();
+    const activate = () => {
+      if (item.disabled) return;
+      close();
       item.callback?.();
+    };
+    row.addEventListener("click", activate);
+    row.addEventListener("keydown", keyEvent => {
+      if (keyEvent.key === "Enter" || keyEvent.key === " ") {
+        keyEvent.preventDefault();
+        activate();
+      }
     });
     list.appendChild(row);
   }
@@ -92,11 +108,31 @@ export function showContextMenu(event, items) {
   menu.style.left = `${Math.max(8, Math.min(event.clientX, window.innerWidth - bounds.width - 8))}px`;
   menu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - bounds.height - 8))}px`;
 
-  const close = click => {
-    if (menu.contains(click.target)) return;
-    menu.remove();
-    document.removeEventListener("pointerdown", close);
+  const onPointerDown = pointer => {
+    if (!menu.contains(pointer.target)) close();
   };
-  setTimeout(() => document.addEventListener("pointerdown", close), 0);
+  const onKeyDown = keyEvent => {
+    if (keyEvent.key !== "Escape") return;
+    keyEvent.preventDefault();
+    keyEvent.stopPropagation();
+    close();
+  };
+  function close() {
+    menu.remove();
+    document.removeEventListener("pointerdown", onPointerDown, true);
+    document.removeEventListener("keydown", onKeyDown, true);
+    document.removeEventListener("scroll", close, true);
+    window.removeEventListener("blur", close);
+    if (closeOpenMenu === close) closeOpenMenu = null;
+  }
+  closeOpenMenu = close;
+  setTimeout(() => {
+    if (closeOpenMenu !== close) return;
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener("scroll", close, true);
+    window.addEventListener("blur", close);
+  }, 0);
+  menu.querySelector(".context-item:not(.is-disabled)")?.focus({ preventScroll: true });
   return menu;
 }

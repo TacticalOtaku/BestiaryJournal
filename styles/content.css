@@ -110,3 +110,7 @@
   padding: 5px 8px;
   border: 1px solid var(--suite-border);
 }
+
+/* An unknown creature posted to chat shows as a silhouette, like in the card. */
+.bestiary-chat-card img.is-silhouette { filter: brightness(0) opacity(.45); background: rgb(0 0 0 / 6%); }
+.theme-dark .bestiary-chat-card img.is-silhouette { filter: brightness(0) invert(1) opacity(.35); }

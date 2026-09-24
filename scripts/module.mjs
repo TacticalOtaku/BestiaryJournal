@@ -39,7 +39,9 @@ function registerWorldStores() {
     default: { revision: 0, comments: [], shares: [] }
   });
   game.settings.register(MODULE_ID, "tierBlockConfig", {
-    name: "Bestiary Tier Block Config", scope: "world", config: false, type: Object, default: {}
+    name: "Bestiary Tier Block Config", scope: "world", config: false, type: Object, default: {},
+    // Fires on every client, so open cards follow a new world ladder at once.
+    onChange: () => scheduleBestiaryRefresh({ changed: { data: true }, uuids: null })
   });
   game.settings.register(MODULE_ID, "dataVersion", {
     name: "Bestiary Data Version", scope: "world", config: false, type: Number, default: 0
@@ -117,7 +119,11 @@ function registerKeybindings() {
     name: "BESTIARY.Keybinding.Open",
     hint: "BESTIARY.Keybinding.OpenHint",
     editable: [{ key: "KeyB", modifiers: ["Shift"] }],
-    onDown: () => { game.bestiaryJournal.toggle(); return true; },
+    onDown: () => {
+      if (!game.bestiaryJournal) return false;
+      game.bestiaryJournal.toggle();
+      return true;
+    },
     onUp: () => {},
     restricted: false,
     precedence: CONST.KEYBINDING_PRECEDENCE.NORMAL
@@ -134,6 +140,7 @@ function registerHandlebarsHelpers() {
   Handlebars.registerHelper("bjIncludes", (list, value) => Array.isArray(list) && list.includes(value));
   Handlebars.registerHelper("bjConcat", (...args) => args.slice(0, -1).join(""));
   Handlebars.registerHelper("bjNameParts", splitDisplayName);
+  Handlebars.registerHelper("bjFormat", (key, options) => game.i18n.format(key, options?.hash ?? {}));
 }
 
 Hooks.once("ready", async () => {
@@ -143,7 +150,7 @@ Hooks.once("ready", async () => {
     mainApp: null,
     open() {
       if (!this.mainApp) this.mainApp = new BestiaryApp();
-      this.mainApp.render(true);
+      this.mainApp.render({ force: true });
     },
     close() {
       if (this.mainApp?.rendered) this.mainApp.close();
@@ -165,28 +172,55 @@ Hooks.once("ready", async () => {
         return current;
       }
       const app = new BestiaryCreatureView({ uuid, ...options });
-      app.render(true);
+      app.render({ force: true });
       return app;
     }
   };
 
-  if (game.user.isGM && isAuthorityGm()) await runMigrations();
-
+  // Listen before migrating, so player requests sent meanwhile are not lost.
   game.socket.on(`module.${MODULE_ID}`, async data => {
     if (await handleBestiaryStoreSocket(data)) return;
-    if (data.action === "refreshBestiary") refreshBestiaryViews();
+    if (data.action === "refreshBestiary") scheduleBestiaryRefresh(data);
   });
+  Hooks.on("bestiaryJournalRefresh", payload => scheduleBestiaryRefresh(payload));
 
-  Hooks.on("bestiaryJournalRefresh", () => refreshBestiaryViews());
+  if (game.user.isGM && isAuthorityGm()) await runMigrations();
 });
 
-function refreshBestiaryViews() {
-  if (game.bestiaryJournal?.mainApp?.rendered) game.bestiaryJournal.mainApp.render();
+/**
+ * Coalesces bursts of changes (a bulk edit, several players at once) into a
+ * single refresh, and merges what they touched so views can skip the rest.
+ */
+let pendingRefresh = null;
+let refreshTimer = null;
+
+function scheduleBestiaryRefresh(payload = {}) {
+  const changed = payload.changed ?? { data: true, knowledge: true, social: true };
+  const uuids = Array.isArray(payload.uuids) ? payload.uuids : null;
+  if (!pendingRefresh) {
+    pendingRefresh = { changed: { ...changed }, uuids };
+  } else {
+    for (const [key, value] of Object.entries(changed)) {
+      pendingRefresh.changed[key] = pendingRefresh.changed[key] || value;
+    }
+    pendingRefresh.uuids = pendingRefresh.uuids && uuids ? [...new Set([...pendingRefresh.uuids, ...uuids])] : null;
+  }
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => {
+    const merged = pendingRefresh;
+    pendingRefresh = null;
+    refreshBestiaryViews(merged);
+  }, 40);
+}
+
+function refreshBestiaryViews(payload) {
+  const main = game.bestiaryJournal?.mainApp;
+  if (main?.rendered) main.refreshFromExternalUpdate(payload);
   for (const app of BestiarySectionView._instances) {
-    if (app.rendered) app.refreshFromExternalUpdate();
+    if (app.rendered) app.refreshFromExternalUpdate(payload);
   }
   for (const app of BestiaryCreatureView._instances) {
-    if (app.rendered) app.refreshFromExternalUpdate();
+    if (app.rendered) app.refreshFromExternalUpdate(payload);
   }
   refreshBestiaryChatLinks();
 }
@@ -232,12 +266,16 @@ function refreshBestiaryChatLinks() {
   }
 }
 
-Hooks.on("renderSidebarTab", (app, html) => {
-  if (app.tabName !== "journal") return;
-  if (html.querySelector(".bestiary-sidebar-btn")) return;
+/**
+ * Sidebar tabs are ApplicationV2 since v13, so the hook is named after the
+ * directory class and `html` is a plain element.
+ */
+Hooks.on("renderJournalDirectory", (app, html) => {
+  const root = html instanceof HTMLElement ? html : html?.[0];
+  if (!root || root.querySelector(".bestiary-sidebar-btn")) return;
 
-  const headerActions = html.querySelector(".header-actions")
-    ?? html.querySelector(".directory-header .action-buttons");
+  const headerActions = root.querySelector(".header-actions")
+    ?? root.querySelector(".directory-header .action-buttons");
   if (!headerActions) return;
 
   const keyHint = formatKeybinding(game.keybindings.get(MODULE_ID, "openBestiary"));
@@ -247,8 +285,10 @@ Hooks.on("renderSidebarTab", (app, html) => {
   btn.dataset.tooltip = keyHint
     ? `${game.i18n.localize("BESTIARY.Title")} (${keyHint})`
     : game.i18n.localize("BESTIARY.Title");
-  btn.innerHTML = `<i class="fas fa-book-skull"></i> ${game.i18n.localize("BESTIARY.Title")}`;
-  btn.addEventListener("click", () => game.bestiaryJournal.toggle());
+  const icon = document.createElement("i");
+  icon.className = "fas fa-book-skull";
+  btn.append(icon, document.createTextNode(` ${game.i18n.localize("BESTIARY.Title")}`));
+  btn.addEventListener("click", () => game.bestiaryJournal?.toggle());
   headerActions.appendChild(btn);
 });
 
@@ -265,8 +305,9 @@ class BestiarySettingsLauncher extends ApplicationV2 {
 
   _replaceHTML() {}
 
+  /** The settings button always brings the bestiary up, never closes it. */
   render() {
-    game.bestiaryJournal?.toggle();
+    game.bestiaryJournal?.open();
     return this;
   }
 }

@@ -5,7 +5,7 @@ import {
   clampKnownTier
 } from "./research-model.mjs";
 import { BESTIARY_COMMANDS, getUserTier } from "./bestiary-domain.mjs";
-import { dispatchBestiaryCommand } from "./bestiary-store.mjs";
+import { runCommand } from "./command-feedback.mjs";
 import { formatTimestamp, getPlayerUsers, localize } from "./foundry-runtime.mjs";
 import { describeTier } from "./research.mjs";
 
@@ -46,8 +46,25 @@ export function buildKnowledgeRoster(knowledge, uuid) {
   });
 }
 
+/**
+ * GM badge: how much of the party knows this creature. With no players in the
+ * world there is nothing to report, so the badge is dropped entirely.
+ */
+export function buildPartyBadge(knowledge, uuid, players) {
+  if (!players.length) return null;
+  const tiers = players.map(user => getUserTier(knowledge, user.id, uuid));
+  const known = tiers.filter(tier => tier > MIN_RESEARCH_TIER).length;
+  const mastered = tiers.filter(tier => tier >= MAX_RESEARCH_TIER).length;
+  return {
+    label: `${known}/${players.length}`,
+    key: known === 0 ? "none" : (mastered === players.length ? "mastered" : "partial"),
+    icon: known === 0 ? "fa-user-slash" : "fa-users",
+    tooltip: game.i18n.format("BESTIARY.Knowledge.PartyBadge", { known, total: players.length })
+  };
+}
+
 export function setKnowledgeTier(uuid, userIds, tier) {
-  return dispatchBestiaryCommand({
+  return runCommand({
     type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
     uuids: Array.isArray(uuid) ? uuid : [uuid],
     userIds: Array.isArray(userIds) ? userIds : [userIds],
@@ -58,7 +75,7 @@ export function setKnowledgeTier(uuid, userIds, tier) {
 }
 
 export function resetKnowledge(uuid, userIds = []) {
-  return dispatchBestiaryCommand({
+  return runCommand({
     type: BESTIARY_COMMANDS.RESET_KNOWLEDGE,
     uuids: Array.isArray(uuid) ? uuid : [uuid],
     userIds
@@ -136,17 +153,13 @@ export async function openShareDialog({ uuid, creatureName, knowledge }) {
 
   if (!result || result === "cancel" || !result.userIds?.length) return false;
 
-  try {
-    await dispatchBestiaryCommand({
-      type: BESTIARY_COMMANDS.SHARE_KNOWLEDGE,
-      uuid,
-      toUserIds: result.userIds,
-      tier: Math.min(result.tier, senderTier, MAX_RESEARCH_TIER)
-    });
-  } catch (error) {
-    ui.notifications.error(error.message);
-    return false;
-  }
+  const outcome = await runCommand({
+    type: BESTIARY_COMMANDS.SHARE_KNOWLEDGE,
+    uuid,
+    toUserIds: result.userIds,
+    tier: Math.min(result.tier, senderTier, MAX_RESEARCH_TIER)
+  }, { unchanged: "BESTIARY.Share.NothingChanged" });
+  if (!outcome?.changed) return false;
   ui.notifications.info(game.i18n.format("BESTIARY.Share.Done", { count: result.userIds.length }));
   return true;
 }

@@ -69,7 +69,7 @@ async function renderCommentText(text) {
   let enriched = escaped;
   try {
     enriched = await enrichHtml(escaped, {
-      secrets: false, documents: true, links: true, rolls: true, async: true
+      secrets: false, documents: true, links: true, rolls: true, embeds: false
     });
   } catch (error) {
     console.warn("Bestiary | Could not enrich a comment", error);

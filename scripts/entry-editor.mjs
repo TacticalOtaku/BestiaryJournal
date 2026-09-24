@@ -1,10 +1,11 @@
 import { BESTIARY_COMMANDS, selectVisibleFamilies } from "./bestiary-domain.mjs";
-import { dispatchBestiaryCommand, getBestiaryData } from "./bestiary-store.mjs";
+import { getBestiaryData } from "./bestiary-store.mjs";
+import { runCommand } from "./command-feedback.mjs";
+import { getCreatureData } from "./creature-cache.mjs";
 import { buildImageView } from "./image-framing.mjs";
-import { extractCreatureData } from "./helpers.mjs";
-import { resolveResearchConfig, researchSkillOptions } from "./research.mjs";
-import { resolveUuid } from "./foundry-runtime.mjs";
-import { suggestResearchDc } from "./research-model.mjs";
+import { researchSkillOptions, skillLabel } from "./research.mjs";
+import { localize } from "./foundry-runtime.mjs";
+import { suggestResearchDc, suggestResearchSkill } from "./research-model.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -42,7 +43,6 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
     super({ ...options, uniqueId });
     this.sectionId = options.sectionId;
     this.uuid = options.uuid;
-    this.onSaveCallback = options.onSave ?? null;
     this._draft = null;
     this._creature = null;
   }
@@ -58,14 +58,11 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
     const entry = this.entry;
     if (!entry) return { error: true };
 
-    if (!this._creature) {
-      const actor = await resolveUuid(this.uuid);
-      this._creature = actor ? await extractCreatureData(actor) : null;
-    }
+    this._creature ??= await getCreatureData(this.uuid);
     this._draft ??= foundry.utils.deepClone(entry);
 
-    const research = resolveResearchConfig(this._draft, this._creature);
     const preview = buildImageView(this._draft, this._creature ?? {});
+    const tokenSrc = this._creature?.prototypeToken;
 
     return {
       error: false,
@@ -81,7 +78,7 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
       ],
       imageSource: this._draft.image.source,
       isPortraitSource: this._draft.image.source === "portrait",
-      hasToken: !!this._creature?.prototypeToken,
+      hasToken: !!tokenSrc && tokenSrc !== this._creature?.img,
       fit: this._draft.image.fit,
       isCover: this._draft.image.fit === "cover",
       focusX: this._draft.image.focusX,
@@ -89,7 +86,12 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
       preview,
       dc: this._draft.research.dc ?? "",
       dcPlaceholder: suggestResearchDc(this._creature?.cr),
-      skills: researchSkillOptions(research.skills),
+      // Only explicit picks are ticked; with none, the automatic skill applies
+      // and saving must not quietly pin it.
+      skills: researchSkillOptions(this._draft.research.skills ?? []),
+      autoSkillLabel: game.i18n.format("BESTIARY.Research.SkillsAuto", {
+        skill: skillLabel(suggestResearchSkill(this._creature?.creatureTypeKey))
+      }),
       hidden: !!this._draft.hidden,
       locked: !!this._draft.locked
     };
@@ -99,9 +101,21 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
     super._onRender(context, options);
     if (context.error) return;
     this._activateFocusPicker();
-    this.element.querySelector(".entry-family-select")?.addEventListener("change", event => {
-      this._draft.familyId = event.currentTarget.value || null;
-    });
+    // Every field writes through to the draft, so nothing typed is lost if
+    // the form has to be drawn again.
+    this.element.addEventListener("change", () => this._captureForm());
+  }
+
+  _captureForm() {
+    const form = this.element;
+    if (!this._draft || !form?.querySelector) return;
+    const value = name => form.querySelector(`[name="${name}"]`);
+    this._draft.familyId = value("familyId")?.value || null;
+    const dc = value("dc")?.value;
+    this._draft.research.dc = dc === "" || dc === undefined ? null : Number(dc);
+    this._draft.research.skills = [...form.querySelectorAll('[name="skills"]:checked')].map(input => input.value);
+    this._draft.hidden = !!value("hidden")?.checked;
+    this._draft.locked = !!value("locked")?.checked;
   }
 
   /** Click or drag on the preview to place the focal point. */
@@ -141,7 +155,10 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
 
   _onSetImageSource(event, target) {
     this._draft.image.source = target.dataset.source === "token" ? "token" : "portrait";
-    this.render();
+    for (const button of this.element.querySelectorAll("[data-source]")) {
+      button.classList.toggle("is-active", button.dataset.source === this._draft.image.source);
+    }
+    this._syncPreview();
   }
 
   _onSetFit(event, target) {
@@ -157,8 +174,19 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
     const dot = this.element.querySelector(".entry-focus-dot");
 
     if (frame) frame.className = preview.frameClass;
-    if (image) image.setAttribute("style", preview.imageStyle);
-    if (backdrop) backdrop.setAttribute("style", preview.backdropStyle);
+    if (image) {
+      image.setAttribute("style", preview.imageStyle);
+      if (image.getAttribute("src") !== preview.src) image.src = preview.src;
+    }
+    if (backdrop) {
+      backdrop.setAttribute("style", preview.backdropStyle);
+      backdrop.hidden = !preview.useBackdrop;
+    } else if (preview.useBackdrop && frame) {
+      const layer = document.createElement("div");
+      layer.className = "bestiary-frame-backdrop";
+      layer.setAttribute("style", preview.backdropStyle);
+      frame.prepend(layer);
+    }
     if (dot) {
       dot.style.left = `${preview.focusX}%`;
       dot.style.top = `${preview.focusY}%`;
@@ -172,6 +200,7 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
   _onSuggestDc() {
     const input = this.element.querySelector('input[name="dc"]');
     if (input) input.value = String(suggestResearchDc(this._creature?.cr));
+    this._captureForm();
   }
 
   async _onFormSubmit(event, form, formData) {
@@ -179,45 +208,41 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
     const skills = [].concat(data.skills ?? []).filter(Boolean);
     const wasLocked = !!this.entry?.locked;
     const wantsLocked = !!data.locked;
+    const patch = {
+      familyId: data.familyId || null,
+      hidden: !!data.hidden,
+      image: {
+        source: this._draft.image.source,
+        fit: this._draft.image.fit,
+        focusX: this._draft.image.focusX,
+        focusY: this._draft.image.focusY
+      },
+      research: {
+        dc: data.dc === "" || data.dc === null || data.dc === undefined ? null : Number(data.dc),
+        skills
+      }
+    };
 
-    if (wasLocked) {
-      await dispatchBestiaryCommand({
-        type: BESTIARY_COMMANDS.SET_CREATURE_LOCK,
-        sectionId: this.sectionId,
-        uuid: this.uuid,
-        locked: false
-      });
-    }
-
-    await dispatchBestiaryCommand({
+    // A locked entry refuses edits, so lift the lock around the update and
+    // put it back even if the update itself is rejected.
+    if (wasLocked && !await this._setLock(false)) return;
+    const result = await runCommand({
       type: BESTIARY_COMMANDS.UPDATE_CREATURE_ENTRY,
       sectionId: this.sectionId,
       uuid: this.uuid,
-      patch: {
-        familyId: data.familyId || null,
-        hidden: !!data.hidden,
-        image: {
-          source: this._draft.image.source,
-          fit: this._draft.image.fit,
-          focusX: this._draft.image.focusX,
-          focusY: this._draft.image.focusY
-        },
-        research: {
-          dc: data.dc === "" || data.dc === null || data.dc === undefined ? null : Number(data.dc),
-          skills
-        }
-      }
+      patch
     });
+    if (wantsLocked) await this._setLock(true);
+    if (result && !result.changed) ui.notifications.warn(localize("BESTIARY.Lock.Blocked"));
+  }
 
-    if (wantsLocked) {
-      await dispatchBestiaryCommand({
-        type: BESTIARY_COMMANDS.SET_CREATURE_LOCK,
-        sectionId: this.sectionId,
-        uuid: this.uuid,
-        locked: true
-      });
-    }
-
-    this.onSaveCallback?.();
+  async _setLock(locked) {
+    const result = await runCommand({
+      type: BESTIARY_COMMANDS.SET_CREATURE_LOCK,
+      sectionId: this.sectionId,
+      uuid: this.uuid,
+      locked
+    });
+    return !!result;
   }
 }

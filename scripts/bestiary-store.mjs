@@ -10,11 +10,13 @@ import {
   normalizeKnowledge,
   normalizeSocial
 } from "./bestiary-domain.mjs";
+import { prepareResearchCommand } from "./research-authority.mjs";
 
 const MODULE_ID = "bestiary-journal";
 const SOCKET_NAME = `module.${MODULE_ID}`;
 const COMMAND_REQUEST_FLAG = "commandRequest";
-const REQUEST_TIMEOUT_MS = 10_000;
+const REQUEST_TIMEOUT_MS = 15_000;
+const HANDLED_REQUEST_TTL_MS = 10 * 60_000;
 
 const SETTING_BY_STORE = Object.freeze({
   data: "bestiaryData",
@@ -22,9 +24,29 @@ const SETTING_BY_STORE = Object.freeze({
   social: "bestiarySocial"
 });
 
+/**
+ * Commands the authority has to check against live Foundry documents before
+ * the pure reducer may see them. Each returns the command to apply plus an
+ * optional follow-up that runs once the change is persisted.
+ */
+const COMMAND_PREPARERS = Object.freeze({
+  [BESTIARY_COMMANDS.RECORD_RESEARCH]: prepareResearchCommand
+});
+
+/** A rejection the requester can show in their own language. */
+export class BestiaryCommandError extends Error {
+  constructor(key, data = {}) {
+    super(key);
+    this.key = key;
+    this.data = data;
+  }
+}
+
 let writeQueue = Promise.resolve();
 let remoteRequestQueue = Promise.resolve();
 const pendingRequests = new Map();
+/** requestId → time handled, so a replayed socket message is ignored. */
+const handledRequests = new Map();
 
 // ── Reads ──────────────────────────────────────────────────────────────────
 
@@ -58,22 +80,23 @@ export function getCurrentViewerTier(uuid, user = game.user) {
 
 // ── Writes ─────────────────────────────────────────────────────────────────
 
+export function hasActiveAuthority() {
+  return !!getAuthorityGm();
+}
+
 /**
  * Every mutation funnels through the authoritative GM: they own the world
  * settings, so players (and secondary GMs) hand the command over by socket.
  */
 export async function dispatchBestiaryCommand(command) {
   if (!game.user?.isGM && !PLAYER_COMMANDS.has(command?.type)) {
-    throw new Error("This bestiary command is reserved for the Game Master");
+    throw new BestiaryCommandError("BESTIARY.Errors.GmOnly");
   }
   const authority = getAuthorityGm();
   if (game.user?.isGM && (!authority || authority.id === game.user.id)) {
     return enqueueCommand(stampCommand(command, game.user));
   }
-  if (!authority) {
-    ui.notifications?.warn(game.i18n.localize("BESTIARY.NoActiveGm"));
-    throw new Error("No active GM is available to apply the bestiary change");
-  }
+  if (!authority) throw new BestiaryCommandError("BESTIARY.NoActiveGm");
 
   const operation = remoteRequestQueue.then(() => requestAuthority(command));
   remoteRequestQueue = operation.catch(() => undefined);
@@ -86,12 +109,16 @@ async function requestAuthority(command) {
   // would inherit every field of the previous command and silently apply them
   // (a leftover `hidden: true` once hid a creature). A string replaces cleanly,
   // and it also sidesteps dots being read as paths in flag keys.
-  await game.user.setFlag(MODULE_ID, COMMAND_REQUEST_FLAG, JSON.stringify({ requestId, command }));
+  await game.user.setFlag(MODULE_ID, COMMAND_REQUEST_FLAG, JSON.stringify({
+    requestId,
+    command,
+    issuedAt: Date.now()
+  }));
 
   const response = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       pendingRequests.delete(requestId);
-      reject(new Error("Timed out waiting for the authoritative GM"));
+      reject(new BestiaryCommandError("BESTIARY.Errors.Timeout"));
     }, REQUEST_TIMEOUT_MS);
     pendingRequests.set(requestId, { resolve, reject, timeout });
   });
@@ -114,6 +141,12 @@ export async function handleBestiaryStoreSocket(message) {
   if (message?.action !== "bestiaryCommand") return false;
   if (getAuthorityGm()?.id !== game.user.id) return true;
 
+  // A socket message only names a request; replaying it, or claiming someone
+  // else's id, must never run a command twice.
+  pruneHandledRequests();
+  if (!message.requestId || handledRequests.has(message.requestId)) return true;
+  handledRequests.set(message.requestId, Date.now());
+
   const requester = game.users?.get?.(message.requesterId);
   // The request itself is read back from a server-persisted user flag, so a
   // spoofed socket payload cannot smuggle a command in.
@@ -121,24 +154,33 @@ export async function handleBestiaryStoreSocket(message) {
   const command = persistedRequest?.command;
 
   if (!requester || persistedRequest?.requestId !== message.requestId || !command) {
-    emitCommandResult(message, null, "The bestiary command could not be authenticated");
-    return true;
-  }
-  if (!requester.isGM && !PLAYER_COMMANDS.has(command.type)) {
-    emitCommandResult(message, null, "This bestiary command is reserved for the Game Master");
-    return true;
-  }
-  if (!requester.isGM && !isSharingAllowed() && command.type === BESTIARY_COMMANDS.SHARE_KNOWLEDGE) {
-    emitCommandResult(message, null, "Sharing bestiary entries is disabled in this world");
+    emitCommandResult(message, null, new BestiaryCommandError("BESTIARY.Errors.NotAuthenticated"));
     return true;
   }
 
+  let result = null;
+  let failure = null;
   try {
-    const result = await enqueueCommand(stampCommand(command, requester));
-    emitCommandResult(message, result);
+    if (!requester.isGM && !PLAYER_COMMANDS.has(command.type)) {
+      throw new BestiaryCommandError("BESTIARY.Errors.GmOnly");
+    }
+    if (!requester.isGM && !isSharingAllowed() && command.type === BESTIARY_COMMANDS.SHARE_KNOWLEDGE) {
+      throw new BestiaryCommandError("BESTIARY.Errors.SharingDisabled");
+    }
+    const stamped = stampCommand(command, requester);
+    const prepared = COMMAND_PREPARERS[command.type]
+      ? await COMMAND_PREPARERS[command.type](stamped, requester)
+      : { command: stamped };
+    result = await enqueueCommand(prepared.command);
+    await prepared.finalize?.(result);
   } catch (error) {
-    emitCommandResult(message, null, error.message);
+    failure = error;
   }
+
+  // Consumed before the answer goes out: the requester only sends its next
+  // command after this one settles, so the cleanup can never erase it.
+  await clearCommandRequest(requester, message.requestId);
+  emitCommandResult(message, result, failure);
   return true;
 }
 
@@ -158,6 +200,22 @@ function readCommandRequest(user) {
   }
 }
 
+async function clearCommandRequest(user, requestId) {
+  if (!user || readCommandRequest(user)?.requestId !== requestId) return;
+  try {
+    await user.unsetFlag(MODULE_ID, COMMAND_REQUEST_FLAG);
+  } catch (error) {
+    console.warn("Bestiary | Could not clear a processed command request", error);
+  }
+}
+
+function pruneHandledRequests() {
+  const cutoff = Date.now() - HANDLED_REQUEST_TTL_MS;
+  for (const [requestId, at] of handledRequests) {
+    if (at < cutoff) handledRequests.delete(requestId);
+  }
+}
+
 /**
  * The authority — not the sender — decides who the command acts as, so a
  * player can never write knowledge or comments in someone else's name.
@@ -166,11 +224,17 @@ function stampCommand(command, user) {
   return { ...command, userId: user.id, isGM: !!user.isGM };
 }
 
+function isPlayerUser(userId) {
+  const user = game.users?.get?.(userId);
+  return !!user && !user.isGM;
+}
+
 async function enqueueCommand(command) {
   const operation = writeQueue.then(async () => {
     const current = createBestiaryState(getBestiaryState());
     const result = applyBestiaryCommand(current, command, {
-      generateId: () => foundry.utils.randomID(16)
+      generateId: () => foundry.utils.randomID(16),
+      isPlayerUser
     });
     if (!result.changedAny) return { changed: false };
 
@@ -181,6 +245,7 @@ async function enqueueCommand(command) {
     const payload = {
       action: "refreshBestiary",
       changed: result.changed,
+      uuids: affectedUuids(command, current, result.state),
       revision: result.state.data.revision
     };
     game.socket?.emit(SOCKET_NAME, payload);
@@ -189,6 +254,21 @@ async function enqueueCommand(command) {
   });
   writeQueue = operation.catch(() => {});
   return operation;
+}
+
+/**
+ * Creatures a command touched, so open cards of unrelated creatures can skip
+ * the refresh. `null` means "could be anything" and refreshes everything.
+ */
+function affectedUuids(command, before, after) {
+  if (command.uuid) return [String(command.uuid)];
+  if (Array.isArray(command.uuids) && command.uuids.length) return command.uuids.map(String);
+  if (command.commentId) {
+    const comment = [...before.social.comments, ...after.social.comments]
+      .find(item => item.id === command.commentId);
+    return comment ? [comment.uuid] : null;
+  }
+  return null;
 }
 
 function isSharingAllowed() {
@@ -217,7 +297,8 @@ function emitCommandResult(request, result, error = null) {
     requestId: request.requestId,
     requesterId: request.requesterId,
     result,
-    error
+    error: error ? (error.key ?? error.message ?? String(error)) : null,
+    errorData: error?.data ?? null
   });
 }
 
@@ -226,6 +307,15 @@ function settlePendingRequest(message) {
   if (!pending) return;
   clearTimeout(pending.timeout);
   pendingRequests.delete(message.requestId);
-  if (message.error) pending.reject(new Error(message.error));
+  if (message.error) pending.reject(new BestiaryCommandError(message.error, message.errorData ?? {}));
   else pending.resolve(message.result);
+}
+
+/** Readable text for any error a command can end with. */
+export function describeCommandError(error) {
+  const key = error?.key ?? error?.message ?? "";
+  if (typeof key === "string" && key.startsWith("BESTIARY.") && game.i18n.has?.(key)) {
+    return game.i18n.format(key, error?.data ?? {});
+  }
+  return error?.message || game.i18n.localize("BESTIARY.Errors.Unknown");
 }

@@ -1,7 +1,5 @@
-import {
-  extractCreatureData, formatMod, formatCR,
-  localizeDndLabel, formatDistanceUnit
-} from "./helpers.mjs";
+import { formatMod, formatCR, localizeDndLabel, formatDistanceUnit } from "./helpers.mjs";
+import { getCreatureData } from "./creature-cache.mjs";
 import {
   GM_TIER,
   MAX_RESEARCH_TIER,
@@ -14,24 +12,21 @@ import {
 } from "./research-model.mjs";
 import {
   BESTIARY_COMMANDS,
-  findCreatureEntry,
+  canViewCreature,
   getCreatureCollections,
   getEntryContexts,
   getUserTier,
-  isCreatureLocked
+  isCreatureLocked,
+  selectEntryContext
 } from "./bestiary-domain.mjs";
-import {
-  dispatchBestiaryCommand,
-  getBestiaryData,
-  getBestiaryKnowledge,
-  getBestiarySocial
-} from "./bestiary-store.mjs";
+import { getBestiaryData, getBestiaryKnowledge, getBestiarySocial } from "./bestiary-store.mjs";
+import { reportCommandError, runCommand } from "./command-feedback.mjs";
 import {
   buildTierMatrix,
   getEntryBlockTiers,
   localizedTierChoices
 } from "./creature-display.mjs";
-import { buildImageView } from "./image-framing.mjs";
+import { buildImageView, SILHOUETTE_PLACEHOLDER } from "./image-framing.mjs";
 import { buildCommentThreads, editComment, postComment, removeComment, toggleCommentPin } from "./comments.mjs";
 import {
   buildKnowledgeRoster,
@@ -98,6 +93,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       setRail: function (event, target) { this._onSetRail(event, target); },
       setCommentChannel: function (event, target) { this._onSetCommentChannel(event, target); },
       submitComment: function () { this._onSubmitComment(); },
+      cancelEdit: function () { this._onCancelEdit(); },
       editComment: function (event, target) { this._onEditComment(event, target); },
       deleteComment: function (event, target) { this._onDeleteComment(event, target); },
       pinComment: function (event, target) { this._onPinComment(event, target); },
@@ -129,7 +125,6 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     this._commentChannel = null;
     this._commentDraft = "";
     this._editingCommentId = null;
-    BestiaryCreatureView._instances.add(this);
   }
 
   get title() {
@@ -151,19 +146,25 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   }
 
   async _prepareContext() {
-    const actor = await resolveUuid(this.actorUuid);
-    if (!actor) return { error: true };
-
     const data = getBestiaryData();
+    const { real, effective, previewUser } = this._resolveViewer();
+    // Hidden while a player had the card open: the card closes its content.
+    if (!real.isGM && !canViewCreature(data, this.actorUuid, real)) {
+      this._title = localize("BESTIARY.Creature");
+      return { error: true, unavailable: true };
+    }
+
+    const creatureData = await getCreatureData(this.actorUuid, { enrich: true });
+    if (!creatureData) return { error: true };
+
     const knowledge = getBestiaryKnowledge();
     const social = getBestiarySocial();
-    const { real, effective, previewUser } = this._resolveViewer();
 
     const contexts = getEntryContexts(data, this.actorUuid);
-    if (!this.sectionId) this.sectionId = contexts[0]?.section.id ?? null;
-    const entry = contexts.find(item => item.section.id === this.sectionId)?.entry
-      ?? findCreatureEntry(data, this.actorUuid)
-      ?? { image: {}, research: {}, blockTiers: {}, itemTiers: {} };
+    const context = selectEntryContext(data, this.actorUuid, effective, this.sectionId)
+      ?? (real.isGM ? contexts.find(item => item.section.id === this.sectionId) ?? contexts[0] : null);
+    this.sectionId = context?.section.id ?? this.sectionId ?? null;
+    const entry = context?.entry ?? { image: {}, research: {}, blockTiers: {}, itemTiers: {} };
 
     const tier = effective.isGM
       ? GM_TIER
@@ -171,10 +172,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const blockTiers = getEntryBlockTiers(entry);
     const show = key => isBlockVisible(key, tier, blockTiers);
 
-    const creature = this._decorateCreature(
-      await extractCreatureData(actor, { enrich: true }),
-      show
-    );
+    const creature = this._decorateCreature(creatureData, show);
     const locked = isCreatureLocked(data, this.actorUuid);
     const stats = this._buildStatEntries(creature, tier, blockTiers);
     // While previewing as a player, hidden content has to disappear the way it
@@ -216,7 +214,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
         : describeTier(tier),
       tierSteps: this._buildTierSteps(tier),
 
-      research: this._buildResearchPanel(entry, creature, tier, locked),
+      research: this._buildResearchPanel(entry, creatureData, tier, locked),
       knowledgeRoster: real.isGM ? buildKnowledgeRoster(knowledge, this.actorUuid) : [],
       partyTierOptions: localizedTierChoices(null, { includeNever: false }),
       shareEnabled: !real.isGM && isSharingEnabled() && !locked && tier > MIN_RESEARCH_TIER,
@@ -225,6 +223,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       commentChannel: this._activeCommentChannel(real, comments.channels),
       commentDraft: this._commentDraft,
       editingCommentId: this._editingCommentId,
+      isEditingComment: !!this._editingCommentId,
 
       tierMatrix: real.isGM ? buildTierMatrix(blockTiers, entry.blockTiers) : [],
       hasEntry: contexts.length > 0,
@@ -283,10 +282,12 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     if (game.user.isGM) return null;
     const config = resolveResearchConfig(entry, creature);
     const record = getBestiaryKnowledge().users?.[game.user.id]?.[this.actorUuid] ?? null;
+    const actors = researchActors();
     const canRoll = isResearchRollEnabled()
       && !locked
       && tier < MAX_RESEARCH_TIER
-      && !record?.blocked;
+      && !record?.blocked
+      && actors.length > 0;
     return {
       enabled: isResearchRollEnabled(),
       canRoll,
@@ -296,7 +297,8 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       isMaxed: tier >= MAX_RESEARCH_TIER,
       nextTierLabel: describeTier(Math.min(tier + 1, MAX_RESEARCH_TIER)).label,
       skills: config.skills.map(skill => ({ value: skill, label: skillLabel(skill) })),
-      actors: researchActors().map(actor => ({ id: actor.id, name: actor.name, img: actor.img })),
+      actors: actors.map(actor => ({ id: actor.id, name: actor.name, img: actor.img })),
+      noActors: actors.length === 0,
       lastRoll: record?.lastRoll
         ? game.i18n.format("BESTIARY.Research.LastAttempt", {
             total: record.lastRoll.total,
@@ -449,10 +451,36 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
 
   _onRender(context, options) {
     super._onRender(context, options);
+    BestiaryCreatureView._instances.add(this);
+    this._syncWindowTitle();
     if (context.error) return;
     this._activateCommentEditor();
     this._activateGmControls();
+    this._activateItemKeyboard();
     playApplicationEntrance(this, ".creature-detail-view");
+  }
+
+  _onClose(options) {
+    super._onClose(options);
+    BestiaryCreatureView._instances.delete(this);
+  }
+
+  /** The frame is built once; keep its title in step with what is known. */
+  _syncWindowTitle() {
+    const title = this.window?.title;
+    if (title instanceof HTMLElement) title.textContent = this.title;
+  }
+
+  _activateItemKeyboard() {
+    for (const item of this.element.querySelectorAll(".creature-item[data-item-key]")) {
+      item.addEventListener("keydown", event => {
+        if (event.target !== item) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          this._onExpandItem(event, item);
+        }
+      });
+    }
   }
 
   _activateCommentEditor() {
@@ -479,8 +507,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     }
     for (const select of this.element.querySelectorAll("[data-user-tier]")) {
       select.addEventListener("change", event => {
-        setKnowledgeTier(this.actorUuid, event.currentTarget.dataset.userTier, Number(event.currentTarget.value))
-          .then(() => this._refreshPreservingScroll());
+        setKnowledgeTier(this.actorUuid, event.currentTarget.dataset.userTier, Number(event.currentTarget.value));
       });
     }
     this.element.querySelector(".preview-as-select")?.addEventListener("change", event => {
@@ -493,7 +520,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   async _onOpenSheet() {
     if (!game.user.isGM) return;
     const actor = await resolveUuid(this.actorUuid);
-    actor?.sheet.render(true);
+    actor?.sheet.render({ force: true });
   }
 
   async _onToggleFavorite() {
@@ -508,9 +535,12 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     this.render();
   }
 
+  /** "Preview as" is one client preference, so every open card follows it. */
   async _onSetPreview(userId) {
     await setPreviewUserId(userId ?? "");
-    await this._refreshPreservingScroll();
+    for (const app of BestiaryCreatureView._instances) {
+      if (app.rendered) app._refreshPreservingScroll();
+    }
   }
 
   // ── Comments ──
@@ -519,6 +549,8 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const channel = target.dataset.channel;
     if (!["gm", "private", "party"].includes(channel)) return;
     if (channel === "gm" && !game.user.isGM) return;
+    // Switching channels abandons an edit instead of silently carrying it over.
+    if (this._editingCommentId) this._onCancelEdit({ render: false });
     this._commentChannel = channel;
     await setPreferredCommentChannel(channel);
     this.render();
@@ -532,18 +564,27 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const shared = channel === "gm"
       && !!this.element.querySelector(".comment-share-toggle")?.checked;
 
-    try {
-      if (this._editingCommentId) {
-        await editComment(this._editingCommentId, { text });
-        this._editingCommentId = null;
-      } else {
-        await postComment({ uuid: this.actorUuid, channel, text, shared });
-      }
-      this._commentDraft = "";
-      await this._refreshPreservingScroll();
-    } catch (error) {
-      ui.notifications.error(error.message);
+    if (this._editingCommentId && text === this._editingOriginal) {
+      this._onCancelEdit();
+      return;
     }
+    let result;
+    try {
+      result = this._editingCommentId
+        ? await editComment(this._editingCommentId, { text })
+        : await postComment({ uuid: this.actorUuid, channel, text, shared });
+    } catch (error) {
+      reportCommandError(error);
+      return;
+    }
+    // Keep the draft when nothing was saved (a lock, a deleted comment).
+    if (!result?.changed) {
+      ui.notifications.warn(localize("BESTIARY.Comments.NotSaved"));
+      return;
+    }
+    this._editingCommentId = null;
+    this._commentDraft = "";
+    await this._refreshPreservingScroll();
   }
 
   _onEditComment(event, target) {
@@ -551,8 +592,16 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     if (!row) return;
     this._editingCommentId = row.dataset.commentId;
     this._commentDraft = row.querySelector(".comment-raw-text")?.textContent ?? "";
+    this._editingOriginal = this._commentDraft.trim();
+    if (row.dataset.channel) this._commentChannel = row.dataset.channel;
     this._rail = "comments";
     this.render();
+  }
+
+  _onCancelEdit({ render = true } = {}) {
+    this._editingCommentId = null;
+    this._commentDraft = "";
+    if (render) this.render();
   }
 
   async _onDeleteComment(event, target) {
@@ -564,22 +613,20 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       rejectClose: false
     });
     if (!confirmed) return;
-    await removeComment(commentId);
-    await this._refreshPreservingScroll();
+    if (this._editingCommentId === commentId) this._onCancelEdit({ render: false });
+    await removeComment(commentId).catch(reportCommandError);
   }
 
   async _onPinComment(event, target) {
     const commentId = target.closest("[data-comment-id]")?.dataset.commentId;
     if (!commentId) return;
-    await toggleCommentPin(commentId);
-    await this._refreshPreservingScroll();
+    await toggleCommentPin(commentId).catch(reportCommandError);
   }
 
   async _onToggleCommentShared(event, target) {
     const row = target.closest("[data-comment-id]");
     if (!row) return;
-    await editComment(row.dataset.commentId, { shared: row.dataset.shared !== "true" });
-    await this._refreshPreservingScroll();
+    await editComment(row.dataset.commentId, { shared: row.dataset.shared !== "true" }).catch(reportCommandError);
   }
 
   // ── Knowledge ──
@@ -590,21 +637,25 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       creatureName: this._title,
       knowledge: getBestiaryKnowledge()
     });
-    await this._refreshPreservingScroll();
   }
 
   async _onRunResearch(event, target) {
+    if (this._researchPending) return;
     const actorId = this.element.querySelector(".research-actor-select")?.value
       ?? target.dataset.actorId;
-    const skill = this.element.querySelector(".research-skill-select")?.value;
+    const skill = this.element.querySelector(".research-skill-select")?.value || undefined;
     const actor = game.actors?.get(actorId) ?? researchActors()[0];
-    const entry = findCreatureEntry(getBestiaryData(), this.actorUuid);
-    const actorDocument = await resolveUuid(this.actorUuid);
-    if (!actorDocument) return;
 
-    const creature = await extractCreatureData(actorDocument);
-    await runResearchCheck({ uuid: this.actorUuid, entry, creature, actor, skill, event });
-    await this._refreshPreservingScroll();
+    this._researchPending = true;
+    target.disabled = true;
+    try {
+      await runResearchCheck({ uuid: this.actorUuid, sectionId: this.sectionId, actor, skill, event });
+    } catch (error) {
+      reportCommandError(error);
+    } finally {
+      this._researchPending = false;
+      if (target.isConnected) target.disabled = false;
+    }
   }
 
   async _onBumpTier(event, target) {
@@ -613,7 +664,6 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const delta = Number(target.dataset.delta ?? 1);
     const current = getUserTier(getBestiaryKnowledge(), userId, this.actorUuid);
     await setKnowledgeTier(this.actorUuid, userId, current + delta);
-    await this._refreshPreservingScroll();
   }
 
   async _onSetPartyTier(event, target) {
@@ -622,7 +672,6 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const userIds = getPlayerUsers().map(user => user.id);
     if (!userIds.length) return;
     await setKnowledgeTier(this.actorUuid, userIds, tier);
-    await this._refreshPreservingScroll();
   }
 
   async _onResetTiers() {
@@ -634,7 +683,6 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     });
     if (!confirmed) return;
     await resetKnowledge(this.actorUuid);
-    await this._refreshPreservingScroll();
   }
 
   // ── GM configuration ──
@@ -646,74 +694,79 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
           select.value === "" ? null : Number(select.value)
       }
     };
-    await dispatchBestiaryCommand({
+    await runCommand({
       type: BESTIARY_COMMANDS.UPDATE_CREATURE_ENTRY,
       sectionId: this.sectionId,
       uuid: this.actorUuid,
       patch
-    });
-    await this._refreshPreservingScroll();
+    }, { unchanged: "BESTIARY.Lock.Blocked" });
   }
 
   async _onSetBlockTier(select) {
-    await dispatchBestiaryCommand({
+    await runCommand({
       type: BESTIARY_COMMANDS.UPDATE_CREATURE_ENTRY,
       sectionId: this.sectionId,
       uuid: this.actorUuid,
       patch: { blockTiers: { [select.dataset.blockTier]: Number(select.value) } }
-    });
-    await this._refreshPreservingScroll();
+    }, { unchanged: "BESTIARY.Lock.Blocked" });
   }
 
   async _onResetBlockTiers() {
-    await dispatchBestiaryCommand({
+    const result = await runCommand({
       type: BESTIARY_COMMANDS.UPDATE_CREATURE_ENTRY,
       sectionId: this.sectionId,
       uuid: this.actorUuid,
       patch: { blockTiers: {}, replaceBlockTiers: true, itemTiers: {}, replaceItemTiers: true }
-    });
-    ui.notifications.info(localize("BESTIARY.Tier.ResetDone"));
-    await this._refreshPreservingScroll();
+    }, { unchanged: "BESTIARY.Lock.Blocked" });
+    if (result?.changed) ui.notifications.info(localize("BESTIARY.Tier.ResetDone"));
   }
 
   async _onToggleLock() {
     if (!game.user.isGM || !this.sectionId) return;
     const entry = getEntryContexts(getBestiaryData(), this.actorUuid)
       .find(item => item.section.id === this.sectionId)?.entry;
-    await dispatchBestiaryCommand({
+    await runCommand({
       type: BESTIARY_COMMANDS.SET_CREATURE_LOCK,
       sectionId: this.sectionId,
       uuid: this.actorUuid,
       locked: !entry?.locked
     });
-    await this._refreshPreservingScroll();
   }
 
   _onOpenEntryEditor() {
     if (!game.user.isGM || !this.sectionId) return;
-    new BestiaryEntryEditor({
-      sectionId: this.sectionId,
-      uuid: this.actorUuid,
-      onSave: () => this._refreshPreservingScroll()
-    }).render(true);
+    new BestiaryEntryEditor({ sectionId: this.sectionId, uuid: this.actorUuid }).render({ force: true });
   }
 
   // ── Chat ──
 
+  /**
+   * Posts what the sender knows, never more: an unknown creature goes out as
+   * a silhouette without a name. A GM previewing as a player posts that view.
+   */
   async _onSendToChat() {
     const actor = await resolveUuid(this.actorUuid);
     if (!actor) return;
+    const data = getBestiaryData();
+    const { effective } = this._resolveViewer();
+    const context = selectEntryContext(data, this.actorUuid, effective, this.sectionId);
+    const tier = effective.isGM ? GM_TIER : getUserTier(getBestiaryKnowledge(), effective.id, this.actorUuid);
+    const blockTiers = getEntryBlockTiers(context?.entry);
+    const knowsName = isBlockVisible("name", tier, blockTiers);
+    const knowsPortrait = isBlockVisible("portrait", tier, blockTiers);
+    const displayName = knowsName ? actor.name : localize("BESTIARY.Tier.UnknownName");
 
     const card = document.createElement("div");
     card.className = "bestiary-chat-card";
 
     const portrait = document.createElement("img");
-    portrait.src = actor.img;
-    portrait.alt = actor.name;
+    portrait.src = knowsPortrait ? actor.img : SILHOUETTE_PLACEHOLDER;
+    portrait.alt = displayName;
+    if (!knowsPortrait) portrait.className = "is-silhouette";
 
     const copy = document.createElement("div");
     const name = document.createElement("strong");
-    name.textContent = actor.name;
+    name.textContent = displayName;
 
     const action = document.createElement("p");
     const link = document.createElement("a");
@@ -729,7 +782,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     card.append(portrait, copy);
 
     await ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor }),
+      speaker: knowsName ? ChatMessage.getSpeaker({ actor }) : ChatMessage.getSpeaker({ user: game.user }),
       content: card.outerHTML,
       flags: { "bestiary-journal": { creatureUuid: actor.uuid } }
     });
@@ -775,20 +828,26 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     icon?.classList.toggle("fa-chevron-down", !expanded);
   }
 
+  /** Re-renders without throwing the reader back to the top of any pane. */
   async _refreshPreservingScroll() {
-    const scrollContainer = this.element?.querySelector(".creature-detail-wrapper");
-    const scrollTop = scrollContainer?.scrollTop ?? 0;
+    const selectors = [".creature-detail-wrapper", ".rail-body"];
+    const offsets = selectors.map(selector => this.element?.querySelector(selector)?.scrollTop ?? 0);
     await this.render();
-    const next = this.element?.querySelector(".creature-detail-wrapper");
-    if (next) next.scrollTop = scrollTop;
+    selectors.forEach((selector, index) => {
+      const next = this.element?.querySelector(selector);
+      if (next) next.scrollTop = offsets[index];
+    });
   }
 
-  async refreshFromExternalUpdate() {
-    await this._refreshPreservingScroll();
-  }
-
-  async close(options) {
-    BestiaryCreatureView._instances.delete(this);
-    return super.close(options);
+  /**
+   * Structure changes (visibility, locks, tier ladders) can affect any card;
+   * knowledge and notes only matter to the creature they were about.
+   */
+  async refreshFromExternalUpdate(payload = {}) {
+    const changed = payload.changed ?? {};
+    const concernsThis = !Array.isArray(payload.uuids) || payload.uuids.includes(this.actorUuid);
+    if (changed.data || ((changed.knowledge || changed.social) && concernsThis)) {
+      await this._refreshPreservingScroll();
+    }
   }
 }

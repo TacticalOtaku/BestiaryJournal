@@ -1,5 +1,6 @@
-import { BESTIARY_COMMANDS } from "./bestiary-domain.mjs";
-import { dispatchBestiaryCommand, getBestiaryState } from "./bestiary-store.mjs";
+import { BESTIARY_COMMANDS, planSnapshotImport } from "./bestiary-domain.mjs";
+import { getBestiaryData, getBestiaryState } from "./bestiary-store.mjs";
+import { runCommand } from "./command-feedback.mjs";
 import { localize } from "./foundry-runtime.mjs";
 
 const MODULE_ID = "bestiary-journal";
@@ -26,8 +27,13 @@ export function buildSnapshot({ sectionIds = [], includeSocial = false } = {}) {
   };
   if (includeSocial) {
     const uuids = new Set(sections.flatMap(section => section.creatures.map(entry => entry.uuid)));
+    const knowledge = { revision: state.knowledge.revision, users: {} };
+    for (const [userId, records] of Object.entries(state.knowledge.users)) {
+      const kept = Object.fromEntries(Object.entries(records).filter(([uuid]) => uuids.has(uuid)));
+      if (Object.keys(kept).length) knowledge.users[userId] = kept;
+    }
     snapshot.archive = {
-      knowledge: state.knowledge,
+      knowledge,
       comments: state.social.comments.filter(comment => uuids.has(comment.uuid))
     };
   }
@@ -36,8 +42,7 @@ export function buildSnapshot({ sectionIds = [], includeSocial = false } = {}) {
 
 export function downloadSnapshot(snapshot, filename) {
   const json = JSON.stringify(snapshot, null, 2);
-  const save = foundry.utils?.saveDataToFile ?? globalThis.saveDataToFile;
-  save(json, "application/json", filename);
+  foundry.utils.saveDataToFile(json, "application/json", filename);
 }
 
 export function exportBestiary({ sectionIds = [], includeSocial = false, filename } = {}) {
@@ -103,6 +108,9 @@ export async function importBestiaryFromFile() {
   const sectionCount = payload.sections.length;
   const creatureCount = payload.sections
     .reduce((total, section) => total + (section.creatures?.length ?? 0), 0);
+  const data = getBestiaryData();
+  const mergePlan = planSnapshotImport(data, payload, "merge");
+  const replacePlan = planSnapshotImport(data, payload, "replace");
 
   const mode = await foundry.applications.api.DialogV2.wait({
     window: { title: localize("BESTIARY.Transfer.ImportTitle"), icon: "fas fa-file-import" },
@@ -113,6 +121,7 @@ export async function importBestiaryFromFile() {
           sections: sectionCount,
           creatures: creatureCount
         })}</p>
+        ${describePlan("BESTIARY.Transfer.PlanMerge", mergePlan)}
         <p class="bestiary-import-note">${localize("BESTIARY.Transfer.ImportNote")}</p>
       </section>`,
     buttons: [
@@ -127,22 +136,38 @@ export async function importBestiaryFromFile() {
   if (mode === "replace") {
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: localize("BESTIARY.Transfer.ModeReplace") },
-      content: `<p>${localize("BESTIARY.Transfer.ReplaceWarning")}</p>`,
+      content: `<p>${localize("BESTIARY.Transfer.ReplaceWarning")}</p>${describePlan("BESTIARY.Transfer.PlanReplace", replacePlan)}`,
       rejectClose: false
     });
     if (!confirmed) return false;
   }
 
-  await dispatchBestiaryCommand({
+  const result = await runCommand({
     type: BESTIARY_COMMANDS.IMPORT_SNAPSHOT,
     payload: { sections: payload.sections },
     mode
-  });
+  }, { unchanged: "BESTIARY.Transfer.NothingChanged" });
+  if (!result?.changed) return false;
   ui.notifications.info(game.i18n.format("BESTIARY.Transfer.Imported", {
     sections: sectionCount,
     creatures: creatureCount
   }));
   return true;
+}
+
+/** A short, escaped list of what an import will touch. */
+function describePlan(titleKey, plan) {
+  const escape = value => foundry.utils.escapeHTML?.(String(value))
+    ?? String(value).replace(/[&<>"']/g, char => `&#${char.charCodeAt(0)};`);
+  const rows = [
+    ["BESTIARY.Transfer.PlanMerged", plan.merged],
+    ["BESTIARY.Transfer.PlanCreated", plan.created],
+    ["BESTIARY.Transfer.PlanRemoved", plan.removed],
+    ["BESTIARY.Transfer.PlanLocked", plan.locked]
+  ].filter(([, names]) => names.length)
+    .map(([key, names]) => `<li><strong>${escape(localize(key))}:</strong> ${names.map(escape).join(", ")}</li>`);
+  if (!rows.length) return "";
+  return `<p class="bestiary-import-plan-title">${escape(localize(titleKey))}</p><ul class="bestiary-import-plan">${rows.join("")}</ul>`;
 }
 
 function pickJsonFile() {

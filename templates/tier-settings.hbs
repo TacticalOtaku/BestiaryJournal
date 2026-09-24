@@ -13,9 +13,9 @@
   <div class="tier-settings-body bestiary-scrollable">
     {{#each groups}}
       <section class="tier-group">
-        <h4><i class="fas {{this.icon}}"></i>{{this.label}}<small>{{this.hint}}</small></h4>
+        <h4><i class="fas {{this.icon}}"></i>{{this.label}}{{#if this.overrideCount}}<em>{{this.overrideCount}}</em>{{/if}}<small>{{this.hint}}</small></h4>
         {{#each this.blocks}}
-          <label class="tier-row {{#if this.isChild}}is-child{{/if}} {{#if this.isNever}}is-never{{/if}}">
+          <label class="tier-row {{#if this.isChild}}is-child{{/if}} {{#if this.isOverridden}}is-overridden{{/if}} {{#if this.isNever}}is-never{{/if}}">
             <span>{{this.label}}</span>
             <select data-block-tier="{{this.key}}">
               {{#each this.choices}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}

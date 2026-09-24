@@ -40,8 +40,10 @@
   color: var(--suite-text);
 }
 
-.theme-dark .bestiary-app,
-body.theme-dark .bestiary-app {
+/* Dark when the interface is dark and the window has not opted out, or when
+   the window itself carries the dark theme. */
+body.theme-dark .bestiary-app:not(.theme-light),
+.bestiary-app.theme-dark {
   --suite-accent: #d29255;
   --suite-accent-bright: #e8b478;
   --suite-bg: rgb(21 20 23 / 97%);
@@ -71,6 +73,8 @@ body.theme-dark .bestiary-app {
 .bestiary-app .window-content {
   padding: 0;
   overflow: hidden;
+  /* Layouts respond to the window's width, not the monitor's. */
+  container: bestiary-window / inline-size;
   background:
     radial-gradient(circle at 82% -4%, color-mix(in srgb, var(--suite-accent) 12%, transparent), transparent 34%),
     radial-gradient(circle at 4% 96%, color-mix(in srgb, var(--tier-studied) 8%, transparent), transparent 30%),
@@ -117,6 +121,9 @@ body.theme-dark .bestiary-app {
   outline-offset: 2px;
   box-shadow: none;
 }
+
+/* Author styles below set `display` on many elements; `hidden` must still win. */
+:where(.bestiary-app) [hidden] { display: none !important; }
 
 .bestiary-app .is-filtered-out,
 .collection-grid-view.is-hidden,
@@ -337,7 +344,7 @@ body.theme-dark .bestiary-app {
 .collection-sort select { height: 40px; padding: 0 32px 0 12px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm); background: var(--suite-raised); color: inherit; appearance: none; }
 .collection-sort > i { position: absolute; right: 12px; pointer-events: none; color: var(--suite-subtle); font-size: .7rem; }
 
-.collection-layout { display: grid; grid-template-columns: minmax(0, 1fr) 0; min-height: 0; transition: grid-template-columns var(--suite-normal) var(--suite-ease); }
+.collection-layout { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 0; min-height: 0; transition: grid-template-columns var(--suite-normal) var(--suite-ease); }
 .collection-layout.has-preview { grid-template-columns: minmax(0, 1fr) 316px; }
 .collection-results-scroll { padding: 16px 26px 26px; overflow-y: auto; min-width: 0; }
 .active-filter-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
@@ -394,6 +401,7 @@ body.theme-dark .bestiary-app {
 .row-flag { color: var(--suite-subtle); font-size: .72rem; }
 
 .collection-preview-panel { min-width: 0; overflow: hidden auto; border-left: 1px solid var(--suite-border); background: color-mix(in srgb, var(--suite-surface) 80%, transparent); }
+.collection-layout:not(.has-preview) .collection-preview-panel { visibility: hidden; border-left-color: transparent; }
 .collection-preview-panel .creature-preview-content { display: none; padding: 16px; }
 .collection-preview-panel .creature-preview-content.is-active { display: block; }
 .collection-preview-panel.has-selection .preview-placeholder { display: none; }
@@ -440,7 +448,7 @@ body.theme-dark .bestiary-app {
 
 /* ── Creature card ──────────────────────────────────────────────────────── */
 
-.creature-detail-wrapper { height: 100%; overflow-y: auto; }
+.creature-detail-wrapper { height: 100%; overflow-y: auto; container: bestiary-card / size; }
 .creature-detail-view { padding: 18px 24px 30px; display: flex; flex-direction: column; gap: 16px; }
 
 .creature-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -457,6 +465,8 @@ body.theme-dark .bestiary-app {
 .creature-kicker { margin: 0; color: var(--suite-subtle); font-size: .73rem; letter-spacing: .1em; text-transform: uppercase; }
 .creature-profile-heading h1 { margin: 3px 0 4px; font-size: clamp(1.6rem, 3vw, 2.2rem); }
 .creature-profile-heading h1.is-unknown { color: var(--suite-subtle); font-style: italic; }
+:where(.bestiary-app) .is-unknown { font-style: italic; color: var(--suite-subtle); }
+:where(.bestiary-app) .recent-creature-copy .is-unknown { color: rgb(255 255 255 / 78%); }
 .creature-type-line { margin: 0; color: var(--suite-muted); font-size: .9rem; }
 
 .tier-ladder { list-style: none; display: flex; gap: 6px; margin: 0; padding: 0; flex-wrap: wrap; }
@@ -552,7 +562,7 @@ body.theme-dark .bestiary-app {
 .creature-biography-content { padding: 4px 16px 16px; }
 
 /* Right rail */
-.creature-rail { position: sticky; top: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); max-height: calc(100vh - 220px); border: 1px solid var(--suite-border); border-radius: var(--suite-radius); background: var(--suite-surface); box-shadow: var(--suite-shadow-card); overflow: hidden; }
+.creature-rail { position: sticky; top: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); max-height: calc(100cqh - 36px); border: 1px solid var(--suite-border); border-radius: var(--suite-radius); background: var(--suite-surface); box-shadow: var(--suite-shadow-card); overflow: hidden; }
 .rail-tabs { display: grid; grid-auto-flow: column; border-bottom: 1px solid var(--suite-border); }
 .rail-tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 12px 8px; border: 0; background: none; color: var(--suite-muted); font-size: .82rem; }
 .rail-tabs button:hover { background: var(--suite-hover); color: var(--suite-text); }
@@ -671,7 +681,11 @@ body.theme-dark .bestiary-app {
 
 /* Bulk import */
 .bestiary-app.bestiary-bulk-import .window-content { padding: 0; }
-.bulk-import-shell { height: 100%; display: grid; grid-template-rows: auto auto auto auto minmax(0, 1fr) auto; padding: 18px 22px 16px; gap: 12px; }
+/* A column, not a fixed row grid: the "copy to world" row only exists for
+   compendium sources, and the list must always take the remaining height. */
+.bulk-import-shell { height: 100%; display: flex; flex-direction: column; padding: 18px 22px 16px; gap: 12px; }
+.bulk-import-shell > * { flex: 0 0 auto; }
+.bulk-import-shell > .bulk-import-list { flex: 1 1 auto; min-height: 0; }
 .bulk-import-header h1 { font-size: 1.4rem; }
 .bulk-import-lead { margin: 5px 0 0; color: var(--suite-subtle); font-size: .82rem; }
 .bulk-import-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; }
@@ -772,16 +786,63 @@ body.theme-dark .bestiary-app {
 :where(.bestiary-app) .bulk-research-footer p { margin: 0; color: var(--suite-muted); font-size: .8rem; line-height: 1.5; }
 :where(.bestiary-app) .bulk-research-footer button { width: 100%; }
 
-@media (max-width: 1180px) {
+/* ── Window-width layouts ───────────────────────────────────────────────── */
+
+@container bestiary-window (max-width: 1100px) {
   .creature-body { grid-template-columns: minmax(0, 1fr); }
   .creature-rail { position: static; max-height: none; }
 }
-@media (max-width: 980px) {
-  .bestiary-shell { grid-template-columns: minmax(0, 1fr); }
-  .library-sidebar { display: none; }
+
+/* Narrow windows keep every tool: the sidebar shrinks to an icon rail and the
+   quick preview slides over the results instead of disappearing. */
+@container bestiary-window (max-width: 900px) {
+  .bestiary-shell { grid-template-columns: 58px minmax(0, 1fr); }
+  .library-sidebar { padding: 14px 7px; gap: 10px; }
+  .library-brand { justify-content: center; padding: 2px 0 10px; }
+  .library-brand > div,
+  .library-sidebar-heading,
+  .library-nav-item > span,
+  .library-nav-item > strong,
+  .library-nav-flag,
+  .library-new-button > span { display: none; }
+  .library-nav-item, .library-back-item { grid-template-columns: minmax(0, 1fr); justify-items: center; padding: 0; }
+  .library-nav-item.is-active::before { left: -7px; }
+  .library-new-button { min-height: 38px; }
+  .library-footer-tools { grid-auto-flow: row; }
+  .library-toolbar, .collection-header { padding-left: 18px; padding-right: 18px; }
+  .library-scroll, .collection-results-scroll { padding-left: 18px; padding-right: 18px; }
   .creature-profile-card { grid-template-columns: minmax(0, 1fr); }
   .creature-portrait { aspect-ratio: 16 / 9; }
   .entry-editor-grid { grid-template-columns: minmax(0, 1fr); }
-  .collection-layout.has-preview { grid-template-columns: minmax(0, 1fr); }
-  .collection-preview-panel { display: none; }
+  .collection-layout.has-preview { grid-template-columns: minmax(0, 1fr) 0; }
+  .collection-layout.has-preview .collection-preview-panel {
+    position: absolute; z-index: 3; inset: 0 0 0 auto; width: min(316px, 100%);
+    box-shadow: var(--suite-shadow); background: var(--suite-raised);
+  }
+  .collection-list-header, .collection-creature-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 52px 104px 36px; gap: 8px; }
 }
+
+/* ── 0.2.4 additions ────────────────────────────────────────────────────── */
+
+/* Windows whose content is a plain form or dialog keep a comfortable inset. */
+.bestiary-app.bestiary-tile-editor .window-content { padding: 16px; overflow: auto; }
+.bestiary-app.bestiary-dialog .window-content { padding: 14px 16px; overflow: auto; }
+.bestiary-import-plan-title { margin: 4px 0 6px; font-size: .82rem; font-weight: 600; }
+.bestiary-import-plan { margin: 0 0 11px; padding-left: 18px; font-size: .8rem; line-height: 1.5; color: var(--suite-muted); }
+
+/* Library search: in the overview the query also searches every creature. */
+.library-search-results { display: none; }
+.library-scroll.is-searching .library-search-results { display: block; }
+.library-scroll.is-searching .library-recent-block { display: none; }
+.library-search-empty { display: none; margin: 0; padding: 18px 0; color: var(--suite-subtle); font-size: .86rem; text-align: center; }
+.library-search-results.is-empty .library-search-empty { display: block; }
+
+.collection-row-tier { display: flex; align-items: center; min-width: 0; }
+.hp-formula { display: block; margin-top: 2px; color: var(--suite-subtle); font-size: .72rem; }
+
+.comment-editing-note { display: flex; align-items: center; gap: 7px; margin: 0 0 7px; color: var(--suite-accent); font-size: .78rem; }
+.comment-item.is-editing { border-color: var(--suite-accent); box-shadow: 0 0 0 1px var(--suite-accent-soft); }
+
+:where(.bestiary-app) .context-item.is-disabled { opacity: .45; cursor: not-allowed; }
+:where(.bestiary-app) .context-item.is-disabled:hover { background: transparent; }
+:where(.bestiary-app) .context-item:focus-visible { outline: 2px solid var(--suite-accent); outline-offset: -2px; }

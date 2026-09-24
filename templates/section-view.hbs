@@ -1,12 +1,12 @@
 <div class="bestiary-shell collection-shell section-shell">
   <aside class="library-sidebar collection-sidebar">
-    <button type="button" class="library-nav-item library-back-item" data-action="goBack">
+    <button type="button" class="library-nav-item library-back-item" data-action="goBack" data-tooltip="{{localize 'BESTIARY.AllCollections'}}">
       <i class="fas fa-arrow-left"></i><span>{{localize "BESTIARY.AllCollections"}}</span>
     </button>
     <div class="library-sidebar-heading"><span>{{localize "BESTIARY.Collections"}}</span></div>
     <nav class="library-collection-nav bestiary-scrollable">
       {{#each allSections}}
-        <button type="button" class="library-nav-item {{#if this.isActive}}is-active{{/if}} {{#if this.hidden}}is-muted{{/if}}" data-action="switchSection" data-section-id="{{this.id}}">
+        <button type="button" class="library-nav-item {{#if this.isActive}}is-active{{/if}} {{#if this.hidden}}is-muted{{/if}}" data-action="switchSection" data-section-id="{{this.id}}" data-tooltip="{{this.name}}">
           <i class="far fa-folder"></i><span title="{{this.name}}">{{this.name}}</span>
           {{#if this.locked}}<i class="fas fa-lock library-nav-flag"></i>{{/if}}
           <strong>{{this.creatureCount}}</strong>
@@ -16,6 +16,13 @@
   </aside>
 
   <main class="collection-workspace">
+  {{#if missing}}
+    <div class="suite-empty-state">
+      <i class="fas fa-folder-minus"></i>
+      <h2>{{localize "BESTIARY.SectionUnavailable"}}</h2>
+      <button type="button" class="suite-secondary-button" data-action="goBack"><i class="fas fa-arrow-left"></i>{{localize "BESTIARY.AllCollections"}}</button>
+    </div>
+  {{else}}
     <header class="collection-header">
       <div class="suite-breadcrumbs">
         <button type="button" data-action="goBack">{{localize "BESTIARY.Title"}}</button>
@@ -96,7 +103,7 @@
                 {{/if}}
                 {{#each this.creatures}}
                   <article class="collection-creature-card {{#if this.isHidden}}is-hidden{{/if}} {{#if this.isLocked}}is-locked{{/if}} {{#if this.isMissing}}is-missing{{/if}}"
-                           data-creature-entry data-uuid="{{this.uuid}}" data-name="{{this.name}}" data-type="{{this.creatureTypeKey}}"
+                           data-creature-entry data-uuid="{{this.uuid}}" data-name="{{this.sortName}}" data-type="{{this.typeKey}}"
                            data-size="{{this.size}}" data-cr="{{this.cr}}" data-family-id="{{this.familyId}}"
                            data-hidden="{{this.isHidden}}" data-locked="{{this.isLocked}}"
                            data-search-text="{{this.searchText}}" data-action="selectCreature" draggable="true" tabindex="0">
@@ -105,7 +112,7 @@
                         {{#if this.image.useBackdrop}}<div class="bestiary-frame-backdrop" style="{{this.image.backdropStyle}}"></div>{{/if}}
                         <img src="{{this.image.src}}" alt="{{this.name}}" style="{{this.image.imageStyle}}" loading="lazy" />
                       </div>
-                      <span class="creature-cr-chip">{{localize "BESTIARY.CRShort"}} {{this.crFormatted}}</span>
+                      {{#if this.knowsCr}}<span class="creature-cr-chip">{{localize "BESTIARY.CRShort"}} {{this.crFormatted}}</span>{{/if}}
                       <div class="creature-card-flags">
                         {{#if this.isHidden}}<span class="suite-badge is-warning"><i class="fas fa-eye-slash"></i></span>{{/if}}
                         {{#if this.isLocked}}<span class="suite-badge is-locked"><i class="fas fa-lock"></i></span>{{/if}}
@@ -114,7 +121,7 @@
                     </div>
                     <div class="collection-creature-copy">
                       <div>
-                        <h3 title="{{this.name}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h3>
+                        <h3 class="{{#unless this.knowsName}}is-unknown{{/unless}}" title="{{this.name}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h3>
                         <p>{{this.typeLabel}}</p>
                       </div>
                       {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" data-tooltip="{{this.tierBadge.tooltip}}"><i class="fas {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
@@ -147,7 +154,7 @@
               <div class="collection-list-body">
                 {{#each this.creatures}}
                   <article class="collection-creature-row {{#if this.isHidden}}is-hidden{{/if}} {{#if this.isLocked}}is-locked{{/if}}"
-                           data-creature-entry data-uuid="{{this.uuid}}" data-name="{{this.name}}" data-type="{{this.creatureTypeKey}}"
+                           data-creature-entry data-uuid="{{this.uuid}}" data-name="{{this.sortName}}" data-type="{{this.typeKey}}"
                            data-size="{{this.size}}" data-cr="{{this.cr}}" data-family-id="{{this.familyId}}"
                            data-hidden="{{this.isHidden}}" data-locked="{{this.isLocked}}"
                            data-search-text="{{this.searchText}}" data-action="selectCreature" draggable="true" tabindex="0">
@@ -155,14 +162,14 @@
                       <div class="{{this.thumb.frameClass}}">
                         <img src="{{this.thumb.src}}" alt="" style="{{this.thumb.imageStyle}}" loading="lazy" />
                       </div>
-                      <strong>{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</strong>
+                      <strong class="{{#unless this.knowsName}}is-unknown{{/unless}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</strong>
                       {{#if this.isHidden}}<i class="fas fa-eye-slash row-flag"></i>{{/if}}
                       {{#if this.isLocked}}<i class="fas fa-lock row-flag"></i>{{/if}}
                     </div>
                     <span>{{this.typeLabel}}</span>
-                    <span>{{this.crFormatted}}</span>
-                    {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}"><i class="fas {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
-                    <button type="button" data-action="openCreature"><i class="fas fa-arrow-right"></i></button>
+                    <span>{{#if this.knowsCr}}{{this.crFormatted}}{{else}}—{{/if}}</span>
+                    <span class="collection-row-tier">{{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fas {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}</span>
+                    <button type="button" data-action="openCreature" aria-label="{{localize 'BESTIARY.ViewCreature'}}"><i class="fas fa-arrow-right"></i></button>
                   </article>
                 {{/each}}
               </div>
@@ -199,13 +206,15 @@
               <img src="{{this.image.src}}" alt="{{this.name}}" style="{{this.image.imageStyle}}" />
             </div>
             <div class="preview-heading">
-              <div><h2>{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h2><p>{{this.typeLabel}}</p></div>
-              <span class="creature-cr-chip">{{localize "BESTIARY.CRShort"}} {{this.crFormatted}}</span>
+              <div><h2 class="{{#unless this.knowsName}}is-unknown{{/unless}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h2><p>{{this.typeLabel}}</p></div>
+              {{#if this.knowsCr}}<span class="creature-cr-chip">{{localize "BESTIARY.CRShort"}} {{this.crFormatted}}</span>{{/if}}
             </div>
-            <div class="preview-stats">
-              <div><span>{{localize "BESTIARY.ACShort"}}</span><strong>{{this.ac.value}}</strong></div>
-              <div><span>{{localize "BESTIARY.HP"}}</span><strong>{{this.hp.value}} / {{this.hp.max}}</strong></div>
-            </div>
+            {{#if (bjOr this.showAc this.showHp)}}
+              <div class="preview-stats">
+                {{#if this.showAc}}<div><span>{{localize "BESTIARY.ACShort"}}</span><strong>{{this.ac}}</strong></div>{{/if}}
+                {{#if this.showHp}}<div><span>{{localize "BESTIARY.HP"}}</span><strong>{{this.hp.max}}</strong></div>{{/if}}
+              </div>
+            {{/if}}
             {{#if this.speedLabel}}<p class="preview-speed"><i class="fas fa-wind"></i>{{this.speedLabel}}</p>{{/if}}
             <div class="preview-actions">
               <button type="button" class="suite-primary-button" data-action="openCreature"><i class="far fa-eye"></i>{{localize "BESTIARY.ViewCreature"}}</button>
@@ -223,7 +232,7 @@
       </aside>
     </div>
 
-    <div class="filter-backdrop" data-action="toggleFilters"></div>
+    <div class="filter-backdrop {{#if filtersOpen}}is-open{{/if}}" data-action="toggleFilters"></div>
     <aside class="collection-filter-panel {{#if filtersOpen}}is-open{{/if}}">
       <header><h2>{{localize "BESTIARY.Filters"}}</h2><button type="button" data-action="toggleFilters"><i class="fas fa-xmark"></i></button></header>
       <div class="filter-panel-scroll bestiary-scrollable">
@@ -260,7 +269,8 @@
     </aside>
 
     {{#if isGM}}
-      <div class="collection-drop-overlay"><i class="fas fa-plus"></i><strong>{{localize "BESTIARY.DropIntoCollection"}} «{{sectionName}}»</strong></div>
+      <div class="collection-drop-overlay"><i class="fas fa-plus"></i><strong>{{bjFormat "BESTIARY.DropIntoCollection" name=sectionName}}</strong></div>
     {{/if}}
+  {{/if}}
   </main>
 </div>
