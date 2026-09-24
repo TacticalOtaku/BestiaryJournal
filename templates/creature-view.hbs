@@ -1,6 +1,10 @@
 <section class="creature-detail-wrapper bestiary-scrollable">
   {{#if error}}
-    <div class="suite-empty-state"><i class="fas fa-triangle-exclamation"></i><h2>{{localize "BESTIARY.CreatureLoadError"}}</h2></div>
+    {{#if unavailable}}
+      <div class="suite-empty-state"><i class="fas fa-eye-slash"></i><h2>{{localize "BESTIARY.CreatureUnavailable"}}</h2></div>
+    {{else}}
+      <div class="suite-empty-state"><i class="fas fa-triangle-exclamation"></i><h2>{{localize "BESTIARY.CreatureLoadError"}}</h2></div>
+    {{/if}}
   {{else}}
     <div class="creature-detail-view">
 
@@ -69,8 +73,8 @@
               {{#if showBlock.ac}}<div class="key-stat"><span>{{localize "BESTIARY.ACShort"}}</span><strong>{{creature.ac.value}}</strong></div>{{/if}}
               {{#if showBlock.hp}}
                 <div class="key-stat hp-stat {{#if creature.lowHp}}is-danger{{/if}}">
-                  <span>{{localize "BESTIARY.HP"}}</span><strong>{{creature.hp.value}} / {{creature.hp.max}}</strong>
-                  <div class="hp-progress"><i style="width: {{creature.hpPercent}}%"></i></div>
+                  <span>{{localize "BESTIARY.HP"}}</span><strong>{{creature.hp.max}}</strong>
+                  {{#if creature.hp.formula}}<small class="hp-formula">{{creature.hp.formula}}</small>{{/if}}
                 </div>
               {{/if}}
               {{#if showBlock.cr}}<div class="key-stat"><span>{{localize "BESTIARY.CRShort"}}</span><strong>{{creature.crFormatted}}</strong></div>{{/if}}
@@ -174,7 +178,7 @@
                     {{else}}
                       <div class="creature-items-list">
                         {{#each this.items}}
-                          <article class="creature-item {{#if this.expanded}}is-expanded{{/if}} {{#if this.hiddenForPlayers}}is-item-hidden{{/if}}" data-item-key="{{this.itemKey}}" data-action="expandItem">
+                          <article class="creature-item {{#if this.expanded}}is-expanded{{/if}} {{#if this.hiddenForPlayers}}is-item-hidden{{/if}}" data-item-key="{{this.itemKey}}" data-action="expandItem" tabindex="0" aria-expanded="{{#if this.expanded}}true{{else}}false{{/if}}">
                             <div class="creature-item-header">
                               <img class="item-icon" src="{{this.img}}" alt="" />
                               <div class="item-heading">
@@ -260,7 +264,7 @@
                 <section class="rail-card">
                   <header>
                     <h3>{{localize "BESTIARY.Knowledge.RosterTitle"}}</h3>
-                    <button type="button" class="rail-inline-button" data-action="resetTiers"><i class="fas fa-rotate-left"></i>{{localize "BESTIARY.Knowledge.Reset"}}</button>
+                    <button type="button" class="rail-inline-button" data-action="resetTiers" {{#if locked}}disabled{{/if}}><i class="fas fa-rotate-left"></i>{{localize "BESTIARY.Knowledge.Reset"}}</button>
                   </header>
                   <ul class="knowledge-roster">
                     {{#each knowledgeRoster}}
@@ -308,6 +312,7 @@
                         <button type="button" class="suite-primary-button" data-action="runResearch" {{#unless research.canRoll}}disabled{{/unless}}>
                           <i class="fas fa-dice-d20"></i>{{localize "BESTIARY.Research.Roll"}}
                         </button>
+                        {{#if research.noActors}}<p class="rail-note is-danger"><i class="fas fa-user-slash"></i>{{localize "BESTIARY.Research.NoActor"}}</p>{{/if}}
                         {{#if research.lastRoll}}<p class="rail-note">{{research.lastRoll}}</p>{{/if}}
                         {{#if research.blocked}}<p class="rail-note is-danger"><i class="fas fa-ban"></i>{{localize "BESTIARY.Research.Blocked"}}</p>{{/if}}
                         {{#if locked}}<p class="rail-note is-danger"><i class="fas fa-lock"></i>{{localize "BESTIARY.Lock.Blocked"}}</p>{{/if}}
@@ -338,7 +343,7 @@
                   {{#if (bjEq this.key ../commentChannel)}}
                     <div class="comment-list">
                       {{#each this.comments}}
-                        <article class="comment-item {{#if this.isOwn}}is-own{{/if}} {{#if this.pinned}}is-pinned{{/if}}" data-comment-id="{{this.id}}" data-shared="{{this.shared}}">
+                        <article class="comment-item {{#if this.isOwn}}is-own{{/if}} {{#if this.pinned}}is-pinned{{/if}} {{#if (bjEq this.id @root.editingCommentId)}}is-editing{{/if}}" data-comment-id="{{this.id}}" data-shared="{{this.shared}}" data-channel="{{this.channel}}">
                           <header>
                             <img src="{{this.authorAvatar}}" alt="" />
                             <strong style="--user-color: {{this.authorColor}}">{{this.authorName}}</strong>
@@ -353,10 +358,10 @@
                                 <i class="fas {{#if this.shared}}fa-eye{{else}}fa-eye-slash{{/if}}"></i>{{this.shareLabel}}
                               </button>
                             {{/if}}
-                            {{#if this.canPin}}<button type="button" data-action="pinComment"><i class="fas fa-thumbtack"></i></button>{{/if}}
+                            {{#if this.canPin}}<button type="button" data-action="pinComment" aria-label="{{localize 'BESTIARY.Comments.Pin'}}" data-tooltip="{{localize 'BESTIARY.Comments.Pin'}}"><i class="fas fa-thumbtack"></i></button>{{/if}}
                             {{#if this.canEdit}}
-                              <button type="button" data-action="editComment"><i class="fas fa-pen"></i></button>
-                              <button type="button" data-action="deleteComment"><i class="fas fa-trash"></i></button>
+                              <button type="button" data-action="editComment" aria-label="{{localize 'BESTIARY.Comments.Edit'}}" data-tooltip="{{localize 'BESTIARY.Comments.Edit'}}"><i class="fas fa-pen"></i></button>
+                              <button type="button" data-action="deleteComment" aria-label="{{localize 'BESTIARY.Comments.Delete'}}" data-tooltip="{{localize 'BESTIARY.Comments.Delete'}}"><i class="fas fa-trash"></i></button>
                             {{/if}}
                           </footer>
                         </article>
@@ -366,9 +371,12 @@
 
                     {{#if this.canPost}}
                       <div class="comment-composer">
+                        {{#if @root.isEditingComment}}<p class="comment-editing-note"><i class="fas fa-pen"></i>{{localize "BESTIARY.Comments.Editing"}}</p>{{/if}}
                         <textarea class="comment-composer-input" rows="3" placeholder="{{localize 'BESTIARY.Comments.Placeholder'}}"></textarea>
                         <div class="comment-composer-actions">
-                          {{#if (bjEq this.key "gm")}}
+                          {{#if @root.isEditingComment}}
+                            <button type="button" class="suite-secondary-button" data-action="cancelEdit"><i class="fas fa-xmark"></i>{{localize "BESTIARY.Comments.CancelEdit"}}</button>
+                          {{else if (bjEq this.key "gm")}}
                             <label class="comment-share-field">
                               <input type="checkbox" class="comment-share-toggle" />
                               <span>{{localize "BESTIARY.Comments.PostShared"}}</span>
@@ -393,7 +401,7 @@
               <section class="rail-card">
                 <header>
                   <h3>{{localize "BESTIARY.Tier.EntryTitle"}}</h3>
-                  <button type="button" class="rail-inline-button" data-action="resetBlockTiers"><i class="fas fa-rotate-left"></i>{{localize "BESTIARY.Tier.Reset"}}</button>
+                  <button type="button" class="rail-inline-button" data-action="resetBlockTiers" {{#if locked}}disabled{{/if}}><i class="fas fa-rotate-left"></i>{{localize "BESTIARY.Tier.Reset"}}</button>
                 </header>
                 <p class="rail-hint">{{localize "BESTIARY.Tier.EntryHint"}}</p>
                 {{#each tierMatrix}}

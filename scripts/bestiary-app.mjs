@@ -1,4 +1,3 @@
-import { extractCreatureData, formatCR } from "./helpers.mjs";
 import {
   BESTIARY_COMMANDS,
   getUserTier,
@@ -7,29 +6,31 @@ import {
   selectVisibleFamilies,
   selectVisibleSections
 } from "./bestiary-domain.mjs";
-import {
-  dispatchBestiaryCommand,
-  getBestiaryData,
-  getBestiaryKnowledge
-} from "./bestiary-store.mjs";
+import { getBestiaryData, getBestiaryKnowledge } from "./bestiary-store.mjs";
+import { runCommand } from "./command-feedback.mjs";
 import {
   getFavoriteCreatureUuids,
   getLibraryViewMode,
   setLibraryViewMode,
   toggleFavoriteCreature
 } from "./client-preferences.mjs";
-import { buildImageView, buildThumbView } from "./image-framing.mjs";
+import { buildCreatureCard } from "./creature-cards.mjs";
+import { getCreatureDataMany } from "./creature-cache.mjs";
+import { buildPartyBadge } from "./knowledge-ui.mjs";
 import { GM_TIER, MIN_RESEARCH_TIER } from "./research-model.mjs";
 import { describeTier } from "./research.mjs";
 import { getPlayerUsers, localize, resolveUuid } from "./foundry-runtime.mjs";
 import { BestiaryTileEditor } from "./tile-editor.mjs";
 import { BestiarySectionView } from "./section-view.mjs";
-import { BestiaryCreatureView } from "./creature-view.mjs";
 import { BestiaryTierSettings } from "./tier-settings.mjs";
 import { exportBestiary, importBestiaryFromFile } from "./transfer.mjs";
 import { playApplicationEntrance, showContextMenu } from "./ui-effects.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+const LIBRARY_VIEWS = ["overview", "all", "recent", "favorites"];
+const RECENT_LIMIT = 24;
+const CARD_DRAG_TYPE = "application/x-bestiary-card";
 
 export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
@@ -43,17 +44,15 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       createSection: function () { this._onCreateSection(); },
       openSection: function (event, target) { this._onOpenSection(event, target); },
       editSection: function (event, target) { this._onEditSection(event, target); },
-      deleteSection: function (event, target) { this._onDeleteSection(event, target); },
-      toggleSectionVisibility: function (event, target) { this._onToggleSectionVisibility(event, target); },
       setLibraryView: function (event, target) { this._onSetLibraryView(event, target); },
       openCreature: function (event, target) { this._onOpenCreature(event, target); },
       openSheet: function (event, target) { this._onOpenSheet(event, target); },
       toggleFavorite: function (event, target) { this._onToggleFavorite(event, target); },
       toggleCreatureLayout: function (event, target) { this._onToggleCreatureLayout(event, target); },
       clearSearch: function () { this._clearSearch(); },
-      exportAll: function () { this._onExportAll(); },
-      importSnapshot: function () { this._onImport(); },
-      openTierSettings: function () { new BestiaryTierSettings().render(true); }
+      exportAll: function () { exportBestiary({}); },
+      importSnapshot: function () { importBestiaryFromFile(); },
+      openTierSettings: function () { new BestiaryTierSettings().render({ force: true }); }
     }
   };
 
@@ -65,6 +64,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     super(options);
     this._activeView = "overview";
     this._creatureLayout = getLibraryViewMode();
+    this._searchQuery = "";
   }
 
   async _prepareContext() {
@@ -74,29 +74,38 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const visibleSections = selectVisibleSections(data, isGM);
     const sections = this._buildSectionCards(visibleSections, isGM);
     const creatures = await this._resolveLibraryCreatures(visibleSections, knowledge, isGM);
-    const favoriteCreatures = creatures.filter(creature => creature.isFavorite);
-    const displayedCreatures = this._activeView === "favorites" ? favoriteCreatures : creatures;
+    const byDate = [...creatures].sort((a, b) => b.addedAt - a.addedAt);
+    const favoriteCreatures = byDate.filter(creature => creature.isFavorite);
+    const displayed = {
+      overview: creatures,
+      all: creatures,
+      recent: byDate.slice(0, RECENT_LIMIT),
+      favorites: favoriteCreatures
+    }[this._activeView];
 
     return {
       sections,
-      recentCreatures: creatures.slice(0, 8),
-      displayedCreatures,
+      recentCreatures: byDate.slice(0, 8),
+      displayedCreatures: displayed,
       totalCreatures: creatures.length,
       favoriteCount: favoriteCreatures.length,
       collectionCount: sections.length,
       knownCount: creatures.filter(creature => creature.viewerTier > MIN_RESEARCH_TIER).length,
       activeView: this._activeView,
       isOverview: this._activeView === "overview",
+      isAll: this._activeView === "all",
       isRecent: this._activeView === "recent",
       isFavorites: this._activeView === "favorites",
-      viewTitle: this._activeView === "favorites"
-        ? localize("BESTIARY.Favorites")
-        : localize("BESTIARY.Recent"),
+      viewTitle: localize({
+        all: "BESTIARY.AllCreatures",
+        recent: "BESTIARY.Recent",
+        favorites: "BESTIARY.Favorites"
+      }[this._activeView] ?? "BESTIARY.Title"),
       creatureLayout: this._creatureLayout,
       isGrid: this._creatureLayout === "grid",
       isGM,
       noSections: sections.length === 0,
-      noCreatures: displayedCreatures.length === 0
+      noCreatures: displayed.length === 0
     };
   }
 
@@ -126,97 +135,112 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   async _resolveLibraryCreatures(visibleSections, knowledge, isGM) {
     const favorites = getFavoriteCreatureUuids();
     const players = isGM ? getPlayerUsers() : [];
+    const merged = mergeCreatureEntries(visibleSections, isGM);
+    const resolved = await getCreatureDataMany(merged.map(item => item.uuid));
     const creatures = [];
 
-    for (const merged of mergeCreatureEntries(visibleSections, isGM)) {
-      try {
-        const actor = await resolveUuid(merged.uuid);
-        if (!actor) continue;
-        const creature = await extractCreatureData(actor);
-        const viewerTier = isGM ? GM_TIER : getUserTier(knowledge, game.user.id, merged.uuid);
-        creatures.push({
-          ...creature,
-          uuid: merged.uuid,
-          addedAt: merged.addedAt,
-          collections: merged.collections,
-          crFormatted: formatCR(creature.cr),
-          typeLabel: [creature.size, creature.creatureType].filter(Boolean).join(" · "),
-          collectionLabel: merged.collections.join(", "),
-          isFavorite: favorites.has(merged.uuid),
+    for (const item of merged) {
+      const creature = resolved.get(item.uuid);
+      if (!creature) continue;
+      const viewerTier = isGM ? GM_TIER : getUserTier(knowledge, game.user.id, item.uuid);
+      creatures.push({
+        ...buildCreatureCard({
+          uuid: item.uuid,
+          entry: item.entry,
+          creature,
           viewerTier,
-          tierBadge: isGM
-            ? this._buildPartyBadge(knowledge, merged.uuid, players)
-            : describeTier(viewerTier),
-          image: buildImageView(merged.entry, creature),
-          thumb: buildThumbView(merged.entry, creature),
-          searchText: [creature.name, creature.creatureType, creature.size, ...merged.collections]
-            .join(" ").toLocaleLowerCase()
-        });
-      } catch (error) {
-        console.warn(`Bestiary | Could not resolve actor UUID ${merged.uuid}`, error);
-      }
+          searchExtra: item.collections
+        }),
+        addedAt: item.addedAt,
+        collectionLabel: item.collections.join(", "),
+        isFavorite: favorites.has(item.uuid),
+        viewerTier,
+        tierBadge: isGM ? buildPartyBadge(knowledge, item.uuid, players) : describeTier(viewerTier)
+      });
     }
-    creatures.sort((a, b) => b.addedAt - a.addedAt);
+    // Known names alphabetically, creatures the viewer cannot name last.
+    creatures.sort((a, b) => (!a.sortName - !b.sortName) || a.sortName.localeCompare(b.sortName));
     return creatures;
   }
 
-  /** Dropped entirely when the world has no players to report on. */
-  _buildPartyBadge(knowledge, uuid, players) {
-    if (!players.length) return null;
-    const known = players.filter(user => getUserTier(knowledge, user.id, uuid) > MIN_RESEARCH_TIER).length;
-    return {
-      label: `${known}/${players.length}`,
-      key: known === 0 ? "none" : "partial",
-      icon: known === 0 ? "fa-user-slash" : "fa-users"
-    };
-  }
-
   // ── Rendering ──
+
+  _onFirstRender(context, options) {
+    super._onFirstRender(context, options);
+    // The outer element survives re-renders, so bind element-level keys once.
+    this.element.addEventListener("keydown", event => this._onShellKeydown(event));
+  }
 
   _onRender(context, options) {
     super._onRender(context, options);
     this._activateSearch();
     this._activateContextMenus();
-    this._activateCreatureDrag();
+    this._activateCreatureCards();
     playApplicationEntrance(this, ".bestiary-shell");
+  }
+
+  async refreshFromExternalUpdate(payload = {}) {
+    const changed = payload.changed ?? {};
+    if (changed.data || changed.knowledge) await this.render();
+  }
+
+  _onShellKeydown(event) {
+    const input = this.element.querySelector(".library-search-input");
+    if (!input) return;
+    if (event.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
+      event.preventDefault();
+      input.focus();
+    } else if (event.key === "Escape" && input.value) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._clearSearch();
+    }
   }
 
   _activateSearch() {
     const input = this.element.querySelector(".library-search-input");
     if (!input) return;
+    input.value = this._searchQuery;
     input.addEventListener("input", () => {
-      const query = input.value.trim().toLocaleLowerCase();
-      for (const element of this.element.querySelectorAll("[data-search-text]")) {
-        element.classList.toggle("is-filtered-out", query && !element.dataset.searchText.includes(query));
-      }
-      this.element.querySelector(".library-search-clear")?.classList.toggle("is-visible", !!query);
+      this._searchQuery = input.value.trim().toLocaleLowerCase();
+      this._applySearch();
     });
-    this.element.addEventListener("keydown", event => {
-      if (event.key === "/" && !["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) {
-        event.preventDefault();
-        input.focus();
-      } else if (event.key === "Escape" && input.value) {
-        this._clearSearch();
-      }
-    });
+    this._applySearch();
+  }
+
+  _applySearch() {
+    const query = this._searchQuery;
+    for (const element of this.element.querySelectorAll("[data-search-text]")) {
+      element.classList.toggle("is-filtered-out", !!query && !element.dataset.searchText.includes(query));
+    }
+    this.element.querySelector(".library-search-clear")?.classList.toggle("is-visible", !!query);
+    this.element.querySelector(".library-scroll")?.classList.toggle("is-searching", !!query);
+    const results = this.element.querySelector(".library-search-results");
+    if (results) {
+      const shown = results.querySelectorAll(".library-creature-card:not(.is-filtered-out)").length;
+      results.classList.toggle("is-empty", shown === 0);
+    }
   }
 
   _clearSearch() {
     const input = this.element?.querySelector(".library-search-input");
     if (!input) return;
     input.value = "";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    this._searchQuery = "";
+    this._applySearch();
     input.focus();
   }
 
-  _activateCreatureDrag() {
-    for (const card of this.element.querySelectorAll(".library-creature-card[data-uuid]")) {
+  _activateCreatureCards() {
+    for (const card of this.element.querySelectorAll("[data-uuid][draggable='true']")) {
       card.addEventListener("dragstart", event => {
         event.dataTransfer.setData("text/plain", JSON.stringify({ type: "Actor", uuid: card.dataset.uuid }));
+        event.dataTransfer.setData(CARD_DRAG_TYPE, card.dataset.uuid);
       });
     }
     for (const card of this.element.querySelectorAll("[data-action='openSection'][tabindex], [data-action='openCreature'][tabindex]")) {
       card.addEventListener("keydown", event => {
+        if (event.target !== card) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           card.click();
@@ -230,43 +254,48 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const tile of this.element.querySelectorAll(".collection-card[data-section-id]")) {
       tile.addEventListener("contextmenu", event => {
         event.preventDefault();
-        const sectionId = tile.dataset.sectionId;
-        const isHidden = tile.dataset.hidden === "true";
-        const isLocked = tile.dataset.locked === "true";
-        showContextMenu(event, [
-          { name: localize("BESTIARY.EditSection"), icon: "fa-pen", callback: () => this._editSectionById(sectionId) },
-          {
-            name: localize(isHidden ? "BESTIARY.ShowToPlayers" : "BESTIARY.HideFromPlayers"),
-            icon: isHidden ? "fa-eye" : "fa-eye-slash",
-            callback: () => this._toggleSectionVisibilityById(sectionId)
-          },
-          {
-            name: localize(isLocked ? "BESTIARY.Lock.Unlock" : "BESTIARY.Lock.Lock"),
-            icon: isLocked ? "fa-lock-open" : "fa-lock",
-            callback: () => this._toggleSectionLock(sectionId, !isLocked)
-          },
-          { separator: true },
-          {
-            name: localize("BESTIARY.Transfer.ExportSection"),
-            icon: "fa-file-export",
-            callback: () => exportBestiary({ sectionIds: [sectionId] })
-          },
-          {
-            name: localize("BESTIARY.DeleteSection"),
-            icon: "fa-trash",
-            danger: true,
-            callback: () => this._deleteSectionById(sectionId)
-          }
-        ]);
+        this._showSectionMenu(event, tile.dataset.sectionId, {
+          isHidden: tile.dataset.hidden === "true",
+          isLocked: tile.dataset.locked === "true"
+        });
       });
     }
+  }
+
+  _showSectionMenu(event, sectionId, { isHidden, isLocked }) {
+    showContextMenu(event, [
+      { name: localize("BESTIARY.EditSection"), icon: "fa-pen", callback: () => this._editSectionById(sectionId) },
+      {
+        name: localize(isHidden ? "BESTIARY.ShowToPlayers" : "BESTIARY.HideFromPlayers"),
+        icon: isHidden ? "fa-eye" : "fa-eye-slash",
+        callback: () => runCommand({ type: BESTIARY_COMMANDS.TOGGLE_SECTION_VISIBILITY, sectionId })
+      },
+      {
+        name: localize(isLocked ? "BESTIARY.Lock.Unlock" : "BESTIARY.Lock.Lock"),
+        icon: isLocked ? "fa-lock-open" : "fa-lock",
+        callback: () => runCommand({ type: BESTIARY_COMMANDS.SET_SECTION_LOCK, sectionId, locked: !isLocked })
+      },
+      { separator: true },
+      {
+        name: localize("BESTIARY.Transfer.ExportSection"),
+        icon: "fa-file-export",
+        callback: () => exportBestiary({ sectionIds: [sectionId] })
+      },
+      {
+        name: localize("BESTIARY.DeleteSection"),
+        icon: "fa-trash",
+        danger: true,
+        disabled: isLocked,
+        callback: () => this._deleteSectionById(sectionId)
+      }
+    ]);
   }
 
   // ── Actions ──
 
   _onSetLibraryView(event, target) {
     const view = target.dataset.libraryView;
-    if (!["overview", "recent", "favorites"].includes(view)) return;
+    if (!LIBRARY_VIEWS.includes(view)) return;
     this._activeView = view;
     this.render();
   }
@@ -276,26 +305,28 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!["grid", "list"].includes(layout)) return;
     this._creatureLayout = layout;
     await setLibraryViewMode(layout);
-    this.element.querySelector(".library-creature-grid")?.classList.toggle("is-list", layout === "list");
+    for (const grid of this.element.querySelectorAll(".library-creature-grid:not(.is-search-grid)")) {
+      grid.classList.toggle("is-list", layout === "list");
+    }
     for (const button of this.element.querySelectorAll("[data-layout]")) {
       button.classList.toggle("is-active", button.dataset.layout === layout);
     }
   }
 
   _onCreateSection() {
-    new BestiaryTileEditor({ mode: "section", onSave: () => this.render() }).render(true);
+    new BestiaryTileEditor({ mode: "section" }).render({ force: true });
   }
 
   _onOpenSection(event, target) {
     const sectionId = target.closest("[data-section-id]")?.dataset.sectionId;
     if (!sectionId) return;
     this.close();
-    new BestiarySectionView({ sectionId }).render(true);
+    new BestiarySectionView({ sectionId }).render({ force: true });
   }
 
   _onOpenCreature(event, target) {
     const uuid = target.closest("[data-uuid]")?.dataset.uuid;
-    if (uuid) new BestiaryCreatureView({ uuid }).render(true);
+    if (uuid) game.bestiaryJournal?.openCreature(uuid);
   }
 
   async _onOpenSheet(event, target) {
@@ -303,7 +334,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!game.user.isGM) return;
     const uuid = target.closest("[data-uuid]")?.dataset.uuid;
     const actor = uuid ? await resolveUuid(uuid) : null;
-    actor?.sheet.render(true);
+    actor?.sheet.render({ force: true });
   }
 
   async _onToggleFavorite(event, target) {
@@ -316,30 +347,20 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onEditSection(event, target) {
     event.stopPropagation();
-    const sectionId = target.closest("[data-section-id]")?.dataset.sectionId;
-    if (sectionId) this._editSectionById(sectionId);
-  }
-
-  _onDeleteSection(event, target) {
-    event.stopPropagation();
-    const sectionId = target.closest("[data-section-id]")?.dataset.sectionId;
-    if (sectionId) this._deleteSectionById(sectionId);
-  }
-
-  _onToggleSectionVisibility(event, target) {
-    event.stopPropagation();
-    const sectionId = target.closest("[data-section-id]")?.dataset.sectionId;
-    if (sectionId) this._toggleSectionVisibilityById(sectionId);
+    const tile = target.closest("[data-section-id]");
+    if (!tile) return;
+    // The "…" button opens the same menu as a right click.
+    const bounds = target.getBoundingClientRect();
+    this._showSectionMenu({ clientX: bounds.left, clientY: bounds.bottom + 4 }, tile.dataset.sectionId, {
+      isHidden: tile.dataset.hidden === "true",
+      isLocked: tile.dataset.locked === "true"
+    });
   }
 
   _editSectionById(sectionId) {
     const section = getBestiaryData().sections.find(item => item.id === sectionId);
     if (!section) return;
-    new BestiaryTileEditor({
-      mode: "section",
-      tileData: section,
-      onSave: () => this.render()
-    }).render(true);
+    new BestiaryTileEditor({ mode: "section", tileData: section }).render({ force: true });
   }
 
   async _deleteSectionById(sectionId) {
@@ -349,26 +370,6 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       rejectClose: false
     });
     if (!confirmed) return;
-    await dispatchBestiaryCommand({ type: BESTIARY_COMMANDS.DELETE_SECTION, sectionId });
-    this.render();
-  }
-
-  async _toggleSectionVisibilityById(sectionId) {
-    await dispatchBestiaryCommand({ type: BESTIARY_COMMANDS.TOGGLE_SECTION_VISIBILITY, sectionId });
-    this.render();
-  }
-
-  async _toggleSectionLock(sectionId, locked) {
-    await dispatchBestiaryCommand({ type: BESTIARY_COMMANDS.SET_SECTION_LOCK, sectionId, locked });
-    this.render();
-  }
-
-  _onExportAll() {
-    exportBestiary({});
-  }
-
-  async _onImport() {
-    const imported = await importBestiaryFromFile();
-    if (imported) this.render();
+    await runCommand({ type: BESTIARY_COMMANDS.DELETE_SECTION, sectionId }, { unchanged: "BESTIARY.Lock.Blocked" });
   }
 }

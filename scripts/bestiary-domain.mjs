@@ -296,6 +296,21 @@ export function findCreatureEntry(data, uuid) {
 }
 
 /**
+ * The (section, entry) pair a viewer should read a creature through: the
+ * preferred collection when it holds the creature and the viewer may see it
+ * there, otherwise the first collection the viewer can see. A player never
+ * gets the settings of a copy that lives in a collection hidden from them.
+ */
+export function selectEntryContext(data, uuid, viewer, preferredSectionId = null) {
+  const visible = getEntryContexts(data, uuid)
+    .filter(({ section, entry }) => isSectionVisible(section, viewer)
+      && isCreatureEntryVisible(entry, section, viewer));
+  return visible.find(context => context.section.id === preferredSectionId)
+    ?? visible[0]
+    ?? null;
+}
+
+/**
  * A sheet counts as locked when the creature entry or its section is locked
  * anywhere in the bestiary. Locking freezes assignments and comments for
  * everyone; the GM has to lift the lock first.
@@ -408,7 +423,9 @@ export function applyBestiaryCommand(currentState, command, dependencies = {}) {
 
   const context = {
     now: dependencies.now ?? Date.now,
-    generateId: dependencies.generateId ?? (() => Math.random().toString(36).slice(2, 18))
+    generateId: dependencies.generateId ?? (() => Math.random().toString(36).slice(2, 18)),
+    // Lets the authority reject ids that are not players of this world.
+    isPlayerUser: dependencies.isPlayerUser ?? (() => true)
   };
   const touched = handler(state, command, context) || [];
   const changed = Object.fromEntries(STORE_KEYS.map(key => [key, touched.includes(key)]));
@@ -728,34 +745,33 @@ function handleMoveCreature(state, command, { now }) {
 }
 
 /**
- * Merges an exported snapshot back in. `replace` wipes matching sections first;
- * `merge` keeps existing sections and only appends what is missing.
+ * Merges an exported snapshot back in.
+ * `replace` swaps every unlocked collection for the snapshot; locked ones stay
+ * exactly as they are. `merge` keeps existing collections and only appends
+ * what is missing — see {@link planSnapshotImport} for how sections match.
  */
 function handleImportSnapshot(state, command, { now, generateId }) {
-  const payload = isObject(command.payload) ? command.payload : {};
-  const incoming = normalizeBestiaryData({ sections: payload.sections });
-  if (!incoming.sections.length) return TOUCHED_NONE;
+  const incoming = prepareIncomingSections(command.payload, generateId);
+  if (!incoming.length) return TOUCHED_NONE;
 
   if (command.mode === "replace") {
-    state.data.sections = incoming.sections.map(section => ({
-      ...section,
-      id: section.id || generateId(),
-      updatedAt: now()
-    }));
+    const kept = state.data.sections.filter(section => section.locked);
+    const keptIds = new Set(kept.map(section => section.id));
+    const keptNames = new Set(kept.map(section => section.name));
+    const replacements = incoming
+      .filter(section => !keptIds.has(section.id) && !keptNames.has(section.name))
+      .map(section => ({ ...section, updatedAt: now() }));
+    state.data.sections = [...kept, ...replacements];
     return TOUCHED_DATA;
   }
 
-  for (const section of incoming.sections) {
-    const existing = state.data.sections
-      .find(item => item.id === section.id || item.name === section.name);
+  const { matches } = matchSnapshotSections(state.data.sections, incoming);
+  for (const section of incoming) {
+    const existing = matches.get(section);
     if (!existing) {
       const maxSort = state.data.sections.reduce((max, item) => Math.max(max, item.sort), 0);
-      state.data.sections.push({
-        ...section,
-        id: section.id || generateId(),
-        sort: maxSort + 100,
-        updatedAt: now()
-      });
+      const id = state.data.sections.some(item => item.id === section.id) ? generateId() : section.id;
+      state.data.sections.push({ ...section, id, sort: maxSort + 100, updatedAt: now() });
       continue;
     }
     if (existing.locked) continue;
@@ -764,15 +780,97 @@ function handleImportSnapshot(state, command, { now, generateId }) {
   return TOUCHED_DATA;
 }
 
+/**
+ * Normalizes snapshot sections and repairs what a hand-edited or doubled
+ * export can contain: missing or repeated ids, and the same creature twice.
+ */
+function prepareIncomingSections(payload, generateId) {
+  const source = isObject(payload) ? payload : {};
+  const sections = normalizeBestiaryData({ sections: source.sections }).sections;
+  const seenIds = new Set();
+  return sections.map(section => {
+    const id = section.id && !seenIds.has(section.id) ? section.id : generateId();
+    seenIds.add(id);
+    const familyIds = new Set();
+    const families = section.families.map(family => {
+      const familyId = family.id && !familyIds.has(family.id) ? family.id : generateId();
+      familyIds.add(familyId);
+      return { ...family, id: familyId };
+    });
+    const uuids = new Set();
+    const creatures = section.creatures.filter(entry => {
+      if (!entry.uuid || uuids.has(entry.uuid)) return false;
+      uuids.add(entry.uuid);
+      return true;
+    });
+    return { ...section, id, families, creatures };
+  });
+}
+
+/**
+ * Incoming sections match an existing one by id first; only an incoming
+ * section without an id match falls back to a same-named collection, and
+ * each existing collection absorbs at most one incoming section.
+ */
+function matchSnapshotSections(existingSections, incoming) {
+  const matches = new Map();
+  const claimed = new Set();
+  for (const section of incoming) {
+    const byId = existingSections.find(item => item.id === section.id);
+    if (byId && !claimed.has(byId)) {
+      matches.set(section, byId);
+      claimed.add(byId);
+    }
+  }
+  for (const section of incoming) {
+    if (matches.has(section)) continue;
+    const byName = existingSections.find(item => !claimed.has(item) && item.name === section.name);
+    if (byName) {
+      matches.set(section, byName);
+      claimed.add(byName);
+    }
+  }
+  return { matches };
+}
+
+/** What an import would do, so the GM can confirm it before anything changes. */
+export function planSnapshotImport(data, payload, mode = "merge") {
+  const current = normalizeBestiaryData(data).sections;
+  let counter = 0;
+  const incoming = prepareIncomingSections(payload, () => `__preview${++counter}`);
+  const lockedNames = current.filter(section => section.locked).map(section => section.name);
+  if (mode === "replace") {
+    const kept = current.filter(section => section.locked);
+    return {
+      merged: [],
+      created: incoming
+        .filter(section => !kept.some(item => item.id === section.id || item.name === section.name))
+        .map(section => section.name),
+      removed: current.filter(section => !section.locked).map(section => section.name),
+      locked: lockedNames
+    };
+  }
+  const { matches } = matchSnapshotSections(current, incoming);
+  const plan = { merged: [], created: [], removed: [], locked: [] };
+  for (const section of incoming) {
+    const existing = matches.get(section);
+    if (!existing) plan.created.push(section.name);
+    else if (existing.locked) plan.locked.push(existing.name);
+    else plan.merged.push(existing.name);
+  }
+  return plan;
+}
+
 function mergeSectionInto(existing, incoming, now, generateId) {
   const familyIdMap = new Map();
   for (const family of incoming.families) {
-    const match = existing.families.find(item => item.id === family.id || item.name === family.name);
+    const match = existing.families.find(item => item.id === family.id)
+      ?? existing.families.find(item => item.name === family.name);
     if (match) {
       familyIdMap.set(family.id, match.id);
       continue;
     }
-    const id = family.id || generateId();
+    const id = existing.families.some(item => item.id === family.id) ? generateId() : family.id;
     familyIdMap.set(family.id, id);
     existing.families.push({ ...family, id, updatedAt: now() });
   }
@@ -845,9 +943,13 @@ function handleRecordResearch(state, command, { now }) {
   const uuid = String(command.uuid ?? "");
   if (!userId || !uuid) return TOUCHED_NONE;
   if (isCreatureLocked(state.data, uuid)) return TOUCHED_NONE;
+  // Only a creature this user can actually open may be researched.
+  if (!canViewCreature(state.data, uuid, { id: userId, isGM: false })) return TOUCHED_NONE;
 
+  const existing = getKnowledgeRecord(state.knowledge, userId, uuid);
+  if (existing?.blocked) return TOUCHED_NONE;
+  if (clampKnownTier(existing?.tier, MIN_RESEARCH_TIER) >= MAX_RESEARCH_TIER) return TOUCHED_NONE;
   const record = ensureKnowledgeRecord(state.knowledge, userId, uuid);
-  if (record.blocked) return TOUCHED_NONE;
 
   record.attempts += 1;
   record.lastRoll = {
@@ -874,13 +976,14 @@ function handleRecordResearch(state, command, { now }) {
  * Sharing never grants more than the sender knows, and never lowers what the
  * recipient already had.
  */
-function handleShareKnowledge(state, command, { now, generateId }) {
+function handleShareKnowledge(state, command, { now, generateId, isPlayerUser }) {
   const fromUserId = String(command.userId ?? "");
   const uuid = String(command.uuid ?? "");
-  const targets = toArray(command.toUserIds ?? command.toUserId)
-    .filter(id => id && id !== fromUserId);
+  const targets = [...new Set(toArray(command.toUserIds ?? command.toUserId))]
+    .filter(id => id && id !== fromUserId && isPlayerUser(id));
   if (!fromUserId || !uuid || !targets.length) return TOUCHED_NONE;
   if (isCreatureLocked(state.data, uuid)) return TOUCHED_NONE;
+  if (!canViewCreature(state.data, uuid, { id: fromUserId, isGM: !!command.isGM })) return TOUCHED_NONE;
 
   const senderTier = getUserTier(state.knowledge, fromUserId, uuid);
   if (senderTier <= MIN_RESEARCH_TIER) return TOUCHED_NONE;
@@ -921,6 +1024,9 @@ function handleAddComment(state, command, { now, generateId }) {
   const authorId = String(command.userId ?? "");
   if (!uuid || !text || !authorId) return TOUCHED_NONE;
   if (isCreatureLocked(state.data, uuid)) return TOUCHED_NONE;
+  // Notes belong to bestiary entries the author can open, nothing else.
+  if (!getEntryContexts(state.data, uuid).length) return TOUCHED_NONE;
+  if (!canViewCreature(state.data, uuid, { id: authorId, isGM: !!command.isGM })) return TOUCHED_NONE;
 
   const channel = COMMENT_CHANNELS.includes(command.channel) ? command.channel : "private";
   if (channel === "gm" && !command.isGM) return TOUCHED_NONE;
@@ -951,7 +1057,7 @@ function handleUpdateComment(state, command, { now }) {
       changed = true;
     }
   }
-  if ("shared" in patch && comment.channel === "gm" && command.isGM) {
+  if ("shared" in patch && comment.channel === "gm" && command.isGM && comment.shared !== !!patch.shared) {
     comment.shared = !!patch.shared;
     changed = true;
   }

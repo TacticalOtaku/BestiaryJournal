@@ -1,5 +1,5 @@
 import { BESTIARY_COMMANDS, selectResearchTargets } from "./bestiary-domain.mjs";
-import { dispatchBestiaryCommand, getBestiaryData } from "./bestiary-store.mjs";
+import { describeCommandError, dispatchBestiaryCommand, getBestiaryData } from "./bestiary-store.mjs";
 import { localize } from "./foundry-runtime.mjs";
 import { researchSkillOptions } from "./research.mjs";
 
@@ -8,7 +8,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 /** GM batch editor. One command persists all selected entries atomically. */
 export class BestiaryBulkResearch extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
-    id: "bestiary-bulk-research",
+    id: "bestiary-bulk-research-{id}",
     classes: ["bestiary-journal", "bestiary-app", "bestiary-bulk-research"],
     tag: "form",
     window: { title: "BESTIARY.BulkResearch.Title", icon: "fas fa-sliders", resizable: true },
@@ -22,7 +22,7 @@ export class BestiaryBulkResearch extends HandlebarsApplicationMixin(Application
   static PARTS = { form: { template: "modules/bestiary-journal/templates/bulk-research.hbs" } };
 
   constructor(options = {}) {
-    super(options);
+    super({ ...options, uniqueId: options.uniqueId ?? foundry.utils.randomID(16) });
     this.sectionId = options.sectionId;
     this.familyId = options.familyId;
   }
@@ -45,9 +45,13 @@ export class BestiaryBulkResearch extends HandlebarsApplicationMixin(Application
     };
   }
 
+  _onFirstRender(context, options) {
+    super._onFirstRender(context, options);
+    this.element.addEventListener("change", () => this._syncForm());
+  }
+
   _onRender(context, options) {
     super._onRender(context, options);
-    this.element.addEventListener("change", () => this._syncForm());
     this._syncForm();
   }
 
@@ -108,7 +112,7 @@ export class BestiaryBulkResearch extends HandlebarsApplicationMixin(Application
       ui.notifications.info(localize("BESTIARY.BulkResearch.Done"));
       await this.close();
     } catch (error) {
-      ui.notifications.error(error.message);
+      ui.notifications.error(describeCommandError(error));
     } finally {
       this._saving = false;
       if (this.element?.querySelector('[name="scope"]')) this._syncForm();

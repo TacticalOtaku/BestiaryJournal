@@ -26,7 +26,6 @@
     "SectionImage": "Cover image",
     "Save": "Save",
     "Cancel": "Cancel",
-    "Delete": "Delete",
     "ConfirmDelete": "Delete this collection together with every creature inside it?",
     "ConfirmRemoveCreature": "Remove this creature from the collection?",
     "DropHint": "Drop NPC actors or an actor folder here",
@@ -34,7 +33,6 @@
     "NoSections": "No collections yet. Create the first one.",
     "MissingActor": "Actor deleted",
     "NoActiveGm": "No active GM — the change cannot be saved.",
-    "Back": "Back",
     "ViewList": "List",
     "ViewCard": "Cards",
     "ViewMode": "View mode",
@@ -137,7 +135,8 @@
       "ChatTitle": "Bestiary research",
       "ChatBody": "{actor} recalls what they know about {creature}: {skill} — {total} against DC {dc}.",
       "ChatSuccess": "Success: their knowledge deepens.",
-      "ChatFailure": "Failure: nothing new comes to mind."
+      "ChatFailure": "Failure: nothing new comes to mind.",
+      "SkillsAuto": "Automatic right now: {skill}."
     },
     "Share": {
       "Button": "Share",
@@ -148,7 +147,8 @@
       "Confirm": "Share",
       "Done": "Shared with {count} player(s).",
       "NothingToShare": "You do not know anything about this creature yet.",
-      "NoRecipients": "There is nobody else to share with."
+      "NoRecipients": "There is nobody else to share with.",
+      "NothingChanged": "Nobody learned anything new."
     },
     "Comments": {
       "Tab": "Notes",
@@ -168,7 +168,12 @@
       "PostShared": "Show to players",
       "SharedWithPlayers": "Visible to players",
       "HiddenFromPlayers": "Hidden from players",
-      "UnknownAuthor": "Unknown author"
+      "UnknownAuthor": "Unknown author",
+      "NotSaved": "The note was not saved — the sheet may be locked.",
+      "Pin": "Pin",
+      "Edit": "Edit",
+      "Editing": "Editing a note",
+      "CancelEdit": "Cancel"
     },
     "Lock": {
       "Lock": "Lock",
@@ -206,7 +211,8 @@
       "FitHint": "\"Fit whole\" shows the artwork uncropped over a blurred backdrop. \"Crop\" fills the tile, centred on the focal point.",
       "FocusHint": "Click or drag across the artwork to set the focal point",
       "CenterFocus": "Recentre",
-      "ClearImage": "Remove image"
+      "ClearImage": "Remove image",
+      "NoToken": "The token uses the same image as the portrait."
     },
     "Import": {
       "Title": "Bulk import",
@@ -224,7 +230,8 @@
       "CopyToWorldHint": "Otherwise entries stay compendium links: not editable, but the world stays small.",
       "Done": "Added {count} creature(s).",
       "LoadFailed": "The source could not be read.",
-      "FolderEmpty": "That folder holds no NPC actors."
+      "FolderEmpty": "That folder holds no NPC actors.",
+      "NothingNew": "Every selected creature is already in this collection."
     },
     "Transfer": {
       "Import": "Import",
@@ -239,10 +246,17 @@
       "ImportNote": "Structure is imported: collections, families, tier settings and framing. Player knowledge and notes do not travel between worlds.",
       "ModeMerge": "Merge",
       "ModeReplace": "Replace all",
-      "ReplaceWarning": "Your current collections will be replaced entirely by the file. Continue?",
+      "ReplaceWarning": "Your unlocked collections will be replaced by the file. Locked collections stay as they are. Continue?",
       "ErrorNotJson": "The file is not valid JSON.",
       "ErrorForeign": "The file was produced by a different module.",
-      "ErrorEmpty": "The file holds no collections."
+      "ErrorEmpty": "The file holds no collections.",
+      "NothingChanged": "The import changed nothing.",
+      "PlanMerge": "When merging:",
+      "PlanReplace": "What will happen:",
+      "PlanMerged": "merged into",
+      "PlanCreated": "created",
+      "PlanRemoved": "removed",
+      "PlanLocked": "locked, left untouched"
     },
     "Preview": {
       "AsGm": "As the GM",
@@ -252,11 +266,9 @@
     "HP": "Hit Points",
     "AC": "Armor Class",
     "Speed": "Speed",
-    "CR": "Challenge Rating",
     "XP": "Experience",
     "Type": "Type",
     "Size": "Size",
-    "Alignment": "Alignment",
     "Abilities": "Abilities",
     "Skills": "Skills",
     "Senses": "Senses",
@@ -284,7 +296,6 @@
     "ItemAttack": "Attack",
     "ItemSave": "Save",
     "ItemTarget": "Target",
-    "ItemActivities": "Activities",
     "ItemEquipped": "Equipped",
     "ItemAttuned": "Attuned",
     "Activity": "Activity",
@@ -345,14 +356,12 @@
     "OnlyNpcActors": "Only NPC actors can be added to the bestiary.",
     "AlreadyInCollection": "{name} is already in this collection.",
     "AddedToCollection": "{name} was added to {collection}.",
-    "DropIntoCollection": "Add to collection",
+    "DropIntoCollection": "Add to collection “{name}”",
     "CreatureProfile": "Creature profile",
     "SendToChat": "To chat",
     "OpenBestiaryCard": "Open the bestiary card",
     "CreatureUnavailable": "This card is hidden or its collection is unavailable.",
     "CoreStats": "Core statistics",
-    "ClickToRoll": "Click to roll",
-    "RollAbility": "Roll a check for",
     "SaveShort": "Save",
     "Proficiencies": "Proficiencies",
     "Perception": "Perception",
@@ -360,7 +369,6 @@
     "Defense": "Defense",
     "Defenses": "Defensive traits",
     "Section": "Section",
-    "Roll": "Roll",
     "CreatureLoadError": "The creature data could not be loaded",
     "SpeedWalk": "Walk",
     "SpeedBurrow": "Burrow",
@@ -420,6 +428,20 @@
       "Apply": "Apply settings",
       "PickSkill": "Select at least one skill, or choose automatic selection.",
       "Done": "Research settings applied to unlocked entries in the selected scope."
+    },
+    "Overview": "Overview",
+    "SearchResults": "Matching creatures",
+    "SectionUnavailable": "This collection is not available.",
+    "Errors": {
+      "GmOnly": "This action is reserved for the Game Master.",
+      "Timeout": "The GM did not answer in time. Try again.",
+      "NotAuthenticated": "The request could not be verified.",
+      "SharingDisabled": "Sharing is disabled in this world.",
+      "ResearchDisabled": "Research rolls are disabled in this world.",
+      "ResearchUnverified": "The research roll could not be verified.",
+      "ResearchSkill": "This skill cannot be used to research this creature.",
+      "ResearchNotRecorded": "The roll was not counted: the creature is locked, blocked for you or already fully known.",
+      "Unknown": "Something went wrong."
     }
   }
 }

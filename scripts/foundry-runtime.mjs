@@ -14,18 +14,6 @@ export function getDnd5eConfig() {
   return CONFIG.DND5E ?? {};
 }
 
-/**
- * dnd5e 4.0 moved the roll helpers from positional arguments
- * (`rollSkill("nat", options)`) to a configuration object (`rollSkill({skill})`).
- * Wrappers such as midi-qol write onto that first argument, so passing a bare
- * string to a modern system throws instead of rolling.
- */
-export function usesLegacyDnd5eRollApi() {
-  const version = game.system?.version ?? "";
-  if (!version) return false;
-  return foundry.utils.isNewerVersion("4.0.0", version);
-}
-
 export function enrichHtml(text, options) {
   const editor = foundry.applications.ux.TextEditor.implementation;
   return editor.enrichHTML(text, options);
@@ -64,8 +52,8 @@ export function formatTimestamp(value) {
 }
 
 export function openFilePicker({ type = "image", current = "", callback }) {
-  const Picker = foundry.applications?.apps?.FilePicker?.implementation ?? globalThis.FilePicker;
+  const Picker = foundry.applications.apps.FilePicker.implementation;
   const picker = new Picker({ type, current, callback });
-  picker.render(true);
+  picker.render({ force: true });
   return picker;
 }
