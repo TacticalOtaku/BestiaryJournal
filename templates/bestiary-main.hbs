@@ -1,7 +1,7 @@
 <div class="bestiary-shell">
   <aside class="library-sidebar" aria-label="{{localize 'BESTIARY.LibraryNavigation'}}">
     <div class="library-brand">
-      <span class="library-brand-mark"><i class="fas fa-book-skull"></i></span>
+      <span class="library-brand-mark"><i class="fa-solid fa-book-skull"></i></span>
       <div>
         <strong>{{localize "BESTIARY.Title"}}</strong>
         <small>{{localize "BESTIARY.Library"}}</small>
@@ -10,16 +10,16 @@
 
     <nav class="library-primary-nav">
       <button type="button" class="library-nav-item {{#if isOverview}}is-active{{/if}}" data-action="setLibraryView" data-library-view="overview" data-tooltip="{{localize 'BESTIARY.Overview'}}">
-        <i class="fas fa-house"></i><span>{{localize "BESTIARY.Overview"}}</span>
+        <i class="fa-solid fa-house"></i><span>{{localize "BESTIARY.Overview"}}</span>
       </button>
       <button type="button" class="library-nav-item {{#if isAll}}is-active{{/if}}" data-action="setLibraryView" data-library-view="all" data-tooltip="{{localize 'BESTIARY.AllCreatures'}}">
-        <i class="fas fa-table-cells-large"></i><span>{{localize "BESTIARY.AllCreatures"}}</span><strong>{{totalCreatures}}</strong>
+        <i class="fa-solid fa-table-cells-large"></i><span>{{localize "BESTIARY.AllCreatures"}}</span><strong>{{totalCreatures}}</strong>
       </button>
       <button type="button" class="library-nav-item {{#if isRecent}}is-active{{/if}}" data-action="setLibraryView" data-library-view="recent" data-tooltip="{{localize 'BESTIARY.Recent'}}">
-        <i class="far fa-clock"></i><span>{{localize "BESTIARY.Recent"}}</span>
+        <i class="fa-regular fa-clock"></i><span>{{localize "BESTIARY.Recent"}}</span>
       </button>
       <button type="button" class="library-nav-item {{#if isFavorites}}is-active{{/if}}" data-action="setLibraryView" data-library-view="favorites" data-tooltip="{{localize 'BESTIARY.Favorites'}}">
-        <i class="far fa-star"></i><span>{{localize "BESTIARY.Favorites"}}</span><strong>{{favoriteCount}}</strong>
+        <i class="fa-regular fa-star"></i><span>{{localize "BESTIARY.Favorites"}}</span><strong>{{favoriteCount}}</strong>
       </button>
     </nav>
 
@@ -27,9 +27,9 @@
     <nav class="library-collection-nav bestiary-scrollable">
       {{#each sections}}
         <button type="button" class="library-nav-item {{#if this.isHidden}}is-muted{{/if}}" data-action="openSection" data-section-id="{{this.id}}" data-tooltip="{{this.name}}">
-          <i class="far fa-folder"></i>
+          <i class="fa-regular fa-folder"></i>
           <span title="{{this.name}}">{{this.name}}</span>
-          {{#if this.isLocked}}<i class="fas fa-lock library-nav-flag"></i>{{/if}}
+          {{#if this.isLocked}}<i class="fa-solid fa-lock library-nav-flag"></i>{{/if}}
           <strong>{{this.creatureCount}}</strong>
         </button>
       {{/each}}
@@ -37,11 +37,11 @@
 
     <div class="library-sidebar-footer">
       {{#if isGM}}
-        <button type="button" class="library-new-button" data-action="createSection" data-tooltip="{{localize 'BESTIARY.NewCollection'}}"><i class="fas fa-plus"></i><span>{{localize "BESTIARY.NewCollection"}}</span></button>
+        <button type="button" class="library-new-button" data-action="createSection" data-tooltip="{{localize 'BESTIARY.NewCollection'}}"><i class="fa-solid fa-plus"></i><span>{{localize "BESTIARY.NewCollection"}}</span></button>
         <div class="library-footer-tools">
-          <button type="button" data-action="importSnapshot" data-tooltip="{{localize 'BESTIARY.Transfer.Import'}}"><i class="fas fa-file-import"></i></button>
-          <button type="button" data-action="exportAll" data-tooltip="{{localize 'BESTIARY.Transfer.ExportAll'}}"><i class="fas fa-file-export"></i></button>
-          <button type="button" data-action="openTierSettings" data-tooltip="{{localize 'BESTIARY.Tier.WorldTitle'}}"><i class="fas fa-layer-group"></i></button>
+          <button type="button" data-action="importSnapshot" data-tooltip="{{localize 'BESTIARY.Transfer.Import'}}"><i class="fa-solid fa-file-import"></i></button>
+          <button type="button" data-action="exportAll" data-tooltip="{{localize 'BESTIARY.Transfer.ExportAll'}}"><i class="fa-solid fa-file-export"></i></button>
+          <button type="button" data-action="openTierSettings" data-tooltip="{{localize 'BESTIARY.Tier.WorldTitle'}}"><i class="fa-solid fa-layer-group"></i></button>
         </div>
       {{/if}}
     </div>
@@ -63,14 +63,14 @@
 
       <div class="library-toolbar-row">
         <label class="library-search">
-          <i class="fas fa-magnifying-glass"></i>
+          <i class="fa-solid fa-magnifying-glass"></i>
           <input type="search" class="library-search-input" placeholder="{{localize 'BESTIARY.SearchLibrary'}}" />
-          <button type="button" class="library-search-clear" data-action="clearSearch" aria-label="{{localize 'BESTIARY.ClearSearch'}}"><i class="fas fa-xmark"></i></button>
+          <button type="button" class="library-search-clear" data-action="clearSearch" aria-label="{{localize 'BESTIARY.ClearSearch'}}"><i class="fa-solid fa-xmark"></i></button>
         </label>
         {{#unless isOverview}}
           <div class="suite-segmented suite-view-switch" aria-label="{{localize 'BESTIARY.ViewMode'}}">
-            <button type="button" class="{{#if isGrid}}is-active{{/if}}" data-action="toggleCreatureLayout" data-layout="grid" data-tooltip="{{localize 'BESTIARY.ViewCard'}}"><i class="fas fa-table-cells-large"></i></button>
-            <button type="button" class="{{#unless isGrid}}is-active{{/unless}}" data-action="toggleCreatureLayout" data-layout="list" data-tooltip="{{localize 'BESTIARY.ViewList'}}"><i class="fas fa-list"></i></button>
+            <button type="button" class="{{#if isGrid}}is-active{{/if}}" data-action="toggleCreatureLayout" data-layout="grid" data-tooltip="{{localize 'BESTIARY.ViewCard'}}"><i class="fa-solid fa-table-cells-large"></i></button>
+            <button type="button" class="{{#unless isGrid}}is-active{{/unless}}" data-action="toggleCreatureLayout" data-layout="list" data-tooltip="{{localize 'BESTIARY.ViewList'}}"><i class="fa-solid fa-list"></i></button>
           </div>
         {{/unless}}
       </div>
@@ -98,17 +98,17 @@
                   </p>
                 </div>
                 <div class="collection-card-flags">
-                  {{#if this.isHidden}}<span class="suite-badge is-warning" data-tooltip="{{localize 'BESTIARY.HiddenFromPlayers'}}"><i class="fas fa-eye-slash"></i></span>{{/if}}
-                  {{#if this.isLocked}}<span class="suite-badge is-locked" data-tooltip="{{localize 'BESTIARY.Lock.Locked'}}"><i class="fas fa-lock"></i></span>{{/if}}
+                  {{#if this.isHidden}}<span class="suite-badge is-warning" data-tooltip="{{localize 'BESTIARY.HiddenFromPlayers'}}"><i class="fa-solid fa-eye-slash"></i></span>{{/if}}
+                  {{#if this.isLocked}}<span class="suite-badge is-locked" data-tooltip="{{localize 'BESTIARY.Lock.Locked'}}"><i class="fa-solid fa-lock"></i></span>{{/if}}
                 </div>
                 {{#if ../isGM}}
-                  <button type="button" class="collection-menu-button" data-action="editSection" aria-label="{{localize 'BESTIARY.EditSection'}}"><i class="fas fa-ellipsis"></i></button>
+                  <button type="button" class="collection-menu-button" data-action="editSection" aria-label="{{localize 'BESTIARY.EditSection'}}"><i class="fa-solid fa-ellipsis"></i></button>
                 {{/if}}
               </article>
             {{/each}}
             {{#if isGM}}
               <button type="button" class="collection-card collection-card-new" data-action="createSection">
-                <span><i class="fas fa-plus"></i></span>
+                <span><i class="fa-solid fa-plus"></i></span>
                 <strong>{{localize "BESTIARY.NewCollection"}}</strong>
                 <small>{{localize "BESTIARY.CreateCollectionHint"}}</small>
               </button>
@@ -136,11 +136,11 @@
                 <small>{{this.collectionLabel}}</small>
               </div>
                 <div class="library-creature-meta">
-                {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fas {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
+                {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
               </div>
                 <div class="library-creature-actions">
                 <button type="button" data-action="toggleFavorite" aria-label="{{localize 'BESTIARY.ToggleFavorite'}}" data-tooltip="{{localize 'BESTIARY.ToggleFavorite'}}"><i class="{{#if this.isFavorite}}fas{{else}}far{{/if}} fa-star"></i></button>
-                {{#if @root.isGM}}<button type="button" data-action="openSheet" aria-label="{{localize 'BESTIARY.OpenSheet'}}" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}"><i class="fas fa-arrow-up-right-from-square"></i></button>{{/if}}
+                {{#if @root.isGM}}<button type="button" data-action="openSheet" aria-label="{{localize 'BESTIARY.OpenSheet'}}" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>{{/if}}
               </div>
             </article>
             {{/each}}
@@ -152,7 +152,7 @@
           <section class="library-section-block library-recent-block">
             <div class="library-section-title">
               <div><h2>{{localize "BESTIARY.RecentlyAdded"}}</h2><p>{{localize "BESTIARY.RecentlyAddedHint"}}</p></div>
-              <button type="button" data-action="setLibraryView" data-library-view="recent">{{localize "BESTIARY.ShowAll"}}<i class="fas fa-arrow-right"></i></button>
+              <button type="button" data-action="setLibraryView" data-library-view="recent">{{localize "BESTIARY.ShowAll"}}<i class="fa-solid fa-arrow-right"></i></button>
             </div>
             <div class="recent-creature-strip bestiary-scrollable">
               {{#each recentCreatures}}
@@ -166,7 +166,7 @@
                     <strong class="{{#unless this.knowsName}}is-unknown{{/unless}}" title="{{this.name}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</strong>
                     <span>{{this.typeLabel}}</span>
                   </div>
-                  {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}"><i class="fas {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
+                  {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}"><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
                 </article>
               {{/each}}
             </div>
@@ -175,9 +175,9 @@
 
         {{#if noSections}}
           <div class="suite-empty-state">
-            <i class="fas fa-folder-open"></i>
+            <i class="fa-solid fa-folder-open"></i>
             <h2>{{localize "BESTIARY.NoSections"}}</h2>
-            {{#if isGM}}<button type="button" class="suite-primary-button" data-action="createSection"><i class="fas fa-plus"></i>{{localize "BESTIARY.NewCollection"}}</button>{{/if}}
+            {{#if isGM}}<button type="button" class="suite-primary-button" data-action="createSection"><i class="fa-solid fa-plus"></i>{{localize "BESTIARY.NewCollection"}}</button>{{/if}}
           </div>
         {{/if}}
       {{else}}
@@ -197,16 +197,16 @@
                 <small>{{this.collectionLabel}}</small>
               </div>
               <div class="library-creature-meta">
-                {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fas {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
+                {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
               </div>
               <div class="library-creature-actions">
                 <button type="button" data-action="toggleFavorite" aria-label="{{localize 'BESTIARY.ToggleFavorite'}}" data-tooltip="{{localize 'BESTIARY.ToggleFavorite'}}"><i class="{{#if this.isFavorite}}fas{{else}}far{{/if}} fa-star"></i></button>
-                {{#if @root.isGM}}<button type="button" data-action="openSheet" aria-label="{{localize 'BESTIARY.OpenSheet'}}" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}"><i class="fas fa-arrow-up-right-from-square"></i></button>{{/if}}
+                {{#if @root.isGM}}<button type="button" data-action="openSheet" aria-label="{{localize 'BESTIARY.OpenSheet'}}" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>{{/if}}
               </div>
             </article>
           {{/each}}
         </div>
-        {{#if noCreatures}}<div class="suite-empty-state"><i class="far fa-star"></i><h2>{{localize "BESTIARY.NoMatchingCreatures"}}</h2></div>{{/if}}
+        {{#if noCreatures}}<div class="suite-empty-state"><i class="fa-regular fa-star"></i><h2>{{localize "BESTIARY.NoMatchingCreatures"}}</h2></div>{{/if}}
       {{/if}}
     </div>
   </main>
