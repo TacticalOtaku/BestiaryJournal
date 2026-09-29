@@ -21,17 +21,20 @@ function fail(message) {
   problems.push(message);
 }
 
+/** Files with the extension under the directory, layer folders included. */
 function listFiles(directory, extension) {
   const full = join(root, directory);
   if (!existsSync(full)) return [];
-  return readdirSync(full)
-    .filter(name => name.endsWith(extension))
-    .map(name => join(directory, name));
+  return readdirSync(full, { withFileTypes: true }).flatMap(entry => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return listFiles(path, extension);
+    return entry.name.endsWith(extension) ? [path] : [];
+  });
 }
 
-const scripts = [...listFiles("scripts", ".mjs"), ...listFiles("tools", ".mjs")];
+const scripts = [...listFiles("scripts", ".js"), ...listFiles("tools", ".mjs")];
 const templates = listFiles("templates", ".hbs");
-const locales = listFiles("languages", ".json");
+const locales = listFiles("lang", ".json");
 
 // ── Syntax ──
 for (const file of scripts) {

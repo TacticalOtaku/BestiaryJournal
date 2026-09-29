@@ -147,31 +147,19 @@ https://raw.githubusercontent.com/TacticalOtaku/BestiaryJournal/main/module.json
 
 ## 🛠️ Разработка
 
-Модуль не требует сборки или сторонних runtime-зависимостей. Для проверок нужен Node.js 20 или новее.
+Модуль не требует сборки или сторонних runtime-зависимостей. Для проверок нужен Node.js 24 или новее.
 
 ```bash
-npm test
-npm run check
+npm install
+npm run check    # ESLint, проверка проекта, unit-тесты
+npm run deploy   # копия модуля в %LOCALAPPDATA%/FoundryVTT/Data/modules/bestiary-journal (или FOUNDRY_DATA, --data <путь>)
+npm run release  # check, затем dist/bestiary-journal-v<версия>.zip
 ```
 
 - `npm test` запускает unit-тесты на встроенном `node:test`: чистые слои и обработку запросов store с имитацией Foundry.
-- `npm run check` проверяет синтаксис ES-модулей, JSON, пути манифеста, импорты, полноту локализаций и уникальность ApplicationV2 ID.
+- `npm run validate` проверяет синтаксис ES-модулей, JSON, пути манифеста, импорты, полноту локализаций и уникальность ApplicationV2 ID.
 
-Код разделён на границы:
-
-| Модуль | Ответственность |
-|---|---|
-| `research-model.mjs` | Чистая модель ступеней: блоки, пороги, правила видимости блоков и отдельных пунктов |
-| `bestiary-domain.mjs` | Чистые правила: нормализация, селекторы, reducer команд, права на заметки и обмен |
-| `bestiary-store.mjs` | Сериализация мировых изменений через авторитетного активного мастера; команды игроков подтверждаются server-persisted флагом пользователя, который мастер гасит после обработки, поэтому повтор запроса ничего не делает |
-| `research-authority.mjs` | Проверка броска исследования на стороне мастера: сообщение в чате, владелец персонажа, навык, свежесть, однократность; сложность и итог считает мастер |
-| `creature-cards.mjs`, `creature-cache.mjs` | Карточки существ, уже урезанные по ступени зрителя, и кэш извлечённых данных актёров |
-| `creature-display.mjs`, `client-preferences.mjs` | Настройки мира и клиента |
-| `image-framing.mjs` | Кадрирование и точка фокуса |
-| `foundry-runtime.mjs` | Адаптер нестабильных API Foundry/D&D 5e |
-| Приложения UI | Только подготовка view-model и взаимодействие с DOM |
-
-Мировое состояние разложено по трём настройкам, чтобы заметка не переписывала всю структуру: `bestiaryData` (структура), `bestiaryKnowledge` (знание игроков), `bestiarySocial` (заметки и журнал обменов).
+Устройство кода — слои, хранилища и поток команд — описано в [docs/architecture.md](docs/architecture.md).
 
 ---
 

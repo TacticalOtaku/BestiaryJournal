@@ -846,3 +846,24 @@ body.theme-dark .bestiary-app:not(.theme-light),
 :where(.bestiary-app) .context-item.is-disabled { opacity: .45; cursor: not-allowed; }
 :where(.bestiary-app) .context-item.is-disabled:hover { background: transparent; }
 :where(.bestiary-app) .context-item:focus-visible { outline: 2px solid var(--suite-accent); outline-offset: -2px; }
+
+/* Less motion on request: transitions and the entrance animation collapse to 1ms
+   (ui-effects.js already skips its script animations). !important is the usual way
+   to override every component's own timing at once. */
+@media (prefers-reduced-motion: reduce) {
+  .bestiary-app {
+    --suite-fast: 1ms;
+    --suite-normal: 1ms;
+  }
+
+  .bestiary-app *,
+  .bestiary-app *::before,
+  .bestiary-app *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -23,7 +23,7 @@
     </label>
 
     <label class="library-search bulk-search">
-      <i class="fas fa-magnifying-glass"></i>
+      <i class="fa-solid fa-magnifying-glass"></i>
       <input type="search" class="bulk-search-input" placeholder="{{localize 'BESTIARY.Import.Search'}}" value="{{query}}" />
     </label>
 
@@ -54,7 +54,7 @@
 
   <div class="bulk-import-list bestiary-scrollable">
     {{#if loading}}
-      <div class="suite-empty-state"><i class="fas fa-spinner fa-spin"></i><h2>{{localize "BESTIARY.Import.Loading"}}</h2></div>
+      <div class="suite-empty-state"><i class="fa-solid fa-spinner fa-spin"></i><h2>{{localize "BESTIARY.Import.Loading"}}</h2></div>
     {{else}}
       {{#each entries}}
         <label class="bulk-import-row {{#if this.alreadyAdded}}is-present{{/if}}" data-entry-row data-cr="{{this.cr}}" data-search-text="{{this.searchText}}">
@@ -67,7 +67,7 @@
         </label>
       {{/each}}
       {{#unless entries.length}}
-        <div class="suite-empty-state"><i class="fas fa-inbox"></i><h2>{{localize "BESTIARY.Import.Empty"}}</h2></div>
+        <div class="suite-empty-state"><i class="fa-solid fa-inbox"></i><h2>{{localize "BESTIARY.Import.Empty"}}</h2></div>
       {{/unless}}
     {{/if}}
   </div>
@@ -75,7 +75,7 @@
   <footer class="bulk-import-footer">
     <button type="button" class="suite-secondary-button" data-action="closeDialog">{{localize "BESTIARY.Cancel"}}</button>
     <button type="button" class="suite-primary-button" data-action="importSelected" disabled>
-      <i class="fas fa-plus"></i>{{localize "BESTIARY.Import.Confirm"}}
+      <i class="fa-solid fa-plus"></i>{{localize "BESTIARY.Import.Confirm"}}
     </button>
   </footer>
 </div>

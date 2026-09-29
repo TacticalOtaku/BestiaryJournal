@@ -1,47 +1,47 @@
 <section class="creature-detail-wrapper bestiary-scrollable">
   {{#if error}}
     {{#if unavailable}}
-      <div class="suite-empty-state"><i class="fas fa-eye-slash"></i><h2>{{localize "BESTIARY.CreatureUnavailable"}}</h2></div>
+      <div class="suite-empty-state"><i class="fa-solid fa-eye-slash"></i><h2>{{localize "BESTIARY.CreatureUnavailable"}}</h2></div>
     {{else}}
-      <div class="suite-empty-state"><i class="fas fa-triangle-exclamation"></i><h2>{{localize "BESTIARY.CreatureLoadError"}}</h2></div>
+      <div class="suite-empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h2>{{localize "BESTIARY.CreatureLoadError"}}</h2></div>
     {{/if}}
   {{else}}
     <div class="creature-detail-view">
 
       <header class="creature-topbar">
         <div class="creature-topbar-left">
-          <span class="tier-chip is-{{tierBadge.key}} is-large"><i class="fas {{tierBadge.icon}}"></i>{{tierBadge.label}}</span>
-          {{#if locked}}<span class="suite-badge is-locked is-inline"><i class="fas fa-lock"></i>{{localize "BESTIARY.Lock.Locked"}}</span>{{/if}}
+          <span class="tier-chip is-{{tierBadge.key}} is-large"><i class="fa-solid {{tierBadge.icon}}"></i>{{tierBadge.label}}</span>
+          {{#if locked}}<span class="suite-badge is-locked is-inline"><i class="fa-solid fa-lock"></i>{{localize "BESTIARY.Lock.Locked"}}</span>{{/if}}
           {{#each collections}}
-            <span class="creature-collection-tag"><i class="far fa-folder"></i>{{this.sectionName}}{{#if this.familyName}} · {{this.familyName}}{{/if}}</span>
+            <span class="creature-collection-tag"><i class="fa-regular fa-folder"></i>{{this.sectionName}}{{#if this.familyName}} · {{this.familyName}}{{/if}}</span>
           {{/each}}
         </div>
 
         <div class="creature-topbar-right">
           {{#if isGM}}
             <label class="preview-as">
-              <i class="fas fa-user-secret"></i>
+              <i class="fa-solid fa-user-secret"></i>
               <select class="preview-as-select">
                 {{#each previewOptions}}<option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>{{/each}}
               </select>
             </label>
             {{#if hasEntry}}
-              <button type="button" class="suite-icon-button" data-action="openEntryEditor" data-tooltip="{{localize 'BESTIARY.Entry.Title'}}"><i class="fas fa-sliders"></i></button>
-              <button type="button" class="suite-icon-button {{#if locked}}is-active{{/if}}" data-action="toggleLock" data-tooltip="{{lockLabel}}"><i class="fas {{#if locked}}fa-lock{{else}}fa-lock-open{{/if}}"></i></button>
+              <button type="button" class="suite-icon-button" data-action="openEntryEditor" data-tooltip="{{localize 'BESTIARY.Entry.Title'}}"><i class="fa-solid fa-sliders"></i></button>
+              <button type="button" class="suite-icon-button {{#if locked}}is-active{{/if}}" data-action="toggleLock" data-tooltip="{{lockLabel}}"><i class="fa-solid {{#if locked}}fa-lock{{else}}fa-lock-open{{/if}}"></i></button>
             {{/if}}
-            <button type="button" class="suite-icon-button" data-action="openSheet" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}"><i class="fas fa-arrow-up-right-from-square"></i></button>
+            <button type="button" class="suite-icon-button" data-action="openSheet" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
           {{/if}}
           <button type="button" class="suite-icon-button {{#if isFavorite}}is-active{{/if}}" data-action="toggleFavorite" data-tooltip="{{localize 'BESTIARY.ToggleFavorite'}}"><i class="{{#if isFavorite}}fas{{else}}far{{/if}} fa-star"></i></button>
-          <button type="button" class="suite-icon-button" data-action="sendToChat" data-tooltip="{{localize 'BESTIARY.SendToChat'}}"><i class="far fa-message"></i></button>
+          <button type="button" class="suite-icon-button" data-action="sendToChat" data-tooltip="{{localize 'BESTIARY.SendToChat'}}"><i class="fa-regular fa-message"></i></button>
           {{#if shareEnabled}}
-            <button type="button" class="suite-primary-button is-compact" data-action="shareCreature"><i class="fas fa-share-nodes"></i>{{localize "BESTIARY.Share.Button"}}</button>
+            <button type="button" class="suite-primary-button is-compact" data-action="shareCreature"><i class="fa-solid fa-share-nodes"></i>{{localize "BESTIARY.Share.Button"}}</button>
           {{/if}}
         </div>
       </header>
 
       {{#if isPreviewing}}
         <div class="preview-banner">
-          <i class="fas fa-eye"></i>
+          <i class="fa-solid fa-eye"></i>
           <span>{{localize "BESTIARY.Preview.Banner"}} <strong>{{previewUserName}}</strong></span>
           <button type="button" data-action="clearPreview">{{localize "BESTIARY.Preview.Exit"}}</button>
         </div>
@@ -63,7 +63,7 @@
           <ol class="tier-ladder" aria-label="{{localize 'BESTIARY.Tier.Ladder'}}">
             {{#each tierSteps}}
               <li class="{{#if this.reached}}is-reached{{/if}} {{#if this.isCurrent}}is-current{{/if}}">
-                <i class="fas {{this.icon}}"></i><span>{{this.label}}</span>
+                <i class="fa-solid {{this.icon}}"></i><span>{{this.label}}</span>
               </li>
             {{/each}}
           </ol>
@@ -84,7 +84,7 @@
 
           {{#if showBlock.speed}}
             <div class="creature-movement-line">
-              <i class="fas fa-wind"></i>
+              <i class="fa-solid fa-wind"></i>
               <div>
                 {{#each speedEntries}}<span><strong>{{this.label}}</strong> {{this.value}}</span>{{/each}}
                 {{#each creature.movementTraits}}<em>{{this}}</em>{{/each}}
@@ -98,7 +98,7 @@
         <div class="creature-main-column">
           {{#if isBlank}}
             <div class="suite-empty-state is-inline">
-              <i class="fas fa-circle-question"></i>
+              <i class="fa-solid fa-circle-question"></i>
               <h2>{{localize "BESTIARY.Tier.NothingKnown"}}</h2>
               <p>{{localize "BESTIARY.Tier.NothingKnownHint"}}</p>
             </div>
@@ -123,25 +123,25 @@
           <div class="creature-info-grid">
             {{#if showBlock.skills}}
               <section class="creature-content-card compact-info-card">
-                <header><div><p>{{localize "BESTIARY.Proficiencies"}}</p><h2>{{localize "BESTIARY.Skills"}}</h2></div><i class="fas fa-hand-sparkles"></i></header>
+                <header><div><p>{{localize "BESTIARY.Proficiencies"}}</p><h2>{{localize "BESTIARY.Skills"}}</h2></div><i class="fa-solid fa-hand-sparkles"></i></header>
                 <div class="trait-chip-list">{{#each skillEntries}}<span>{{this.label}} <strong>{{this.total}}</strong></span>{{/each}}</div>
               </section>
             {{/if}}
             {{#if showBlock.senses}}
               <section class="creature-content-card compact-info-card">
-                <header><div><p>{{localize "BESTIARY.Perception"}}</p><h2>{{localize "BESTIARY.Senses"}}</h2></div><i class="far fa-eye"></i></header>
+                <header><div><p>{{localize "BESTIARY.Perception"}}</p><h2>{{localize "BESTIARY.Senses"}}</h2></div><i class="fa-regular fa-eye"></i></header>
                 <div class="trait-chip-list">{{#each senseEntries}}<span>{{this.label}} <strong>{{this.value}}</strong></span>{{/each}}</div>
               </section>
             {{/if}}
             {{#if showBlock.languages}}
               <section class="creature-content-card compact-info-card">
-                <header><div><p>{{localize "BESTIARY.Communication"}}</p><h2>{{localize "BESTIARY.Languages"}}</h2></div><i class="fas fa-language"></i></header>
+                <header><div><p>{{localize "BESTIARY.Communication"}}</p><h2>{{localize "BESTIARY.Languages"}}</h2></div><i class="fa-solid fa-language"></i></header>
                 <div class="trait-chip-list">{{#each creature.languages}}<span>{{this}}</span>{{/each}}</div>
               </section>
             {{/if}}
             {{#if showDefenses}}
               <section class="creature-content-card compact-info-card">
-                <header><div><p>{{localize "BESTIARY.Defense"}}</p><h2>{{localize "BESTIARY.Defenses"}}</h2></div><i class="fas fa-shield-halved"></i></header>
+                <header><div><p>{{localize "BESTIARY.Defense"}}</p><h2>{{localize "BESTIARY.Defenses"}}</h2></div><i class="fa-solid fa-shield-halved"></i></header>
                 <div class="trait-chip-list">
                   {{#if showBlock.resistances}}{{#each creature.resistances}}<span>{{this}}</span>{{/each}}{{/if}}
                   {{#if showBlock.immunities}}{{#each creature.immunities}}<span class="is-positive">{{this}}</span>{{/each}}{{/if}}
@@ -156,7 +156,7 @@
             <nav class="creature-section-nav">
               {{#each contentSections}}
                 <button type="button" data-action="toggleSection" data-section-key="{{this.key}}">
-                  <i class="fas {{this.icon}}"></i>{{this.label}}{{#if this.count}}<span>{{this.count}}</span>{{/if}}
+                  <i class="fa-solid {{this.icon}}"></i>{{this.label}}{{#if this.count}}<span>{{this.count}}</span>{{/if}}
                 </button>
               {{/each}}
             </nav>
@@ -165,11 +165,11 @@
               {{#each contentSections}}
                 <section class="creature-items-accordion {{#if this.expanded}}is-expanded{{/if}} {{#if this.blockHiddenForPlayers}}is-gm-only{{/if}}" data-content-section="{{this.key}}">
                   <button type="button" class="section-toggle" data-action="toggleSection" data-section-key="{{this.key}}">
-                    <span class="section-icon"><i class="fas {{this.icon}}"></i></span>
+                    <span class="section-icon"><i class="fa-solid {{this.icon}}"></i></span>
                     <span class="section-label"><small>{{localize "BESTIARY.Section"}}</small><strong>{{this.label}}</strong></span>
-                    {{#if this.blockHiddenForPlayers}}<em class="section-gm-flag"><i class="fas fa-eye-slash"></i>{{localize "BESTIARY.Tier.GmOnly"}}</em>{{/if}}
+                    {{#if this.blockHiddenForPlayers}}<em class="section-gm-flag"><i class="fa-solid fa-eye-slash"></i>{{localize "BESTIARY.Tier.GmOnly"}}</em>{{/if}}
                     {{#if this.count}}<em>{{this.count}}</em>{{/if}}
-                    <i class="fas section-chevron {{#if this.expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                    <i class="fa-solid section-chevron {{#if this.expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
                   </button>
 
                   <div class="accordion-section-body {{#unless this.expanded}}is-collapsed{{/unless}}">
@@ -193,14 +193,14 @@
 
                               {{#if ../../isGM}}
                                 <label class="item-tier-control" data-tooltip="{{localize 'BESTIARY.Tier.ItemHint'}}">
-                                  <i class="fas fa-eye"></i>
+                                  <i class="fa-solid fa-eye"></i>
                                   <select data-item-tier data-block-key="{{this.blockKey}}" data-item-id="{{this.itemId}}" {{#if ../../locked}}disabled{{/if}}>
                                     {{#each this.tierChoices}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
                                   </select>
                                 </label>
                               {{/if}}
 
-                              <i class="fas creature-item-chevron {{#if this.expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                              <i class="fa-solid creature-item-chevron {{#if this.expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
                             </div>
 
                             <div class="creature-item-body {{#unless this.expanded}}is-collapsed{{/unless}}">
@@ -242,10 +242,10 @@
 
         <aside class="creature-rail">
           <nav class="rail-tabs">
-            <button type="button" class="{{#if isRailKnowledge}}is-active{{/if}}" data-action="setRail" data-rail="knowledge"><i class="fas fa-brain"></i>{{localize "BESTIARY.Knowledge.Tab"}}</button>
-            <button type="button" class="{{#if isRailComments}}is-active{{/if}}" data-action="setRail" data-rail="comments"><i class="far fa-comments"></i>{{localize "BESTIARY.Comments.Tab"}}{{#if comments.total}}<em>{{comments.total}}</em>{{/if}}</button>
+            <button type="button" class="{{#if isRailKnowledge}}is-active{{/if}}" data-action="setRail" data-rail="knowledge"><i class="fa-solid fa-brain"></i>{{localize "BESTIARY.Knowledge.Tab"}}</button>
+            <button type="button" class="{{#if isRailComments}}is-active{{/if}}" data-action="setRail" data-rail="comments"><i class="fa-regular fa-comments"></i>{{localize "BESTIARY.Comments.Tab"}}{{#if comments.total}}<em>{{comments.total}}</em>{{/if}}</button>
             {{#if isGM}}
-              <button type="button" class="{{#if isRailConfig}}is-active{{/if}}" data-action="setRail" data-rail="config"><i class="fas fa-layer-group"></i>{{localize "BESTIARY.Tier.Tab"}}</button>
+              <button type="button" class="{{#if isRailConfig}}is-active{{/if}}" data-action="setRail" data-rail="config"><i class="fa-solid fa-layer-group"></i>{{localize "BESTIARY.Tier.Tab"}}</button>
             {{/if}}
           </nav>
 
@@ -256,7 +256,7 @@
                   <header class="party-assignment-heading"><h3>{{localize "BESTIARY.Knowledge.PartyTitle"}}</h3><p>{{localize "BESTIARY.Knowledge.PartyHint"}}</p></header>
                   <div class="party-quick-set">
                     {{#each partyTierOptions}}
-                      <button type="button" data-action="setPartyTier" data-tier="{{this.value}}" {{#if ../locked}}disabled{{/if}}><i class="fas {{this.icon}}"></i>{{this.label}}</button>
+                      <button type="button" data-action="setPartyTier" data-tier="{{this.value}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid {{this.icon}}"></i>{{this.label}}</button>
                     {{/each}}
                   </div>
                 </section>
@@ -264,7 +264,7 @@
                 <section class="rail-card">
                   <header>
                     <h3>{{localize "BESTIARY.Knowledge.RosterTitle"}}</h3>
-                    <button type="button" class="rail-inline-button" data-action="resetTiers" {{#if locked}}disabled{{/if}}><i class="fas fa-rotate-left"></i>{{localize "BESTIARY.Knowledge.Reset"}}</button>
+                    <button type="button" class="rail-inline-button" data-action="resetTiers" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-rotate-left"></i>{{localize "BESTIARY.Knowledge.Reset"}}</button>
                   </header>
                   <ul class="knowledge-roster">
                     {{#each knowledgeRoster}}
@@ -291,7 +291,7 @@
                   <header><h3>{{localize "BESTIARY.Knowledge.YourTitle"}}</h3><p>{{tierBadge.hint}}</p></header>
                   {{#if research.enabled}}
                     {{#if research.isMaxed}}
-                      <p class="rail-note is-positive"><i class="fas fa-circle-check"></i>{{localize "BESTIARY.Research.Complete"}}</p>
+                      <p class="rail-note is-positive"><i class="fa-solid fa-circle-check"></i>{{localize "BESTIARY.Research.Complete"}}</p>
                     {{else}}
                       <div class="research-panel">
                         <p class="research-target">{{localize "BESTIARY.Research.Target"}} <strong>{{research.nextTierLabel}}</strong> · {{localize "BESTIARY.Research.Dc"}} <strong>{{research.dc}}</strong></p>
@@ -310,12 +310,12 @@
                           </select>
                         </label>
                         <button type="button" class="suite-primary-button" data-action="runResearch" {{#unless research.canRoll}}disabled{{/unless}}>
-                          <i class="fas fa-dice-d20"></i>{{localize "BESTIARY.Research.Roll"}}
+                          <i class="fa-solid fa-dice-d20"></i>{{localize "BESTIARY.Research.Roll"}}
                         </button>
-                        {{#if research.noActors}}<p class="rail-note is-danger"><i class="fas fa-user-slash"></i>{{localize "BESTIARY.Research.NoActor"}}</p>{{/if}}
+                        {{#if research.noActors}}<p class="rail-note is-danger"><i class="fa-solid fa-user-slash"></i>{{localize "BESTIARY.Research.NoActor"}}</p>{{/if}}
                         {{#if research.lastRoll}}<p class="rail-note">{{research.lastRoll}}</p>{{/if}}
-                        {{#if research.blocked}}<p class="rail-note is-danger"><i class="fas fa-ban"></i>{{localize "BESTIARY.Research.Blocked"}}</p>{{/if}}
-                        {{#if locked}}<p class="rail-note is-danger"><i class="fas fa-lock"></i>{{localize "BESTIARY.Lock.Blocked"}}</p>{{/if}}
+                        {{#if research.blocked}}<p class="rail-note is-danger"><i class="fa-solid fa-ban"></i>{{localize "BESTIARY.Research.Blocked"}}</p>{{/if}}
+                        {{#if locked}}<p class="rail-note is-danger"><i class="fa-solid fa-lock"></i>{{localize "BESTIARY.Lock.Blocked"}}</p>{{/if}}
                       </div>
                     {{/if}}
                   {{else}}
@@ -323,7 +323,7 @@
                   {{/if}}
 
                   {{#if shareEnabled}}
-                    <button type="button" class="suite-secondary-button rail-wide" data-action="shareCreature"><i class="fas fa-share-nodes"></i>{{localize "BESTIARY.Share.Button"}}</button>
+                    <button type="button" class="suite-secondary-button rail-wide" data-action="shareCreature"><i class="fa-solid fa-share-nodes"></i>{{localize "BESTIARY.Share.Button"}}</button>
                   {{/if}}
                 </section>
               {{/if}}
@@ -334,7 +334,7 @@
                 <nav class="comment-channel-tabs">
                   {{#each comments.channels}}
                     <button type="button" class="{{#if (bjEq this.key ../commentChannel)}}is-active{{/if}}" data-action="setCommentChannel" data-channel="{{this.key}}" data-tooltip="{{this.hint}}">
-                      <i class="fas {{this.icon}}"></i>{{this.label}}{{#if this.count}}<em>{{this.count}}</em>{{/if}}
+                      <i class="fa-solid {{this.icon}}"></i>{{this.label}}{{#if this.count}}<em>{{this.count}}</em>{{/if}}
                     </button>
                   {{/each}}
                 </nav>
@@ -348,20 +348,20 @@
                             <img src="{{this.authorAvatar}}" alt="" />
                             <strong style="--user-color: {{this.authorColor}}">{{this.authorName}}</strong>
                             <time>{{this.createdLabel}}{{#if this.editedLabel}} · {{localize "BESTIARY.Comments.Edited"}}{{/if}}</time>
-                            {{#if this.pinned}}<i class="fas fa-thumbtack comment-pin-flag"></i>{{/if}}
+                            {{#if this.pinned}}<i class="fa-solid fa-thumbtack comment-pin-flag"></i>{{/if}}
                           </header>
                           <div class="comment-text">{{{this.html}}}</div>
                           <span class="comment-raw-text" hidden>{{this.text}}</span>
                           <footer class="comment-actions">
                             {{#if this.canShare}}
                               <button type="button" data-action="toggleCommentShared" class="{{#if this.shared}}is-active{{/if}}">
-                                <i class="fas {{#if this.shared}}fa-eye{{else}}fa-eye-slash{{/if}}"></i>{{this.shareLabel}}
+                                <i class="fa-solid {{#if this.shared}}fa-eye{{else}}fa-eye-slash{{/if}}"></i>{{this.shareLabel}}
                               </button>
                             {{/if}}
-                            {{#if this.canPin}}<button type="button" data-action="pinComment" aria-label="{{localize 'BESTIARY.Comments.Pin'}}" data-tooltip="{{localize 'BESTIARY.Comments.Pin'}}"><i class="fas fa-thumbtack"></i></button>{{/if}}
+                            {{#if this.canPin}}<button type="button" data-action="pinComment" aria-label="{{localize 'BESTIARY.Comments.Pin'}}" data-tooltip="{{localize 'BESTIARY.Comments.Pin'}}"><i class="fa-solid fa-thumbtack"></i></button>{{/if}}
                             {{#if this.canEdit}}
-                              <button type="button" data-action="editComment" aria-label="{{localize 'BESTIARY.Comments.Edit'}}" data-tooltip="{{localize 'BESTIARY.Comments.Edit'}}"><i class="fas fa-pen"></i></button>
-                              <button type="button" data-action="deleteComment" aria-label="{{localize 'BESTIARY.Comments.Delete'}}" data-tooltip="{{localize 'BESTIARY.Comments.Delete'}}"><i class="fas fa-trash"></i></button>
+                              <button type="button" data-action="editComment" aria-label="{{localize 'BESTIARY.Comments.Edit'}}" data-tooltip="{{localize 'BESTIARY.Comments.Edit'}}"><i class="fa-solid fa-pen"></i></button>
+                              <button type="button" data-action="deleteComment" aria-label="{{localize 'BESTIARY.Comments.Delete'}}" data-tooltip="{{localize 'BESTIARY.Comments.Delete'}}"><i class="fa-solid fa-trash"></i></button>
                             {{/if}}
                           </footer>
                         </article>
@@ -371,11 +371,11 @@
 
                     {{#if this.canPost}}
                       <div class="comment-composer">
-                        {{#if @root.isEditingComment}}<p class="comment-editing-note"><i class="fas fa-pen"></i>{{localize "BESTIARY.Comments.Editing"}}</p>{{/if}}
+                        {{#if @root.isEditingComment}}<p class="comment-editing-note"><i class="fa-solid fa-pen"></i>{{localize "BESTIARY.Comments.Editing"}}</p>{{/if}}
                         <textarea class="comment-composer-input" rows="3" placeholder="{{localize 'BESTIARY.Comments.Placeholder'}}"></textarea>
                         <div class="comment-composer-actions">
                           {{#if @root.isEditingComment}}
-                            <button type="button" class="suite-secondary-button" data-action="cancelEdit"><i class="fas fa-xmark"></i>{{localize "BESTIARY.Comments.CancelEdit"}}</button>
+                            <button type="button" class="suite-secondary-button" data-action="cancelEdit"><i class="fa-solid fa-xmark"></i>{{localize "BESTIARY.Comments.CancelEdit"}}</button>
                           {{else if (bjEq this.key "gm")}}
                             <label class="comment-share-field">
                               <input type="checkbox" class="comment-share-toggle" />
@@ -383,7 +383,7 @@
                             </label>
                           {{/if}}
                           <button type="button" class="suite-primary-button" data-action="submitComment">
-                            <i class="fas fa-paper-plane"></i>{{#if ../editingCommentId}}{{localize "BESTIARY.Comments.SaveEdit"}}{{else}}{{localize "BESTIARY.Comments.Post"}}{{/if}}
+                            <i class="fa-solid fa-paper-plane"></i>{{#if ../editingCommentId}}{{localize "BESTIARY.Comments.SaveEdit"}}{{else}}{{localize "BESTIARY.Comments.Post"}}{{/if}}
                           </button>
                         </div>
                       </div>
@@ -392,7 +392,7 @@
                 {{/each}}
 
                 {{#if comments.locked}}
-                  <p class="rail-note is-danger"><i class="fas fa-lock"></i>{{localize "BESTIARY.Lock.CommentsBlocked"}}</p>
+                  <p class="rail-note is-danger"><i class="fa-solid fa-lock"></i>{{localize "BESTIARY.Lock.CommentsBlocked"}}</p>
                 {{/if}}
               </section>
             {{/if}}
@@ -401,12 +401,12 @@
               <section class="rail-card">
                 <header>
                   <h3>{{localize "BESTIARY.Tier.EntryTitle"}}</h3>
-                  <button type="button" class="rail-inline-button" data-action="resetBlockTiers" {{#if locked}}disabled{{/if}}><i class="fas fa-rotate-left"></i>{{localize "BESTIARY.Tier.Reset"}}</button>
+                  <button type="button" class="rail-inline-button" data-action="resetBlockTiers" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-rotate-left"></i>{{localize "BESTIARY.Tier.Reset"}}</button>
                 </header>
                 <p class="rail-hint">{{localize "BESTIARY.Tier.EntryHint"}}</p>
                 {{#each tierMatrix}}
                   <div class="tier-group">
-                    <h4><i class="fas {{this.icon}}"></i>{{this.label}}{{#if this.overrideCount}}<em>{{this.overrideCount}}</em>{{/if}}</h4>
+                    <h4><i class="fa-solid {{this.icon}}"></i>{{this.label}}{{#if this.overrideCount}}<em>{{this.overrideCount}}</em>{{/if}}</h4>
                     {{#each this.blocks}}
                       <label class="tier-row {{#if this.isChild}}is-child{{/if}} {{#if this.isOverridden}}is-overridden{{/if}} {{#if this.isNever}}is-never{{/if}}">
                         <span>{{this.label}}</span>

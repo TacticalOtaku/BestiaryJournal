@@ -1,0 +1,182 @@
+import { BESTIARY_COMMANDS, planSnapshotImport } from "../core/bestiary-domain.js";
+import { getBestiaryData, getBestiaryState } from "./bestiary-store.js";
+import { runCommand } from "./command-feedback.js";
+import { localize } from "./foundry-runtime.js";
+
+const MODULE_ID = "bestiary-journal";
+const EXPORT_FORMAT = 1;
+
+/**
+ * Snapshots the structural side of the bestiary: sections, families, entries,
+ * reveal thresholds and framing. Knowledge and comments are user-scoped, so
+ * they travel only as an archival copy — importing restores structure only.
+ */
+export function buildSnapshot({ sectionIds = [], includeSocial = false } = {}) {
+  const state = getBestiaryState();
+  const sections = sectionIds.length
+    ? state.data.sections.filter(section => sectionIds.includes(section.id))
+    : state.data.sections;
+
+  const snapshot = {
+    module: MODULE_ID,
+    format: EXPORT_FORMAT,
+    exportedAt: Date.now(),
+    world: game.world?.id ?? "",
+    system: game.system?.id ?? "",
+    sections: foundry.utils.deepClone(sections)
+  };
+  if (includeSocial) {
+    const uuids = new Set(sections.flatMap(section => section.creatures.map(entry => entry.uuid)));
+    const knowledge = { revision: state.knowledge.revision, users: {} };
+    for (const [userId, records] of Object.entries(state.knowledge.users)) {
+      const kept = Object.fromEntries(Object.entries(records).filter(([uuid]) => uuids.has(uuid)));
+      if (Object.keys(kept).length) knowledge.users[userId] = kept;
+    }
+    snapshot.archive = {
+      knowledge,
+      comments: state.social.comments.filter(comment => uuids.has(comment.uuid))
+    };
+  }
+  return snapshot;
+}
+
+export function downloadSnapshot(snapshot, filename) {
+  const json = JSON.stringify(snapshot, null, 2);
+  foundry.utils.saveDataToFile(json, "application/json", filename);
+}
+
+export function exportBestiary({ sectionIds = [], includeSocial = false, filename } = {}) {
+  const snapshot = buildSnapshot({ sectionIds, includeSocial });
+  const stamp = new Date().toISOString().slice(0, 10);
+  downloadSnapshot(snapshot, filename ?? `bestiary-${game.world?.id ?? "world"}-${stamp}.json`);
+  ui.notifications.info(game.i18n.format("BESTIARY.Transfer.Exported", {
+    count: snapshot.sections.length
+  }));
+  return snapshot;
+}
+
+/** Exports a single creature entry as a one-section snapshot. */
+export function exportCreatureEntry(sectionId, uuid) {
+  const state = getBestiaryState();
+  const section = state.data.sections.find(item => item.id === sectionId);
+  const entry = section?.creatures.find(item => item.uuid === uuid);
+  if (!section || !entry) return null;
+
+  const snapshot = {
+    module: MODULE_ID,
+    format: EXPORT_FORMAT,
+    exportedAt: Date.now(),
+    world: game.world?.id ?? "",
+    system: game.system?.id ?? "",
+    sections: [{
+      ...foundry.utils.deepClone(section),
+      creatures: [foundry.utils.deepClone(entry)],
+      families: section.families.filter(family => family.id === entry.familyId)
+    }]
+  };
+  const slug = (entry.label || uuid).replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase();
+  downloadSnapshot(snapshot, `bestiary-entry-${slug}.json`);
+  return snapshot;
+}
+
+export function validateSnapshot(payload) {
+  if (!payload || typeof payload !== "object") return "BESTIARY.Transfer.ErrorNotJson";
+  if (payload.module && payload.module !== MODULE_ID) return "BESTIARY.Transfer.ErrorForeign";
+  if (!Array.isArray(payload.sections) || !payload.sections.length) return "BESTIARY.Transfer.ErrorEmpty";
+  return null;
+}
+
+/** Opens a file picker, previews the snapshot and asks how to apply it. */
+export async function importBestiaryFromFile() {
+  const file = await pickJsonFile();
+  if (!file) return false;
+
+  let payload;
+  try {
+    payload = JSON.parse(await file.text());
+  } catch {
+    ui.notifications.error(localize("BESTIARY.Transfer.ErrorNotJson"));
+    return false;
+  }
+
+  const error = validateSnapshot(payload);
+  if (error) {
+    ui.notifications.error(localize(error));
+    return false;
+  }
+
+  const sectionCount = payload.sections.length;
+  const creatureCount = payload.sections
+    .reduce((total, section) => total + (section.creatures?.length ?? 0), 0);
+  const data = getBestiaryData();
+  const mergePlan = planSnapshotImport(data, payload, "merge");
+  const replacePlan = planSnapshotImport(data, payload, "replace");
+
+  const mode = await foundry.applications.api.DialogV2.wait({
+    window: { title: localize("BESTIARY.Transfer.ImportTitle"), icon: "fa-solid fa-file-import" },
+    classes: ["bestiary-journal", "bestiary-app", "bestiary-dialog"],
+    content: `
+      <section class="bestiary-import-dialog">
+        <p>${game.i18n.format("BESTIARY.Transfer.ImportSummary", {
+          sections: sectionCount,
+          creatures: creatureCount
+        })}</p>
+        ${describePlan("BESTIARY.Transfer.PlanMerge", mergePlan)}
+        <p class="bestiary-import-note">${localize("BESTIARY.Transfer.ImportNote")}</p>
+      </section>`,
+    buttons: [
+      { action: "merge", icon: "fa-solid fa-code-merge", label: localize("BESTIARY.Transfer.ModeMerge"), default: true },
+      { action: "replace", icon: "fa-solid fa-arrows-rotate", label: localize("BESTIARY.Transfer.ModeReplace") },
+      { action: "cancel", icon: "fa-solid fa-xmark", label: localize("BESTIARY.Cancel") }
+    ],
+    rejectClose: false
+  });
+
+  if (!mode || mode === "cancel") return false;
+  if (mode === "replace") {
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: localize("BESTIARY.Transfer.ModeReplace") },
+      content: `<p>${localize("BESTIARY.Transfer.ReplaceWarning")}</p>${describePlan("BESTIARY.Transfer.PlanReplace", replacePlan)}`,
+      rejectClose: false
+    });
+    if (!confirmed) return false;
+  }
+
+  const result = await runCommand({
+    type: BESTIARY_COMMANDS.IMPORT_SNAPSHOT,
+    payload: { sections: payload.sections },
+    mode
+  }, { unchanged: "BESTIARY.Transfer.NothingChanged" });
+  if (!result?.changed) return false;
+  ui.notifications.info(game.i18n.format("BESTIARY.Transfer.Imported", {
+    sections: sectionCount,
+    creatures: creatureCount
+  }));
+  return true;
+}
+
+/** A short, escaped list of what an import will touch. */
+function describePlan(titleKey, plan) {
+  const escape = value => foundry.utils.escapeHTML?.(String(value))
+    ?? String(value).replace(/[&<>"']/g, char => `&#${char.charCodeAt(0)};`);
+  const rows = [
+    ["BESTIARY.Transfer.PlanMerged", plan.merged],
+    ["BESTIARY.Transfer.PlanCreated", plan.created],
+    ["BESTIARY.Transfer.PlanRemoved", plan.removed],
+    ["BESTIARY.Transfer.PlanLocked", plan.locked]
+  ].filter(([, names]) => names.length)
+    .map(([key, names]) => `<li><strong>${escape(localize(key))}:</strong> ${names.map(escape).join(", ")}</li>`);
+  if (!rows.length) return "";
+  return `<p class="bestiary-import-plan-title">${escape(localize(titleKey))}</p><ul class="bestiary-import-plan">${rows.join("")}</ul>`;
+}
+
+function pickJsonFile() {
+  return new Promise(resolve => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json,.json";
+    input.addEventListener("change", () => resolve(input.files?.[0] ?? null), { once: true });
+    input.addEventListener("cancel", () => resolve(null), { once: true });
+    input.click();
+  });
+}

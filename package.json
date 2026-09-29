@@ -1,15 +1,27 @@
 {
   "name": "bestiary-journal",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Development checks for the Bestiary Journal Foundry VTT module.",
   "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "test": "node --test",
-    "check": "node tools/check-project.mjs"
+    "validate": "node tools/check-project.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "check": "npm run lint && npm run validate && npm test",
+    "deploy": "node tools/deploy.mjs",
+    "package": "node tools/package.mjs",
+    "release": "npm run check && npm run package"
   },
-  "engines": {
-    "node": ">=20"
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.10.0",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.7"
   }
 }

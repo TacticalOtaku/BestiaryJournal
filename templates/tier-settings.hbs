@@ -6,14 +6,14 @@
       <p class="tier-settings-hint">{{hint}}</p>
     </div>
     <button type="button" class="suite-secondary-button" data-action="restoreDefaults">
-      <i class="fas fa-rotate-left"></i>{{localize "BESTIARY.Restore"}}
+      <i class="fa-solid fa-rotate-left"></i>{{localize "BESTIARY.Restore"}}
     </button>
   </header>
 
   <div class="tier-settings-body bestiary-scrollable">
     {{#each groups}}
       <section class="tier-group">
-        <h4><i class="fas {{this.icon}}"></i>{{this.label}}{{#if this.overrideCount}}<em>{{this.overrideCount}}</em>{{/if}}<small>{{this.hint}}</small></h4>
+        <h4><i class="fa-solid {{this.icon}}"></i>{{this.label}}{{#if this.overrideCount}}<em>{{this.overrideCount}}</em>{{/if}}<small>{{this.hint}}</small></h4>
         {{#each this.blocks}}
           <label class="tier-row {{#if this.isChild}}is-child{{/if}} {{#if this.isOverridden}}is-overridden{{/if}} {{#if this.isNever}}is-never{{/if}}">
             <span>{{this.label}}</span>
@@ -27,6 +27,6 @@
   </div>
 
   <footer class="sheet-footer flexrow">
-    <button type="submit" class="suite-primary-button"><i class="fas fa-check"></i>{{localize "BESTIARY.Save"}}</button>
+    <button type="submit" class="suite-primary-button"><i class="fa-solid fa-check"></i>{{localize "BESTIARY.Save"}}</button>
   </footer>
 </section>
