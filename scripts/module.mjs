@@ -8,6 +8,7 @@ import {
   isAuthorityGm
 } from "./bestiary-store.mjs";
 import { runMigrations } from "./migrations.mjs";
+import { migrateClientPreferencesToUser } from "./client-preferences.mjs";
 import { splitDisplayName } from "./display-names.mjs";
 
 const MODULE_ID = "bestiary-journal";
@@ -19,7 +20,7 @@ Hooks.once("init", () => {
 
   registerWorldStores();
   registerWorldOptions();
-  registerClientPreferences();
+  registerPreferences();
   registerMenus();
   registerKeybindings();
   registerHandlebarsHelpers();
@@ -60,16 +61,23 @@ function registerWorldStores() {
 }
 
 function registerWorldOptions() {
+  // Both options decide which buttons a creature card offers, so open cards
+  // redraw as soon as the GM flips them. The authority enforces them anyway.
+  const refreshCards = () => scheduleBestiaryRefresh({ changed: { settings: true } });
+
   game.settings.register(MODULE_ID, "allowPlayerSharing", {
     name: "BESTIARY.Settings.AllowSharing",
     hint: "BESTIARY.Settings.AllowSharingHint",
-    scope: "world", config: true, type: Boolean, default: true
+    scope: "world", config: true, type: Boolean, default: true,
+    onChange: refreshCards
   });
   game.settings.register(MODULE_ID, "researchRollEnabled", {
     name: "BESTIARY.Settings.ResearchRoll",
     hint: "BESTIARY.Settings.ResearchRollHint",
-    scope: "world", config: true, type: Boolean, default: true
+    scope: "world", config: true, type: Boolean, default: true,
+    onChange: refreshCards
   });
+  // Only read by the authority when the next roll is judged; nothing to redraw.
   game.settings.register(MODULE_ID, "researchSingleAttempt", {
     name: "BESTIARY.Settings.SingleAttempt",
     hint: "BESTIARY.Settings.SingleAttemptHint",
@@ -77,9 +85,13 @@ function registerWorldOptions() {
   });
 }
 
-function registerClientPreferences() {
+/**
+ * Favorites and collapsed families follow the user across devices ("user"
+ * scope). The rest is about this screen and stays per browser ("client").
+ */
+function registerPreferences() {
   game.settings.register(MODULE_ID, "favoriteCreatures", {
-    name: "Favorite Creatures", scope: "client", config: false, type: Array, default: []
+    name: "Favorite Creatures", scope: "user", config: false, type: Array, default: []
   });
   game.settings.register(MODULE_ID, "libraryViewMode", {
     name: "Library View Mode", scope: "client", config: false, type: String, default: "grid"
@@ -88,7 +100,7 @@ function registerClientPreferences() {
     name: "Preview As User", scope: "client", config: false, type: String, default: ""
   });
   game.settings.register(MODULE_ID, "collapsedFamilies", {
-    name: "Collapsed Families", scope: "client", config: false, type: Array, default: []
+    name: "Collapsed Families", scope: "user", config: false, type: Array, default: []
   });
   game.settings.register(MODULE_ID, "commentChannel", {
     name: "Preferred Comment Channel", scope: "client", config: false, type: String, default: "private"
@@ -185,6 +197,8 @@ Hooks.once("ready", async () => {
   Hooks.on("bestiaryJournalRefresh", payload => scheduleBestiaryRefresh(payload));
 
   if (game.user.isGM && isAuthorityGm()) await runMigrations();
+  // Every user, players included: their favorites move off this browser.
+  await migrateClientPreferencesToUser();
 });
 
 /**

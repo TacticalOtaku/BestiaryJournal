@@ -1,6 +1,40 @@
 const MODULE_ID = "bestiary-journal";
 const VIEW_MODES = new Set(["grid", "list"]);
 
+/** Preferences that used to live per browser and now follow the user. */
+const PREFERENCES_MOVED_TO_USER = ["favoriteCreatures", "collapsedFamilies"];
+
+/**
+ * Folds what each browser kept locally into the user's shared value, then
+ * drops the local copy so an un-favorited creature does not come back on the
+ * next load. Several browsers of one user merge rather than overwrite.
+ */
+export async function migrateClientPreferencesToUser(storage = globalThis.localStorage) {
+  for (const key of PREFERENCES_MOVED_TO_USER) {
+    const storageKey = `${MODULE_ID}.${key}`;
+    const raw = storage?.getItem(storageKey);
+    if (raw === null || raw === undefined) continue;
+
+    let legacy = [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) legacy = parsed;
+    } catch (error) {
+      console.warn(`Bestiary | Ignoring an unreadable local "${key}" preference`, error);
+    }
+
+    try {
+      const current = game.settings.get(MODULE_ID, key) ?? [];
+      const merged = [...new Set([...current, ...legacy])];
+      if (merged.length !== current.length) await game.settings.set(MODULE_ID, key, merged);
+      storage.removeItem(storageKey);
+    } catch (error) {
+      // Keep the local copy so the next load can try again.
+      console.warn(`Bestiary | Could not move the "${key}" preference to the user`, error);
+    }
+  }
+}
+
 export function getFavoriteCreatureUuids() {
   return new Set(game.settings.get(MODULE_ID, "favoriteCreatures") ?? []);
 }

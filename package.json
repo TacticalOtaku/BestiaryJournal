@@ -1,6 +1,6 @@
 {
   "name": "bestiary-journal",
-  "version": "0.2.3",
+  "version": "0.2.5",
   "private": true,
   "type": "module",
   "description": "Development checks for the Bestiary Journal Foundry VTT module.",
