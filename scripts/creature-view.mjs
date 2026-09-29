@@ -846,7 +846,8 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   async refreshFromExternalUpdate(payload = {}) {
     const changed = payload.changed ?? {};
     const concernsThis = !Array.isArray(payload.uuids) || payload.uuids.includes(this.actorUuid);
-    if (changed.data || ((changed.knowledge || changed.social) && concernsThis)) {
+    // `settings`: a world option changed which actions the card may offer.
+    if (changed.data || changed.settings || ((changed.knowledge || changed.social) && concernsThis)) {
       await this._refreshPreservingScroll();
     }
   }
