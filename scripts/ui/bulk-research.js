@@ -1,4 +1,4 @@
-import { BESTIARY_COMMANDS, selectResearchTargets } from "../core/bestiary-domain.js";
+import { BESTIARY_COMMANDS, selectResearchTargets, summarizeResearchTargets } from "../core/bestiary-domain.js";
 import { describeCommandError, dispatchBestiaryCommand, getBestiaryData } from "../foundry/bestiary-store.js";
 import { localize } from "../foundry/foundry-runtime.js";
 import { researchSkillOptions } from "../foundry/research.js";
@@ -47,12 +47,40 @@ export class BestiaryBulkResearch extends HandlebarsApplicationMixin(Application
 
   _onFirstRender(context, options) {
     super._onFirstRender(context, options);
-    this.element.addEventListener("change", () => this._syncForm());
+    this.element.addEventListener("change", event => {
+      if (["scope", "familyId"].includes(event.target.name)) this._showCurrentSettings();
+      this._syncForm();
+    });
   }
 
   _onRender(context, options) {
     super._onRender(context, options);
+    this._showCurrentSettings();
     this._syncForm();
+  }
+
+  _targets(form = this.element) {
+    try {
+      return selectResearchTargets(getBestiaryData(), this._selection(form));
+    } catch {
+      return []; // A collection may have been deleted.
+    }
+  }
+
+  /** Opens on the settings already in force, so the GM can see what was applied before. */
+  _showCurrentSettings(form = this.element) {
+    const { dc, skills } = summarizeResearchTargets(this._targets(form));
+    for (const [name, current] of [["dcMode", dc], ["skillsMode", skills]]) {
+      const select = form.querySelector(`[name="${name}"]`);
+      select.value = ["set", "auto"].includes(current.mode) ? current.mode : "keep";
+      select.querySelector('option[value="keep"]').textContent = localize(current.mode === "mixed"
+        ? "BESTIARY.BulkResearch.KeepMixed"
+        : "BESTIARY.BulkResearch.Keep");
+    }
+    if (dc.mode === "set") form.querySelector('[name="dc"]').value = dc.value;
+    for (const input of form.querySelectorAll('[name="skills"]')) {
+      input.checked = skills.mode === "set" && skills.values.includes(input.value);
+    }
   }
 
   _selection(form = this.element) {
@@ -76,8 +104,7 @@ export class BestiaryBulkResearch extends HandlebarsApplicationMixin(Application
     const skills = form.querySelector('[data-skills]');
     skills.hidden = skillsMode !== "set";
     skills.disabled = skillsMode !== "set";
-    let targets = [];
-    try { targets = selectResearchTargets(getBestiaryData(), selection); } catch { /* A collection may have been deleted. */ }
+    const targets = this._targets(form);
     const count = targets.filter(target => !target.locked).length;
     form.querySelector('[data-summary]').textContent = game.i18n.format("BESTIARY.BulkResearch.Summary", {
       count, skipped: targets.length - count

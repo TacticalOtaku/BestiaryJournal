@@ -14,6 +14,12 @@ export function getDnd5eConfig() {
   return CONFIG.DND5E ?? {};
 }
 
+/** dnd5e's own evaluation of a deterministic bonus formula such as "-3" or "-@prof". */
+export function simplifyDnd5eBonus(bonus, rollData) {
+  const simplify = globalThis.dnd5e?.utils?.simplifyBonus;
+  return simplify ? simplify(bonus, rollData) : (Number(bonus) || 0);
+}
+
 export function enrichHtml(text, options) {
   const editor = foundry.applications.ux.TextEditor.implementation;
   return editor.enrichHTML(text, options);

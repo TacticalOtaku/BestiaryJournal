@@ -679,6 +679,25 @@ export function selectResearchTargets(data, { scope, sectionId, familyId }) {
     .map(entry => ({ section, entry, locked: !!section.locked || !!entry.locked })));
 }
 
+/**
+ * The research settings the unlocked targets share: one DC or skill set
+ * ("set"), none at all ("auto"), or different ones ("mixed"). Lets the batch
+ * editor open on what is already in force.
+ */
+export function summarizeResearchTargets(targets) {
+  const open = targets.filter(target => !target.locked);
+  if (!open.length) return { dc: { mode: "keep" }, skills: { mode: "keep" } };
+  const only = values => (values.size === 1 ? [...values][0] : undefined);
+  const dc = only(new Set(open.map(({ entry }) => entry.research?.dc ?? null)));
+  const skills = only(new Set(open.map(({ entry }) => JSON.stringify([...(entry.research?.skills ?? [])].sort()))));
+  return {
+    dc: dc === undefined ? { mode: "mixed" } : dc === null ? { mode: "auto" } : { mode: "set", value: dc },
+    skills: skills === undefined ? { mode: "mixed" }
+      : skills === "[]" ? { mode: "auto" }
+      : { mode: "set", values: JSON.parse(skills) }
+  };
+}
+
 function handleBulkUpdateResearch(state, command, { now }) {
   if (!command.isGM) throw new Error("Bulk research settings are reserved for the Game Master");
   const targets = selectResearchTargets(state.data, command);
@@ -1113,3 +1132,20 @@ function toArray(value) {
 }
 
 export { MAX_RESEARCH_TIER, MIN_RESEARCH_TIER };
+
+// ── Sharing window ───────────────────────────────────────────────────────────
+
+export const SHARING_WINDOWS = Object.freeze(["always", "outOfCombat", "afterRest"]);
+
+/**
+ * Why a player may not share right now, or null. Telling the party about a
+ * creature takes time: never during a fight and, in "afterRest" worlds, only
+ * once the character has rested since it last fought. An unknown mode falls
+ * back to the out-of-combat rule.
+ */
+export function sharingBlockReason({ mode, inCombat, restedAt = 0, foughtAt = 0 }) {
+  if (mode === "always") return null;
+  if (inCombat) return "inCombat";
+  if (mode === "afterRest" && !(Number(restedAt) > Number(foughtAt))) return "needsRest";
+  return null;
+}

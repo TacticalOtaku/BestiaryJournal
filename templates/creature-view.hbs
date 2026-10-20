@@ -142,12 +142,22 @@
             {{#if showDefenses}}
               <section class="creature-content-card compact-info-card">
                 <header><div><p>{{localize "BESTIARY.Defense"}}</p><h2>{{localize "BESTIARY.Defenses"}}</h2></div><i class="fa-solid fa-shield-halved"></i></header>
-                <div class="trait-chip-list">
-                  {{#if showBlock.resistances}}{{#each creature.resistances}}<span>{{this}}</span>{{/each}}{{/if}}
-                  {{#if showBlock.immunities}}{{#each creature.immunities}}<span class="is-positive">{{this}}</span>{{/each}}{{/if}}
-                  {{#if showBlock.vulnerabilities}}{{#each creature.vulnerabilities}}<span class="is-danger">{{this}}</span>{{/each}}{{/if}}
-                  {{#if showBlock.conditionImmunities}}{{#each creature.conditionImmunities}}<span>{{this}}</span>{{/each}}{{/if}}
-                </div>
+                {{#if damageDefenses.length}}
+                  <div class="defense-group">
+                    <h3>{{localize "BESTIARY.DefenseDamage"}}</h3>
+                    <div class="trait-chip-list">
+                      {{#each damageDefenses}}<span class="is-{{this.kind}}" data-tooltip="{{this.title}}"><i class="fa-solid {{this.icon}}" aria-hidden="true"></i><span class="sr-only">{{this.title}}: </span>{{this.label}}</span>{{/each}}
+                    </div>
+                  </div>
+                {{/if}}
+                {{#if showBlock.conditionImmunities}}
+                  <div class="defense-group">
+                    <h3>{{localize "BESTIARY.ConditionImmunities"}}</h3>
+                    <div class="trait-chip-list">
+                      {{#each creature.conditionImmunities}}<span>{{this}}</span>{{/each}}
+                    </div>
+                  </div>
+                {{/if}}
               </section>
             {{/if}}
           </div>

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.1
+
+### Added
+- **When players may share** world setting: always, out of combat (default) or after a rest. A player whose character is in a started combat cannot share; in "after a rest" worlds the character must take a short or long rest after their last combat round. The authoritative GM records rests and fights and enforces the rule.
+- **To chat (what players know)** in the creature menu of a collection: the GM posts a creature card without opening it, showing only what every player already knows.
+- Perception is offered as a research skill.
+- **Damage modification** block (tier 3 by default): flat amounts dnd5e adds to or removes from incoming damage, shown as "All damage −3" when one amount covers every type.
+
+### Changed
+- Defensive traits are split into damage and condition immunities. Damage chips carry their kind: full shield for immunity, half shield for resistance, arrows for damage modification, a cracked heart for vulnerability; protection is green, weakness red.
+- The research settings window opens on the DC and skills already in force for the chosen scope, and says when the entries differ.
+
+### Fixed
+- After importing a bestiary, text fields such as a new family's name accepted typing again: the file picker now lives in the document like Foundry's own, so the desktop app gets its keyboard focus back.
+- The import and share dialogs are wider and resizable, and their buttons wrap instead of overlapping.
+- A creature card posted to chat keeps its 52 px portrait when the module is disabled.
+
 ## 0.3.0
 
 ### Added

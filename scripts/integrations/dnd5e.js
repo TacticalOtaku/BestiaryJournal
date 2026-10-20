@@ -2,7 +2,8 @@ import {
   enrichHtml,
   getDnd5eConfig,
   hasTranslation,
-  localize
+  localize,
+  simplifyDnd5eBonus
 } from "../foundry/foundry-runtime.js";
 import { log } from "../core/logger.js";
 
@@ -33,6 +34,7 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
     ...extractAbilitiesAndSkills(system),
     ...extractMovement(system),
     ...extractTraitsAndSenses(system),
+    damageModifications: extractDamageModifications(actor),
     ...extractIdentityAndVitals(system),
     ...categorizeActorItems(actor),
     // dnd5e keeps a player-facing biography next to the full one; prefer it
@@ -109,6 +111,26 @@ function extractTraitsAndSenses(system) {
     senses,
     senseUnits: sensesData.units ?? senseRanges.units ?? "ft"
   };
+}
+
+/**
+ * Flat amounts dnd5e adds to incoming damage of a type (negative reduces it),
+ * evaluated the way the actor sheet shows them. One amount on every damage
+ * type reads as "all damage".
+ */
+function extractDamageModifications(actor) {
+  const damageTypes = getDnd5eConfig().damageTypes ?? {};
+  const amounts = actor.system?.traits?.dm?.amount ?? {};
+  const rollData = actor.getRollData?.({ deterministic: true }) ?? {};
+  const totals = Object.entries(amounts)
+    .map(([key, formula]) => ({ key, amount: simplifyDnd5eBonus(formula, rollData) }))
+    .filter(({ amount }) => Number.isFinite(amount) && amount !== 0);
+  const typeKeys = Object.keys(damageTypes);
+  const coversAll = typeKeys.length > 1 && totals.length === typeKeys.length
+    && totals.every(({ amount }) => amount === totals[0].amount);
+  const describe = (label, amount) => ({ label, amount, text: `${label} ${amount > 0 ? "+" : "−"}${Math.abs(amount)}` });
+  if (coversAll) return [describe(localize("BESTIARY.DamageAll"), totals[0].amount)];
+  return totals.map(({ key, amount }) => describe(localizeDndLabel("DamageTypes", damageTypes, key, key), amount));
 }
 
 function extractIdentityAndVitals(system) {
