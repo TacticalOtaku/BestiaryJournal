@@ -15,7 +15,7 @@ import {
   setLibraryViewMode,
   toggleCollapsedFamily
 } from "../foundry/client-preferences.js";
-import { buildCreatureCard } from "./creature-cards.js";
+import { buildCreatureCard, postCreatureToChat } from "./creature-cards.js";
 import { getCreatureDataMany } from "../foundry/creature-cache.js";
 import { buildPartyBadge } from "./knowledge-ui.js";
 import { GM_TIER } from "../core/research-model.js";
@@ -374,6 +374,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     const items = [
       { name: localize("BESTIARY.ViewCreature"), icon: "fa-eye", callback: () => this._openCreatureByUuid(uuid) },
       { name: localize("BESTIARY.OpenSheet"), icon: "fa-arrow-up-right-from-square", callback: () => this._openSheetByUuid(uuid) },
+      { name: localize("BESTIARY.SendToChatParty"), icon: "fa-message", callback: () => this._sendToChatByUuid(uuid) },
       { name: localize("BESTIARY.Entry.Title"), icon: "fa-sliders", callback: () => this._openEntryEditorByUuid(uuid) },
       {
         name: localize(isHidden ? "BESTIARY.ShowToPlayers" : "BESTIARY.HideFromPlayers"),
@@ -666,6 +667,16 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     if (!game.user.isGM || !uuid) return;
     const actor = await resolveUuid(uuid);
     actor?.sheet.render({ force: true });
+  }
+
+  /** Posts only what every player already knows, so a research prompt spoils nothing. */
+  async _sendToChatByUuid(uuid) {
+    const knowledge = getBestiaryKnowledge();
+    const players = getPlayerUsers();
+    const tier = players.length
+      ? Math.min(...players.map(user => getUserTier(knowledge, user.id, uuid)))
+      : GM_TIER;
+    await postCreatureToChat({ uuid, sectionId: this.sectionId, viewer: { id: game.user.id, isGM: true }, tier });
   }
 
   _onOpenEntryEditor(event, target) {

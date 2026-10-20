@@ -113,8 +113,9 @@ export async function importBestiaryFromFile() {
   const replacePlan = planSnapshotImport(data, payload, "replace");
 
   const mode = await foundry.applications.api.DialogV2.wait({
-    window: { title: localize("BESTIARY.Transfer.ImportTitle"), icon: "fa-solid fa-file-import" },
+    window: { title: localize("BESTIARY.Transfer.ImportTitle"), icon: "fa-solid fa-file-import", resizable: true },
     classes: ["bestiary-journal", "bestiary-app", "bestiary-dialog"],
+    position: { width: 520 },
     content: `
       <section class="bestiary-import-dialog">
         <p>${game.i18n.format("BESTIARY.Transfer.ImportSummary", {
@@ -175,8 +176,17 @@ function pickJsonFile() {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "application/json,.json";
-    input.addEventListener("change", () => resolve(input.files?.[0] ?? null), { once: true });
-    input.addEventListener("cancel", () => resolve(null), { once: true });
+    input.hidden = true;
+    // Kept in the document like Foundry's own pickers: in the desktop app a
+    // detached one left text fields deaf to the keyboard after the system dialog.
+    document.body.append(input);
+    const finish = file => {
+      input.remove();
+      window.focus();
+      resolve(file);
+    };
+    input.addEventListener("change", () => finish(input.files?.[0] ?? null), { once: true });
+    input.addEventListener("cancel", () => finish(null), { once: true });
     input.click();
   });
 }

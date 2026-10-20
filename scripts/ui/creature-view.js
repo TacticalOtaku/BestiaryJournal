@@ -26,7 +26,8 @@ import {
   getEntryBlockTiers,
   localizedTierChoices
 } from "../foundry/creature-display.js";
-import { buildImageView, SILHOUETTE_PLACEHOLDER } from "../core/image-framing.js";
+import { buildImageView } from "../core/image-framing.js";
+import { postCreatureToChat } from "./creature-cards.js";
 import { buildCommentThreads, editComment, postComment, removeComment, toggleCommentPin } from "./comments.js";
 import {
   buildKnowledgeRoster,
@@ -71,6 +72,30 @@ const CONTENT_SECTION_DEFS = [
   ["spells", "BESTIARY.Spellcasting", "fa-wand-sparkles"],
   ["inventory", "BESTIARY.Inventory", "fa-bag-shopping"]
 ];
+
+/**
+ * Damage defenses as one list of chips, only for blocks the viewer knows:
+ * green protects (full shield = immunity, half = resistance, arrow = flat
+ * reduction), red hurts (vulnerability, flat increase).
+ */
+function buildDamageDefenses(creature, showBlock) {
+  const chips = [];
+  const add = (block, title, values, chip) => {
+    if (!showBlock[block]) return;
+    for (const value of values) chips.push({ title: localize(title), ...chip(value) });
+  };
+  add("immunities", "BESTIARY.Immunities", creature.immunities,
+    label => ({ label, kind: "positive", icon: "fa-shield" }));
+  add("resistances", "BESTIARY.Resistances", creature.resistances,
+    label => ({ label, kind: "positive", icon: "fa-shield-halved" }));
+  add("damageModifications", "BESTIARY.DamageModifications", creature.damageModifications,
+    ({ text, amount }) => amount < 0
+      ? { label: text, kind: "positive", icon: "fa-arrow-down" }
+      : { label: text, kind: "danger", icon: "fa-arrow-up" });
+  add("vulnerabilities", "BESTIARY.Vulnerabilities", creature.vulnerabilities,
+    label => ({ label, kind: "danger", icon: "fa-heart-crack" }));
+  return chips;
+}
 
 export class BestiaryCreatureView extends HandlebarsApplicationMixin(ApplicationV2) {
 
@@ -191,8 +216,9 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       contentSections,
       showBlock,
       showAbilities: show("abilities") && stats.abilityEntries.length > 0,
-      showDefenses: showBlock.resistances || showBlock.immunities
-        || showBlock.vulnerabilities || showBlock.conditionImmunities,
+      damageDefenses: buildDamageDefenses(creature, showBlock),
+      showDefenses: showBlock.resistances || showBlock.immunities || showBlock.vulnerabilities
+        || showBlock.damageModifications || showBlock.conditionImmunities,
       showVitals: showBlock.ac || showBlock.hp || showBlock.cr || showBlock.xp,
       hasContent: contentSections.length > 0,
       isBlank: !showBlock.ac && !showBlock.hp && !show("abilities") && contentSections.length === 0,
@@ -441,6 +467,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       resistances: show("resistances") && creature.resistances.length > 0,
       immunities: show("immunities") && creature.immunities.length > 0,
       vulnerabilities: show("vulnerabilities") && creature.vulnerabilities.length > 0,
+      damageModifications: show("damageModifications") && creature.damageModifications.length > 0,
       conditionImmunities: show("conditionImmunities") && creature.conditionImmunities.length > 0
     };
   }
@@ -738,52 +765,9 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
 
   // ── Chat ──
 
-  /**
-   * Posts what the sender knows, never more: an unknown creature goes out as
-   * a silhouette without a name. A GM previewing as a player posts that view.
-   */
   async _onSendToChat() {
-    const actor = await resolveUuid(this.actorUuid);
-    if (!actor) return;
-    const data = getBestiaryData();
     const { effective } = this._resolveViewer();
-    const context = selectEntryContext(data, this.actorUuid, effective, this.sectionId);
-    const tier = effective.isGM ? GM_TIER : getUserTier(getBestiaryKnowledge(), effective.id, this.actorUuid);
-    const blockTiers = getEntryBlockTiers(context?.entry);
-    const knowsName = isBlockVisible("name", tier, blockTiers);
-    const knowsPortrait = isBlockVisible("portrait", tier, blockTiers);
-    const displayName = knowsName ? actor.name : localize("BESTIARY.Tier.UnknownName");
-
-    const card = document.createElement("div");
-    card.className = "bestiary-chat-card";
-
-    const portrait = document.createElement("img");
-    portrait.src = knowsPortrait ? actor.img : SILHOUETTE_PLACEHOLDER;
-    portrait.alt = displayName;
-    if (!knowsPortrait) portrait.className = "is-silhouette";
-
-    const copy = document.createElement("div");
-    const name = document.createElement("strong");
-    name.textContent = displayName;
-
-    const action = document.createElement("p");
-    const link = document.createElement("a");
-    link.href = "#";
-    link.className = "bestiary-creature-link";
-    link.dataset.bestiaryCreatureUuid = actor.uuid;
-    const icon = document.createElement("i");
-    icon.className = "fa-solid fa-book-skull";
-    link.append(icon, document.createTextNode(localize("BESTIARY.OpenBestiaryCard")));
-
-    action.appendChild(link);
-    copy.append(name, action);
-    card.append(portrait, copy);
-
-    await ChatMessage.create({
-      speaker: knowsName ? ChatMessage.getSpeaker({ actor }) : ChatMessage.getSpeaker({ user: game.user }),
-      content: card.outerHTML,
-      flags: { "bestiary-journal": { creatureUuid: actor.uuid } }
-    });
+    await postCreatureToChat({ uuid: this.actorUuid, sectionId: this.sectionId, viewer: effective });
   }
 
   // ── Disclosure ──

@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyBestiaryCommand, createBestiaryState, PLAYER_COMMANDS } from "../scripts/core/bestiary-domain.js";
+import {
+  applyBestiaryCommand,
+  createBestiaryState,
+  PLAYER_COMMANDS,
+  selectResearchTargets,
+  summarizeResearchTargets
+} from "../scripts/core/bestiary-domain.js";
 
 function fixture() {
   return createBestiaryState({ data: { sections: [
@@ -57,4 +63,14 @@ test("bulk research is GM-only and an empty patch does not bump revisions", () =
   assert.equal(PLAYER_COMMANDS.has("bulkUpdateResearch"), false);
   assert.throws(() => run(fixture(), { isGM: false, scope: "all", patch: { dc: 10 } }));
   assert.equal(run(fixture(), { scope: "all", patch: {} }).changedAny, false);
+});
+
+test("the batch editor summary reports shared, automatic and mixed settings of unlocked entries", () => {
+  const { data } = fixture();
+  const summary = selection => summarizeResearchTargets(selectResearchTargets(data, selection));
+  assert.deepEqual(summary({ scope: "family", sectionId: "a", familyId: "f" }),
+    { dc: { mode: "set", value: 12 }, skills: { mode: "set", values: ["nat"] } });
+  assert.deepEqual(summary({ scope: "section", sectionId: "a" }), { dc: { mode: "mixed" }, skills: { mode: "mixed" } });
+  assert.deepEqual(summary({ scope: "section", sectionId: "c" }), { dc: { mode: "auto" }, skills: { mode: "auto" } });
+  assert.deepEqual(summary({ scope: "section", sectionId: "b" }), { dc: { mode: "keep" }, skills: { mode: "keep" } });
 });

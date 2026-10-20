@@ -10,7 +10,8 @@ import {
   getUserTier,
   normalizeBestiaryData,
   selectComments,
-  selectVisibleCreatureEntries
+  selectVisibleCreatureEntries,
+  sharingBlockReason
 } from "../scripts/core/bestiary-domain.js";
 
 let counter = 0;
@@ -326,4 +327,15 @@ test("each store bumps its own revision only", () => {
 
 test("an unknown command is rejected loudly", () => {
   assert.throws(() => applyBestiaryCommand(stateWith(), { type: "nope" }, deps), /Unknown bestiary command/);
+});
+
+test("sharing waits for the end of a fight and, after a rest only when the world asks for it", () => {
+  assert.equal(sharingBlockReason({ mode: "always", inCombat: true }), null);
+  assert.equal(sharingBlockReason({ mode: "outOfCombat", inCombat: true }), "inCombat");
+  assert.equal(sharingBlockReason({ mode: "outOfCombat", inCombat: false }), null);
+  assert.equal(sharingBlockReason({ mode: "bogus", inCombat: true }), "inCombat");
+  assert.equal(sharingBlockReason({ mode: "afterRest", inCombat: false }), "needsRest");
+  assert.equal(sharingBlockReason({ mode: "afterRest", inCombat: false, restedAt: 5, foughtAt: 9 }), "needsRest");
+  assert.equal(sharingBlockReason({ mode: "afterRest", inCombat: false, restedAt: 10, foughtAt: 9 }), null);
+  assert.equal(sharingBlockReason({ mode: "afterRest", inCombat: true, restedAt: 10, foughtAt: 9 }), "inCombat");
 });

@@ -8,6 +8,8 @@ import {
   isAuthorityGm
 } from "./foundry/bestiary-store.js";
 import { runMigrations } from "./foundry/migrations.js";
+import { registerSharingClock } from "./foundry/sharing-window.js";
+import { SHARING_WINDOWS } from "./core/bestiary-domain.js";
 import { migrateClientPreferencesToUser } from "./foundry/client-preferences.js";
 import { splitDisplayName } from "./core/display-names.js";
 import { log, setDebugLogging } from "./core/logger.js";
@@ -70,6 +72,16 @@ function registerWorldOptions() {
     hint: "BESTIARY.Settings.AllowSharingHint",
     scope: "world", config: true, type: Boolean, default: true,
     onChange: refreshCards
+  });
+  game.settings.register(MODULE_ID, "sharingWindow", {
+    name: "BESTIARY.Settings.SharingWindow",
+    hint: "BESTIARY.Settings.SharingWindowHint",
+    scope: "world", config: true, type: String, default: "outOfCombat",
+    choices: Object.fromEntries(SHARING_WINDOWS.map(mode => [mode, `BESTIARY.Settings.SharingWindow_${mode}`]))
+  });
+  // When each player last rested and fought; written by the authoritative GM only.
+  game.settings.register(MODULE_ID, "sharingClock", {
+    scope: "world", config: false, type: Object, default: { revision: 0, users: {} }
   });
   game.settings.register(MODULE_ID, "researchRollEnabled", {
     name: "BESTIARY.Settings.ResearchRoll",
@@ -202,6 +214,7 @@ Hooks.once("ready", async () => {
     if (data.action === "refreshBestiary") scheduleBestiaryRefresh(data);
   });
   Hooks.on("bestiaryJournalRefresh", payload => scheduleBestiaryRefresh(payload));
+  registerSharingClock(isAuthorityGm);
 
   if (game.user.isGM && isAuthorityGm()) await runMigrations();
   // Every user, players included: their favorites move off this browser.

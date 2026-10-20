@@ -1,8 +1,10 @@
 import { formatCR, formatDistanceUnit } from "../integrations/dnd5e.js";
 import { getEntryBlockTiers } from "../foundry/creature-display.js";
-import { buildImageView, buildThumbView } from "../core/image-framing.js";
-import { isBlockVisible } from "../core/research-model.js";
-import { localize } from "../foundry/foundry-runtime.js";
+import { buildImageView, buildThumbView, SILHOUETTE_PLACEHOLDER } from "../core/image-framing.js";
+import { GM_TIER, isBlockVisible } from "../core/research-model.js";
+import { getUserTier, selectEntryContext } from "../core/bestiary-domain.js";
+import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store.js";
+import { localize, resolveUuid } from "../foundry/foundry-runtime.js";
 
 /**
  * View model for a creature tile, row or quick preview, already cut down to
@@ -77,4 +79,53 @@ function formatSpeed(creature) {
     const label = localize(`BESTIARY.Speed${key.charAt(0).toUpperCase()}${key.slice(1)}`);
     return `${label}: ${value} ${unit}`;
   }).join(" · ");
+}
+
+/**
+ * Posts what the viewer knows, never more: an unknown creature goes out as a
+ * silhouette without a name. A GM previewing as a player posts that view;
+ * `tier` overrides the viewer's own tier.
+ */
+export async function postCreatureToChat({ uuid, sectionId, viewer, tier }) {
+  const actor = await resolveUuid(uuid);
+  if (!actor) return;
+  const context = selectEntryContext(getBestiaryData(), uuid, viewer, sectionId);
+  tier ??= viewer.isGM ? GM_TIER : getUserTier(getBestiaryKnowledge(), viewer.id, uuid);
+  const blockTiers = getEntryBlockTiers(context?.entry);
+  const knowsName = isBlockVisible("name", tier, blockTiers);
+  const knowsPortrait = isBlockVisible("portrait", tier, blockTiers);
+  const displayName = knowsName ? actor.name : localize("BESTIARY.Tier.UnknownName");
+
+  const card = document.createElement("div");
+  card.className = "bestiary-chat-card";
+
+  const portrait = document.createElement("img");
+  portrait.src = knowsPortrait ? actor.img : SILHOUETTE_PLACEHOLDER;
+  portrait.alt = displayName;
+  // Keeps the card small once the module (and its CSS) is disabled.
+  portrait.width = portrait.height = 52;
+  if (!knowsPortrait) portrait.className = "is-silhouette";
+
+  const copy = document.createElement("div");
+  const name = document.createElement("strong");
+  name.textContent = displayName;
+
+  const action = document.createElement("p");
+  const link = document.createElement("a");
+  link.href = "#";
+  link.className = "bestiary-creature-link";
+  link.dataset.bestiaryCreatureUuid = actor.uuid;
+  const icon = document.createElement("i");
+  icon.className = "fa-solid fa-book-skull";
+  link.append(icon, document.createTextNode(localize("BESTIARY.OpenBestiaryCard")));
+
+  action.appendChild(link);
+  copy.append(name, action);
+  card.append(portrait, copy);
+
+  await ChatMessage.create({
+    speaker: knowsName ? ChatMessage.getSpeaker({ actor }) : ChatMessage.getSpeaker({ user: game.user }),
+    content: card.outerHTML,
+    flags: { "bestiary-journal": { creatureUuid: actor.uuid } }
+  });
 }

@@ -507,10 +507,15 @@ body.theme-dark .bestiary-app:not(.theme-light),
 
 .creature-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 12px; }
 .trait-chip-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 13px 16px 16px; }
-.trait-chip-list span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--suite-border); border-radius: 99px; background: var(--suite-raised); font-size: .79rem; }
-.trait-chip-list span strong { color: var(--suite-accent); }
-.trait-chip-list span.is-positive { border-color: color-mix(in srgb, var(--suite-positive) 42%, transparent); color: var(--suite-positive); }
-.trait-chip-list span.is-danger { border-color: color-mix(in srgb, var(--suite-danger) 42%, transparent); color: var(--suite-danger); }
+.trait-chip-list > span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--suite-border); border-radius: 99px; background: var(--suite-raised); font-size: .79rem; }
+.trait-chip-list > span strong { color: var(--suite-accent); }
+.trait-chip-list > span.is-positive { border-color: color-mix(in srgb, var(--suite-positive) 42%, transparent); color: var(--suite-positive); }
+.trait-chip-list > span.is-danger { border-color: color-mix(in srgb, var(--suite-danger) 42%, transparent); color: var(--suite-danger); }
+.trait-chip-list > span > i { font-size: .72rem; }
+/* Damage and condition defenses read as two labelled groups. */
+.defense-group + .defense-group { border-top: 1px solid var(--suite-border); }
+.defense-group h3 { padding: 11px 16px 0; color: var(--suite-subtle); font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.defense-group .trait-chip-list { padding-top: 8px; }
 
 .creature-section-nav { display: flex; flex-wrap: wrap; gap: 7px; }
 .creature-section-nav button { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--suite-border); border-radius: 99px; background: var(--suite-surface); color: var(--suite-muted); font-size: .8rem; }
@@ -827,6 +832,9 @@ body.theme-dark .bestiary-app:not(.theme-light),
 /* Windows whose content is a plain form or dialog keep a comfortable inset. */
 .bestiary-app.bestiary-tile-editor .window-content { padding: 16px; overflow: auto; }
 .bestiary-app.bestiary-dialog .window-content { padding: 14px 16px; overflow: auto; }
+/* The button reset above drops Foundry's min-width, so footer buttons shrank
+   until their labels overlapped; keep the label width and wrap instead. */
+.bestiary-app.bestiary-dialog .form-footer > button { flex: 1 1 auto; white-space: nowrap; }
 .bestiary-import-plan-title { margin: 4px 0 6px; font-size: .82rem; font-weight: 600; }
 .bestiary-import-plan { margin: 0 0 11px; padding-left: 18px; font-size: .8rem; line-height: 1.5; color: var(--suite-muted); }
 

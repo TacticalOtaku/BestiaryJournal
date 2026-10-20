@@ -11,6 +11,7 @@ import {
   normalizeSocial
 } from "../core/bestiary-domain.js";
 import { prepareResearchCommand } from "./research-authority.js";
+import { sharingBlockKey } from "./sharing-window.js";
 import { log } from "../core/logger.js";
 
 const MODULE_ID = "bestiary-journal";
@@ -165,8 +166,10 @@ export async function handleBestiaryStoreSocket(message) {
     if (!requester.isGM && !PLAYER_COMMANDS.has(command.type)) {
       throw new BestiaryCommandError("BESTIARY.Errors.GmOnly");
     }
-    if (!requester.isGM && !isSharingAllowed() && command.type === BESTIARY_COMMANDS.SHARE_KNOWLEDGE) {
-      throw new BestiaryCommandError("BESTIARY.Errors.SharingDisabled");
+    if (!requester.isGM && command.type === BESTIARY_COMMANDS.SHARE_KNOWLEDGE) {
+      if (!isSharingAllowed()) throw new BestiaryCommandError("BESTIARY.Errors.SharingDisabled");
+      const blocked = sharingBlockKey(requester);
+      if (blocked) throw new BestiaryCommandError(blocked);
     }
     const stamped = stampCommand(command, requester);
     const prepared = COMMAND_PREPARERS[command.type]

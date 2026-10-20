@@ -55,6 +55,7 @@ export const DISPLAY_BLOCKS = Object.freeze([
   { key: "resistances", label: "BESTIARY.Resistances", group: "defense", tier: 2 },
   { key: "immunities", label: "BESTIARY.Immunities", group: "defense", tier: 3 },
   { key: "vulnerabilities", label: "BESTIARY.Vulnerabilities", group: "defense", tier: 3 },
+  { key: "damageModifications", label: "BESTIARY.DamageModifications", group: "defense", tier: 3 },
   { key: "conditionImmunities", label: "BESTIARY.ConditionImmunities", group: "defense", tier: 3 },
 
   { key: "features", label: "BESTIARY.Features", group: "combat", tier: 2 },
@@ -185,7 +186,7 @@ const TYPE_SKILL = {
   humanoid: "his"
 };
 
-export const RESEARCH_SKILLS = Object.freeze(["nat", "arc", "rel", "his", "inv", "sur", "med"]);
+export const RESEARCH_SKILLS = Object.freeze(["nat", "arc", "rel", "his", "inv", "sur", "med", "prc"]);
 
 export function suggestResearchSkill(creatureTypeKey) {
   return TYPE_SKILL[creatureTypeKey] ?? "nat";

@@ -8,6 +8,7 @@ import { BESTIARY_COMMANDS, getUserTier } from "../core/bestiary-domain.js";
 import { runCommand } from "../foundry/command-feedback.js";
 import { formatTimestamp, getPlayerUsers, localize } from "../foundry/foundry-runtime.js";
 import { describeTier } from "../foundry/research.js";
+import { sharingBlockKey } from "../foundry/sharing-window.js";
 
 const SOURCE_LABELS = {
   gm: "BESTIARY.Knowledge.SourceGm",
@@ -92,6 +93,12 @@ export function isSharingEnabled() {
  * dialog just avoids offering impossible choices.
  */
 export async function openShareDialog({ uuid, creatureName, knowledge }) {
+  // The authority checks this again; asking first spares a dialog that cannot succeed.
+  const blocked = sharingBlockKey();
+  if (blocked) {
+    ui.notifications.warn(localize(blocked));
+    return false;
+  }
   const senderTier = getUserTier(knowledge, game.user.id, uuid);
   if (senderTier <= MIN_RESEARCH_TIER) {
     ui.notifications.warn(localize("BESTIARY.Share.NothingToShare"));
@@ -129,8 +136,9 @@ export async function openShareDialog({ uuid, creatureName, knowledge }) {
     </section>`;
 
   const result = await foundry.applications.api.DialogV2.wait({
-    window: { title: localize("BESTIARY.Share.Title"), icon: "fa-solid fa-share-nodes" },
+    window: { title: localize("BESTIARY.Share.Title"), icon: "fa-solid fa-share-nodes", resizable: true },
     classes: ["bestiary-journal", "bestiary-app", "bestiary-dialog"],
+    position: { width: 460 },
     content,
     buttons: [
       {
