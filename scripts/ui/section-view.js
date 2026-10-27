@@ -15,8 +15,8 @@ import {
   setLibraryViewMode,
   toggleCollapsedFamily
 } from "../foundry/client-preferences.js";
-import { buildCreatureCard, postCreatureToChat } from "./creature-cards.js";
-import { getCreatureDataMany } from "../foundry/creature-cache.js";
+import { buildCreatureCard, partyTier, postCreatureToChat, sortByKnownName } from "./creature-cards.js";
+import { resolveShownEntries } from "../foundry/creature-cache.js";
 import { buildPartyBadge } from "./knowledge-ui.js";
 import { GM_TIER } from "../core/research-model.js";
 import { describeTier } from "../foundry/research.js";
@@ -105,7 +105,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     const isGM = game.user.isGM;
     // A collection hidden while a player had it open disappears for them too.
     const section = found && isSectionVisible(found, isGM) ? found : null;
-    const allSections = this._buildSectionNavigation(data, isGM);
+    const allSections = await this._buildSectionNavigation(data, isGM);
 
     if (!section) return { creatures: [], groups: [], allSections, isGM, isEmpty: true, missing: true };
 
@@ -137,17 +137,16 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
   }
 
   _buildSectionNavigation(data, isGM) {
-    return selectVisibleSections(data, isGM).map(section => ({
+    return Promise.all(selectVisibleSections(data, isGM).map(async section => ({
       ...section,
-      creatureCount: selectVisibleCreatureEntries(section, isGM).length,
+      creatureCount: (await resolveShownEntries(selectVisibleCreatureEntries(section, isGM), isGM)).entries.length,
       isActive: section.id === this.sectionId
-    }));
+    })));
   }
 
   async _resolveSectionCreatures(section, knowledge, isGM) {
     const players = isGM ? getPlayerUsers() : [];
-    const entries = selectVisibleCreatureEntries(section, isGM);
-    const resolved = await getCreatureDataMany(entries.map(entry => entry.uuid));
+    const { entries, resolved } = await resolveShownEntries(selectVisibleCreatureEntries(section, isGM), isGM);
 
     const creatures = entries.map(entry => {
       const viewerTier = isGM ? GM_TIER : getUserTier(knowledge, game.user.id, entry.uuid);
@@ -167,9 +166,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
         tierBadge: isGM ? buildPartyBadge(knowledge, entry.uuid, players) : describeTier(viewerTier)
       };
     });
-    // Known names alphabetically, creatures the viewer cannot name last.
-    creatures.sort((a, b) => (!a.sortName - !b.sortName) || a.sortName.localeCompare(b.sortName));
-    return creatures;
+    return sortByKnownName(creatures);
   }
 
   _buildGroups(section, families, creatures, isGM) {
@@ -643,7 +640,10 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     if (!sectionId || sectionId === this.sectionId) return;
     this.sectionId = sectionId;
     this._selectedUuid = null;
+    // Filters of the old collection would hide cards with no chip left to explain it.
     this._familyFilters.clear();
+    this._typeFilters.clear();
+    this._sizeFilters.clear();
     this.render();
   }
 
@@ -671,12 +671,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
   /** Posts only what every player already knows, so a research prompt spoils nothing. */
   async _sendToChatByUuid(uuid) {
-    const knowledge = getBestiaryKnowledge();
-    const players = getPlayerUsers();
-    const tier = players.length
-      ? Math.min(...players.map(user => getUserTier(knowledge, user.id, uuid)))
-      : GM_TIER;
-    await postCreatureToChat({ uuid, sectionId: this.sectionId, viewer: { id: game.user.id, isGM: true }, tier });
+    await postCreatureToChat({ uuid, sectionId: this.sectionId, viewer: { id: game.user.id, isGM: true }, tier: partyTier(uuid) });
   }
 
   _onOpenEntryEditor(event, target) {

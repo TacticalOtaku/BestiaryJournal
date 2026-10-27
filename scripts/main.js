@@ -4,6 +4,7 @@ import { BestiarySectionView } from "./ui/section-view.js";
 import { BestiaryTierSettings } from "./ui/tier-settings.js";
 import {
   canUserViewBestiaryCreature,
+  getBestiaryData,
   handleBestiaryStoreSocket,
   isAuthorityGm
 } from "./foundry/bestiary-store.js";
@@ -275,8 +276,8 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   }
 });
 
-function refreshBestiaryChatLink(link) {
-  const canView = canUserViewBestiaryCreature(link.dataset.bestiaryCreatureUuid);
+function refreshBestiaryChatLink(link, data) {
+  const canView = canUserViewBestiaryCreature(link.dataset.bestiaryCreatureUuid, game.user, data);
   link.classList.toggle("is-disabled", !canView);
   if (canView) {
     link.removeAttribute("aria-disabled");
@@ -291,12 +292,13 @@ function refreshBestiaryChatLink(link) {
 }
 
 function refreshBestiaryChatLinks() {
+  const data = getBestiaryData();
   for (const link of bestiaryChatLinks) {
     if (!link.isConnected) {
       bestiaryChatLinks.delete(link);
       continue;
     }
-    refreshBestiaryChatLink(link);
+    refreshBestiaryChatLink(link, data);
   }
 }
 

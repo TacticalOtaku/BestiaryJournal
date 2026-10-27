@@ -27,7 +27,7 @@ import {
   localizedTierChoices
 } from "../foundry/creature-display.js";
 import { buildImageView } from "../core/image-framing.js";
-import { postCreatureToChat } from "./creature-cards.js";
+import { postCreatureToChat, speedEntries } from "./creature-cards.js";
 import { buildCommentThreads, editComment, postComment, removeComment, toggleCommentPin } from "./comments.js";
 import {
   buildKnowledgeRoster,
@@ -274,7 +274,6 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       crFormatted: formatCR(creature.cr),
       typeLabel: show("type") ? typeLabel : localize("BESTIARY.Tier.UnknownType"),
       showAlignment: show("alignment") && !!creature.alignment,
-      hpPercent: Math.max(0, Math.min(100, Math.round(hpRatio * 100))),
       lowHp: creature.hp.max > 0 && hpRatio <= 0.25
     };
   }
@@ -359,17 +358,9 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       abilityEntries,
       skillEntries: Object.values(creature.skills)
         .map(skill => ({ label: skill.label, total: formatMod(skill.total) })),
-      speedEntries: this._buildSpeedEntries(creature),
+      speedEntries: speedEntries(creature),
       senseEntries: this._buildSenseEntries(creature, dnd5e)
     };
-  }
-
-  _buildSpeedEntries(creature) {
-    const unit = formatDistanceUnit(creature.speedUnits);
-    return Object.entries(creature.speeds).map(([key, value]) => ({
-      label: localize(`BESTIARY.Speed${key.charAt(0).toUpperCase()}${key.slice(1)}`),
-      value: `${value} ${unit}`
-    }));
   }
 
   _buildSenseEntries(creature, dnd5e) {

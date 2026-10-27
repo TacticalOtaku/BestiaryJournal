@@ -1,10 +1,12 @@
 /**
  * Copy the module into the local Foundry Data/modules/<id> folder.
- * Target root: --data <path>, the FOUNDRY_DATA env var, or %LOCALAPPDATA%/FoundryVTT/Data.
+ * Target root: --data <path>, the FOUNDRY_DATA env var, or the platform default
+ * (%LOCALAPPDATA%/FoundryVTT/Data on Windows, ~/Library/Application Support/FoundryVTT/Data on macOS).
  * Reload Foundry (F5) afterwards; a new stylesheet or language in module.json needs a server restart.
  */
 import { existsSync } from "node:fs";
 import { cp, readFile, rm } from "node:fs/promises";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { presentEntries, readJson, root } from "./package-files.mjs";
 
@@ -14,7 +16,9 @@ function resolveDataRoot() {
   const flagIndex = process.argv.indexOf("--data");
   if (flagIndex !== -1 && process.argv[flagIndex + 1]) return process.argv[flagIndex + 1];
   if (process.env.FOUNDRY_DATA) return process.env.FOUNDRY_DATA;
-  return process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, "FoundryVTT", "Data") : null;
+  if (process.env.LOCALAPPDATA) return join(process.env.LOCALAPPDATA, "FoundryVTT", "Data");
+  if (process.platform === "darwin") return join(homedir(), "Library", "Application Support", "FoundryVTT", "Data");
+  return null;
 }
 
 const dataRoot = resolveDataRoot();

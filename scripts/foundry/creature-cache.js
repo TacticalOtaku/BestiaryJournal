@@ -41,6 +41,15 @@ export async function getCreatureDataMany(uuids) {
   }));
 }
 
+/**
+ * The entries a viewer is shown, with their creature data. A deleted actor
+ * stays listed for the GM to clean up; players neither see nor count it.
+ */
+export async function resolveShownEntries(entries, isGM) {
+  const resolved = await getCreatureDataMany(entries.map(entry => entry.uuid));
+  return { entries: isGM ? entries : entries.filter(entry => resolved.get(entry.uuid)), resolved };
+}
+
 export function invalidateCreature(uuid) {
   if (!uuid) return;
   cache.delete(cacheKey(uuid, false));

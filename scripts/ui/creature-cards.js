@@ -4,7 +4,7 @@ import { buildImageView, buildThumbView, SILHOUETTE_PLACEHOLDER } from "../core/
 import { GM_TIER, isBlockVisible } from "../core/research-model.js";
 import { getUserTier, selectEntryContext } from "../core/bestiary-domain.js";
 import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store.js";
-import { localize, resolveUuid } from "../foundry/foundry-runtime.js";
+import { getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtime.js";
 
 /**
  * View model for a creature tile, row or quick preview, already cut down to
@@ -73,24 +73,43 @@ function missingCreature(entry) {
   };
 }
 
-function formatSpeed(creature) {
+/** One `{ label, value }` per movement mode, in the creature's own unit. */
+export function speedEntries(creature) {
   const unit = formatDistanceUnit(creature.speedUnits);
-  return Object.entries(creature.speeds ?? {}).map(([key, value]) => {
-    const label = localize(`BESTIARY.Speed${key.charAt(0).toUpperCase()}${key.slice(1)}`);
-    return `${label}: ${value} ${unit}`;
-  }).join(" · ");
+  return Object.entries(creature.speeds ?? {}).map(([key, value]) => ({
+    label: localize(`BESTIARY.Speed${key.charAt(0).toUpperCase()}${key.slice(1)}`),
+    value: `${value} ${unit}`
+  }));
+}
+
+function formatSpeed(creature) {
+  return speedEntries(creature).map(({ label, value }) => `${label}: ${value}`).join(" · ");
+}
+
+/** Known names alphabetically, creatures the viewer cannot name last. */
+export function sortByKnownName(cards) {
+  return cards.sort((a, b) => (!a.sortName - !b.sortName) || a.sortName.localeCompare(b.sortName));
+}
+
+/** The tier every player has reached, so a public post spoils nothing for anyone. */
+export function partyTier(uuid) {
+  const knowledge = getBestiaryKnowledge();
+  const players = getPlayerUsers();
+  return players.length
+    ? Math.min(...players.map(user => getUserTier(knowledge, user.id, uuid)))
+    : GM_TIER;
 }
 
 /**
- * Posts what the viewer knows, never more: an unknown creature goes out as a
- * silhouette without a name. A GM previewing as a player posts that view;
- * `tier` overrides the viewer's own tier.
+ * Posts a public card: an unknown creature goes out as a silhouette without a
+ * name. A player (or a GM previewing as one) posts only what the whole party
+ * knows, so the card never sidesteps the sharing rules; `tier` overrides that.
  */
 export async function postCreatureToChat({ uuid, sectionId, viewer, tier }) {
   const actor = await resolveUuid(uuid);
   if (!actor) return;
   const context = selectEntryContext(getBestiaryData(), uuid, viewer, sectionId);
-  tier ??= viewer.isGM ? GM_TIER : getUserTier(getBestiaryKnowledge(), viewer.id, uuid);
+  tier ??= viewer.isGM ? GM_TIER : partyTier(uuid);
   const blockTiers = getEntryBlockTiers(context?.entry);
   const knowsName = isBlockVisible("name", tier, blockTiers);
   const knowsPortrait = isBlockVisible("portrait", tier, blockTiers);

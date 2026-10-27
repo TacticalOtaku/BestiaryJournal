@@ -794,7 +794,7 @@ function handleImportSnapshot(state, command, { now, generateId }) {
       continue;
     }
     if (existing.locked) continue;
-    mergeSectionInto(existing, section, now, generateId);
+    mergeSectionInto(existing, section, now);
   }
   return TOUCHED_DATA;
 }
@@ -880,7 +880,7 @@ export function planSnapshotImport(data, payload, mode = "merge") {
   return plan;
 }
 
-function mergeSectionInto(existing, incoming, now, generateId) {
+function mergeSectionInto(existing, incoming, now) {
   const familyIdMap = new Map();
   for (const family of incoming.families) {
     const match = existing.families.find(item => item.id === family.id)
@@ -889,9 +889,8 @@ function mergeSectionInto(existing, incoming, now, generateId) {
       familyIdMap.set(family.id, match.id);
       continue;
     }
-    const id = existing.families.some(item => item.id === family.id) ? generateId() : family.id;
-    familyIdMap.set(family.id, id);
-    existing.families.push({ ...family, id, updatedAt: now() });
+    familyIdMap.set(family.id, family.id);
+    existing.families.push({ ...family, updatedAt: now() });
   }
   for (const entry of incoming.creatures) {
     if (existing.creatures.some(item => item.uuid === entry.uuid)) continue;
