@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.2
+
+### Fixed
+- **To chat** from a player's creature card posts only what the whole party knows, so it no longer reveals a creature past the sharing rules.
+- Actions read dnd5e 5.3 activities correctly: saving throws name their abilities instead of "[OBJECT SET]", attacks show their full to-hit and their kind, damage shows the resolved formula and damage types instead of "@mod".
+- A description that fails to enrich is left empty instead of showing its raw text, GM secret blocks included.
+- Bulk import no longer lists the previous compendium when the source is switched while it is still loading.
+- Switching collections clears the type and size filters along with the family filter.
+- Players no longer see or count entries of deleted actors in a collection; the GM still does, to clean them up.
+- `npm run deploy` finds the Foundry Data folder on macOS without `FOUNDRY_DATA`.
+
+### Development
+- Tests for the GM command relay (replayed, forged and GM-only requests, research rolls) and for dnd5e activity parsing.
+- Chat links read the bestiary once per refresh instead of once per link.
+- Removed unused helpers; one shared `escapeHTML` (Foundry's), speed label and name sort.
+
 ## 0.3.1
 
 ### Added

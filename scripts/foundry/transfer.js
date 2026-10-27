@@ -158,8 +158,7 @@ export async function importBestiaryFromFile() {
 
 /** A short, escaped list of what an import will touch. */
 function describePlan(titleKey, plan) {
-  const escape = value => foundry.utils.escapeHTML?.(String(value))
-    ?? String(value).replace(/[&<>"']/g, char => `&#${char.charCodeAt(0)};`);
+  const escape = value => foundry.utils.escapeHTML(String(value));
   const rows = [
     ["BESTIARY.Transfer.PlanMerged", plan.merged],
     ["BESTIARY.Transfer.PlanCreated", plan.created],

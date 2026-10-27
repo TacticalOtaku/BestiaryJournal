@@ -14,8 +14,8 @@ import {
   setLibraryViewMode,
   toggleFavoriteCreature
 } from "../foundry/client-preferences.js";
-import { buildCreatureCard } from "./creature-cards.js";
-import { getCreatureDataMany } from "../foundry/creature-cache.js";
+import { buildCreatureCard, sortByKnownName } from "./creature-cards.js";
+import { getCreatureDataMany, resolveShownEntries } from "../foundry/creature-cache.js";
 import { buildPartyBadge } from "./knowledge-ui.js";
 import { GM_TIER, MIN_RESEARCH_TIER } from "../core/research-model.js";
 import { describeTier } from "../foundry/research.js";
@@ -72,7 +72,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const knowledge = getBestiaryKnowledge();
     const isGM = game.user.isGM;
     const visibleSections = selectVisibleSections(data, isGM);
-    const sections = this._buildSectionCards(visibleSections, isGM);
+    const sections = await this._buildSectionCards(visibleSections, isGM);
     const creatures = await this._resolveLibraryCreatures(visibleSections, knowledge, isGM);
     const byDate = [...creatures].sort((a, b) => b.addedAt - a.addedAt);
     const favoriteCreatures = byDate.filter(creature => creature.isFavorite);
@@ -110,8 +110,8 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _buildSectionCards(visibleSections, isGM) {
-    return visibleSections.map(section => {
-      const entries = selectVisibleCreatureEntries(section, isGM);
+    return Promise.all(visibleSections.map(async section => {
+      const { entries } = await resolveShownEntries(selectVisibleCreatureEntries(section, isGM), isGM);
       const families = selectVisibleFamilies(section, isGM);
       const updatedAt = Math.max(
         section.updatedAt ?? 0,
@@ -129,7 +129,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
           ? new Date(updatedAt).toLocaleDateString(game.i18n.lang)
           : ""
       };
-    });
+    }));
   }
 
   async _resolveLibraryCreatures(visibleSections, knowledge, isGM) {
@@ -158,9 +158,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
         tierBadge: isGM ? buildPartyBadge(knowledge, item.uuid, players) : describeTier(viewerTier)
       });
     }
-    // Known names alphabetically, creatures the viewer cannot name last.
-    creatures.sort((a, b) => (!a.sortName - !b.sortName) || a.sortName.localeCompare(b.sortName));
-    return creatures;
+    return sortByKnownName(creatures);
   }
 
   // ── Rendering ──

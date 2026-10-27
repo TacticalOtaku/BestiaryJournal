@@ -20,7 +20,8 @@ export async function enrichText(text, options = {}) {
     });
   } catch (e) {
     log.warn("Failed to enrich HTML text", e);
-    return text;
+    // The raw text still holds GM secret blocks, so show nothing rather than leak them.
+    return "";
   }
 }
 
@@ -266,10 +267,7 @@ function extractItemMeta(item) {
   return {
     tags: collector.tags,
     stats: collector.stats,
-    activities,
-    hasMeta: collector.tags.length > 0
-      || collector.stats.length > 0
-      || activities.length > 0
+    activities
   };
 }
 
@@ -332,15 +330,15 @@ function appendDefaultItemMeta({ item, system, labels, activities, pushTag, push
   pushStat("BESTIARY.ItemUses", formatUses(system.uses));
 }
 
-function extractItemActivities(item) {
+export function extractItemActivities(item) {
   const activities = _collectionValues(item.system?.activities);
   return activities.map((activity, index) => {
     const activationType = activity?.activation?.type ?? "";
-    const actionType = activity?.actionType ?? activity?.type ?? "";
+    // `type` first: attack activities report `actionType` as mwak/rwak/msak/rsak.
+    const actionType = activity?.type ?? activity?.actionType ?? "";
     const attack = formatActivityAttack(activity);
     const damage = formatActivityDamage(activity);
     const save = formatActivitySave(activity);
-    const uses = formatUses(activity?.uses);
     const range = formatRange(activity?.range);
     const target = formatTarget(activity?.target);
     const cost = activity?.activation?.cost;
@@ -354,9 +352,7 @@ function extractItemActivities(item) {
       damage,
       save,
       range,
-      target,
-      uses,
-      hasData: [attack, damage, save, range, target, uses].some(Boolean)
+      target
     };
   });
 }
@@ -367,48 +363,25 @@ function _collectionValues(collection) {
   return Object.values(collection);
 }
 
+/** The full to-hit dnd5e prepares; `attack.bonus` is only the extra bonus on top of it. */
 function formatActivityAttack(activity) {
-  const attack = activity?.attack ?? {};
-  const bonus = attack?.bonus ?? attack?.value ?? attack?.modifier;
-  const ability = attack?.ability;
-  const parts = [];
-  if (bonus !== null && bonus !== undefined && bonus !== "") {
-    const num = Number(bonus);
-    parts.push(Number.isFinite(num) ? formatMod(num) : String(bonus));
-  }
-  if (ability) parts.push(String(ability).toUpperCase());
-  return parts.join(" ");
+  return activity?.labels?.toHit ?? "";
 }
 
+/** dnd5e's damage labels resolve @mod and name the types (parts keep them in a `types` Set). */
 function formatActivityDamage(activity) {
-  const damage = activity?.damage;
-  if (!damage) return "";
-
-  const parts = [];
-  const damageParts = Array.isArray(damage?.parts) ? damage.parts : [];
-  for (const part of damageParts) {
-    if (!part) continue;
-    const formula = part.formula ?? part.number ?? "";
-    const type = part.type ?? part.damageType ?? "";
-    const formatted = [formula, localizeDamageType(type)].filter(Boolean).join(" ");
-    if (formatted) parts.push(formatted);
-  }
-
-  if (!parts.length) {
-    const value = damage?.formula ?? damage?.value ?? damage?.base?.formula;
-    if (value) parts.push(String(value));
-  }
-
-  return parts.join(", ");
+  const labels = activity?.labels?.damage;
+  return Array.isArray(labels) ? labels.map(damage => damage?.label).filter(Boolean).join(", ") : "";
 }
 
 function formatActivitySave(activity) {
   const save = activity?.save;
   if (!save) return "";
   const dc = save.dc?.value ?? save.dc ?? "";
-  const ability = save.ability ?? save.type ?? "";
+  // dnd5e 5.x keeps the save abilities in a Set; one save may allow several.
+  const abilities = save.ability instanceof Set ? [...save.ability] : [save.ability ?? save.type].filter(Boolean);
   const pieces = [];
-  if (ability) pieces.push(localizeAbilityShort(ability));
+  if (abilities.length) pieces.push(abilities.map(localizeAbilityShort).join("/"));
   if (dc !== "") pieces.push(`DC ${dc}`);
   return pieces.join(" ");
 }
@@ -417,7 +390,7 @@ function formatRange(range) {
   if (!range) return "";
   const value = range.value ?? range.reach ?? "";
   const long = range.long ?? "";
-  const units = normalizeUnit(range.units ?? range.unit ?? "");
+  const units = formatDistanceUnit(range.units ?? range.unit ?? "");
   if (!value && !long) return "";
   if (value && long) return `${value}/${long}${units ? ` ${units}` : ""}`;
   return `${value || long}${units ? ` ${units}` : ""}`;
@@ -557,12 +530,6 @@ function localizeActivationType(type, cost) {
   return cost && cost > 1 ? `${cost} ${label}` : label;
 }
 
-function localizeDamageType(type) {
-  if (!type) return "";
-  const damageTypes = getDnd5eConfig().damageTypes;
-  return damageTypes?.[type]?.label ?? damageTypes?.[type] ?? type;
-}
-
 function localizeTargetType(type) {
   if (!type) return "";
   const targetTypes = getDnd5eConfig().targetTypes;
@@ -591,10 +558,6 @@ export function formatDistanceUnit(unit) {
     m: localize("BESTIARY.UnitMeters")
   };
   return map[unit] ?? unit;
-}
-
-function normalizeUnit(unit) {
-  return formatDistanceUnit(unit);
 }
 
 function _traitArray(trait, config = {}, category = "") {

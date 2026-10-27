@@ -97,20 +97,25 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
   }
 
   async _loadSource() {
+    const sourceId = this._sourceId;
     this._loading = true;
+    let entries;
     try {
-      this._entries = this._sourceId === "world"
+      entries = sourceId === "world"
         ? this._loadWorldActors()
-        : await this._loadPackActors(this._sourceId);
+        : await this._loadPackActors(sourceId);
     } catch (error) {
       log.error("Could not read the import source", error);
       ui.notifications.error(localize("BESTIARY.Import.LoadFailed"));
-      this._entries = [];
+      entries = [];
     } finally {
       this._loading = false;
-      // Marked loaded even on failure so a broken pack does not loop forever.
-      this._loaded = true;
     }
+    // The GM picked another source meanwhile: drop this one, the next render loads theirs.
+    if (this._sourceId !== sourceId) return;
+    this._entries = entries;
+    // Marked loaded even on failure so a broken pack does not loop forever.
+    this._loaded = true;
     this._markExisting();
   }
 

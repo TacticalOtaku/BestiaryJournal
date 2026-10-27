@@ -113,26 +113,26 @@ export async function openShareDialog({ uuid, creatureName, knowledge }) {
 
   const tierOptions = RESEARCH_TIERS
     .filter(choice => choice.value > MIN_RESEARCH_TIER && choice.value <= senderTier)
-    .map(choice => `<option value="${choice.value}"${choice.value === senderTier ? " selected" : ""}>${escapeHtml(localize(choice.label))}</option>`)
+    .map(choice => `<option value="${choice.value}"${choice.value === senderTier ? " selected" : ""}>${foundry.utils.escapeHTML(localize(choice.label))}</option>`)
     .join("");
 
   const rows = recipients.map(user => `
     <label class="bestiary-share-row">
-      <input type="checkbox" name="recipient" value="${escapeHtml(user.id)}" />
-      <img src="${escapeHtml(user.avatar)}" alt="" />
-      <span class="bestiary-share-name" style="--user-color:${escapeHtml(user.color)}">${escapeHtml(user.name)}</span>
-      <em>${escapeHtml(describeTier(getUserTier(knowledge, user.id, uuid)).label)}</em>
+      <input type="checkbox" name="recipient" value="${foundry.utils.escapeHTML(user.id)}" />
+      <img src="${foundry.utils.escapeHTML(user.avatar)}" alt="" />
+      <span class="bestiary-share-name" style="--user-color:${foundry.utils.escapeHTML(user.color)}">${foundry.utils.escapeHTML(user.name)}</span>
+      <em>${foundry.utils.escapeHTML(describeTier(getUserTier(knowledge, user.id, uuid)).label)}</em>
     </label>`).join("");
 
   const content = `
     <section class="bestiary-share-dialog">
-      <p class="bestiary-share-lead">${escapeHtml(game.i18n.format("BESTIARY.Share.Lead", { name: creatureName }))}</p>
+      <p class="bestiary-share-lead">${foundry.utils.escapeHTML(game.i18n.format("BESTIARY.Share.Lead", { name: creatureName }))}</p>
       <div class="bestiary-share-list">${rows}</div>
       <label class="bestiary-share-tier">
-        <span>${escapeHtml(localize("BESTIARY.Share.TierLabel"))}</span>
+        <span>${foundry.utils.escapeHTML(localize("BESTIARY.Share.TierLabel"))}</span>
         <select name="tier">${tierOptions}</select>
       </label>
-      <p class="bestiary-share-note">${escapeHtml(localize("BESTIARY.Share.CapNote"))}</p>
+      <p class="bestiary-share-note">${foundry.utils.escapeHTML(localize("BESTIARY.Share.CapNote"))}</p>
     </section>`;
 
   const result = await foundry.applications.api.DialogV2.wait({
@@ -172,10 +172,3 @@ export async function openShareDialog({ uuid, creatureName, knowledge }) {
   return true;
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}

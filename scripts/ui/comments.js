@@ -36,8 +36,7 @@ export async function buildCommentThreads(social, uuid, viewer, { locked = false
   return {
     channels,
     total: rendered.length,
-    locked,
-    hasAny: rendered.length > 0
+    locked
   };
 }
 
@@ -66,7 +65,7 @@ async function decorateComment(comment, viewer, locked) {
  * `@UUID[...]` style references still resolve without allowing raw HTML.
  */
 async function renderCommentText(text) {
-  const escaped = escapeHtml(String(text ?? ""));
+  const escaped = foundry.utils.escapeHTML(String(text ?? ""));
   let enriched = escaped;
   try {
     enriched = await enrichHtml(escaped, {
@@ -76,14 +75,6 @@ async function renderCommentText(text) {
     log.warn("Could not enrich a comment", error);
   }
   return enriched.replace(/\n/g, "<br />");
-}
-
-function escapeHtml(value) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 export function postComment({ uuid, channel, text, shared = false }) {
