@@ -8,9 +8,12 @@ import {
   createBestiaryState,
   isCreatureLocked,
   getUserTier,
+  mergeCreatureEntries,
   normalizeBestiaryData,
   selectComments,
+  selectEntryContext,
   selectVisibleCreatureEntries,
+  selectVisibleSections,
   sharingBlockReason
 } from "../scripts/core/bestiary-domain.js";
 
@@ -200,8 +203,8 @@ test("sharing is capped at the sender's tier and never lowers the recipient", ()
 
   assert.equal(getUserTier(state.knowledge, "p2", "Actor.wolf"), 2, "capped at the sender's tier");
   assert.equal(getUserTier(state.knowledge, "p3", "Actor.wolf"), 3, "already knew more, left alone");
-  assert.equal(state.social.shares.length, 1);
-  assert.equal(state.social.shares[0].toUserId, "p2");
+  assert.equal(state.knowledge.users.p2["Actor.wolf"].source, "share");
+  assert.equal(state.knowledge.users.p2["Actor.wolf"].grantedBy, "p1");
 });
 
 test("a player who knows nothing cannot share", () => {
@@ -274,6 +277,17 @@ test("private comments stay private even from the GM", () => {
   }, deps).state;
   const gmView = selectComments(state.social, "Actor.wolf", { id: "gm", isGM: true });
   assert.deepEqual(gmView, []);
+});
+
+test("a creature in several collections is read through the first one on display", () => {
+  // Stored Forest first, but the GM reordered Caves to the top.
+  const state = stateWith([
+    sectionFixture({ sort: 100 }),
+    sectionFixture({ id: "sec2", name: "Caves", sort: 0, creatures: [{ uuid: "Actor.wolf", blockTiers: { name: 3 } }] })
+  ]);
+  const viewer = { id: "p1", isGM: false };
+  assert.equal(selectEntryContext(state.data, "Actor.wolf", viewer).section.id, "sec2");
+  assert.equal(mergeCreatureEntries(selectVisibleSections(state.data, viewer), viewer)[0].entry.blockTiers.name, 3);
 });
 
 test("hidden entries stay out of a player's reach", () => {

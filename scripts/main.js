@@ -40,7 +40,7 @@ function registerWorldStores() {
   });
   game.settings.register(MODULE_ID, "bestiarySocial", {
     name: "Bestiary Comments", scope: "world", config: false, type: Object,
-    default: { revision: 0, comments: [], shares: [] }
+    default: { revision: 0, comments: [] }
   });
   game.settings.register(MODULE_ID, "tierBlockConfig", {
     name: "Bestiary Tier Block Config", scope: "world", config: false, type: Object, default: {},

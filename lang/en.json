@@ -239,6 +239,7 @@
       "CopyToWorldHint": "Otherwise entries stay compendium links: not editable, but the world stays small.",
       "Done": "Added {count} creature(s).",
       "LoadFailed": "The source could not be read.",
+      "CopyFailed": "The actors could not be copied into the world.",
       "FolderEmpty": "That folder holds no NPC actors.",
       "NothingNew": "Every selected creature is already in this collection."
     },

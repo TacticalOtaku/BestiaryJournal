@@ -282,27 +282,34 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
 
   /**
    * Copies compendium actors the way the core "Import" does, keeping the link
-   * to their source. An actor already imported from the same entry is reused
-   * instead of duplicated — matched by source, never by a coincidental name.
+   * to their source, with one read and one create for the whole batch. An actor
+   * already imported from the same entry is reused instead of duplicated —
+   * matched by source, never by a coincidental name.
    */
   async _copyIntoWorld(entries) {
-    const created = [];
+    const copied = [];
+    const missing = [];
     for (const entry of entries) {
-      try {
-        const existing = game.actors.find(actor =>
-          (actor._stats?.compendiumSource ?? actor.flags?.core?.sourceId) === entry.uuid);
-        if (existing) {
-          created.push({ ...entry, uuid: existing.uuid });
-          continue;
-        }
-        const source = await fromUuid(entry.uuid);
-        if (!source) continue;
-        const actor = await Actor.implementation.create(game.actors.fromCompendium(source, { clearFolder: true }));
-        if (actor) created.push({ ...entry, uuid: actor.uuid });
-      } catch (error) {
-        log.warn(`Could not copy ${entry.uuid} into the world`, error);
-      }
+      const existing = game.actors.find(actor =>
+        (actor._stats?.compendiumSource ?? actor.flags?.core?.sourceId) === entry.uuid);
+      if (existing) copied.push({ ...entry, uuid: existing.uuid });
+      else missing.push(entry);
     }
-    return created;
+    if (!missing.length) return copied;
+
+    try {
+      const pack = game.packs.get(this._sourceId);
+      const sources = await pack.getDocuments({ _id__in: missing.map(entry => foundry.utils.parseUuid(entry.uuid).id) });
+      const actors = await Actor.implementation.createDocuments(
+        sources.map(source => game.actors.fromCompendium(source, { clearFolder: true }))
+      );
+      // The server does not keep the request order, so each copy is matched back by its source.
+      const byUuid = new Map(missing.map(entry => [entry.uuid, entry]));
+      for (const actor of actors) copied.push({ ...byUuid.get(actor._stats.compendiumSource), uuid: actor.uuid });
+    } catch (error) {
+      log.error("Could not copy actors into the world", error);
+      ui.notifications.error(localize("BESTIARY.Import.CopyFailed"));
+    }
+    return copied;
   }
 }

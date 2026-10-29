@@ -31,7 +31,7 @@ plain Node; if it needs something from the runtime, pass it in as an argument.
 ## World state and commands
 
 World state lives in three world settings so a note does not rewrite the whole structure: `bestiaryData`
-(structure), `bestiaryKnowledge` (player knowledge) and `bestiarySocial` (notes and the sharing log). Each carries a
+(structure), `bestiaryKnowledge` (player knowledge) and `bestiarySocial` (notes). Each carries a
 `revision`; `dataVersion` drives `foundry/migrations.js`, which keeps the original data when a migration fails.
 
 Changes are serialised through the authoritative active GM (`isAuthorityGm`). Player commands travel as a

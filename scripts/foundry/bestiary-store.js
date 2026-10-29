@@ -5,7 +5,6 @@ import {
   applyBestiaryCommand,
   canViewCreature,
   createBestiaryState,
-  getViewerTier,
   normalizeBestiaryData,
   normalizeKnowledge,
   normalizeSocial
@@ -75,10 +74,6 @@ export function getBestiaryState() {
 /** Pass `data` when checking many creatures at once, so the bestiary is read only once. */
 export function canUserViewBestiaryCreature(uuid, user = game.user, data = getBestiaryData()) {
   return canViewCreature(data, uuid, user);
-}
-
-export function getCurrentViewerTier(uuid, user = game.user) {
-  return getViewerTier(getBestiaryKnowledge(), uuid, user);
 }
 
 // ── Writes ─────────────────────────────────────────────────────────────────

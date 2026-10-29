@@ -1,7 +1,6 @@
 import {
   BESTIARY_COMMANDS,
   getUserTier,
-  isCreatureLocked,
   isSectionVisible,
   selectVisibleCreatureEntries,
   selectVisibleFamilies,
@@ -844,7 +843,9 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
   }
 
   async _removeByUuid(uuid) {
-    if (isCreatureLocked(getBestiaryData(), uuid)) {
+    // Only this collection's locks hold the entry here, as the command itself decides.
+    const section = getBestiaryData().sections.find(item => item.id === this.sectionId);
+    if (section?.locked || section?.creatures.find(item => item.uuid === uuid)?.locked) {
       ui.notifications.warn(localize("BESTIARY.Lock.Blocked"));
       return;
     }

@@ -4,8 +4,6 @@ import {
   NEVER_TIER,
   TIER_CHOICES,
   clampTier,
-  defaultBlockTiers,
-  getBlockDefinition,
   getTierDefinition,
   resolveBlockTiers
 } from "../core/research-model.js";
@@ -33,10 +31,6 @@ export async function setWorldBlockTiers(tiers) {
 /** Effective thresholds for one creature: built-ins → world → entry override. */
 export function getEntryBlockTiers(entry) {
   return resolveBlockTiers(getWorldBlockTiers(), entry?.blockTiers);
-}
-
-export function getDefaultBlockTiers() {
-  return defaultBlockTiers();
 }
 
 export function localizedTierChoices(selected, { includeNever = true, includeInherit = false } = {}) {
@@ -99,9 +93,4 @@ export function buildTierMatrix(effectiveTiers, entryOverrides = {}, baseTiers =
       overrideCount: blocks.filter(block => block.isOverridden).length
     };
   }).filter(group => group.blocks.length);
-}
-
-export function blockLabel(key) {
-  const definition = getBlockDefinition(key);
-  return definition ? localize(definition.label) || definition.label : key;
 }
