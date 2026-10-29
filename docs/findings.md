@@ -19,3 +19,6 @@ Things the mockups surfaced about the module itself. Each needs a decision or a 
   import dialog with «Выбрать другой файл».
 - Bulk import sources: the real code offers world actors and compendiums; the templates also show world folders
   (decide whether to add folder sources).
+- Research DC and skills are set per collection entry, and the GM judges a roll against the entry of the collection
+  the card was opened from (`foundry/research-authority.js`), so a player can roll from the collection with the
+  lower DC. To settle with the research-roll judge, not with the knowledge lens (ADR 0001 covers thresholds only).

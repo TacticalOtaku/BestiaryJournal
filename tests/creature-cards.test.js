@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildCreatureCard } from "../scripts/ui/creature-cards.js";
+import { createKnowledgeLens } from "../scripts/core/knowledge-lens.js";
 
 globalThis.game = {
   settings: { get: () => ({}) },
@@ -22,9 +23,10 @@ const creature = {
   speeds: { walk: 40 }
 };
 const entry = { uuid: "Actor.grim", image: {}, blockTiers: {} };
+const lens = tier => createKnowledgeLens({ tier, worldTiers: {}, entries: [entry] });
 
 test("a creature the viewer does not know reveals nothing anywhere in its card", () => {
-  const card = buildCreatureCard({ uuid: "Actor.grim", entry, creature, viewerTier: 0 });
+  const card = buildCreatureCard({ uuid: "Actor.grim", entry, creature, lens: lens(0) });
   // Every field reaches the page somewhere: text, data attributes for search, sort and filters.
   const page = JSON.stringify(card);
   for (const secret of ["Grimgnaw", "grimgnaw", "Fiend", "fiend", "Gargantuan", "17", "19", "250", "40"]) {
@@ -35,7 +37,7 @@ test("a creature the viewer does not know reveals nothing anywhere in its card",
 });
 
 test("each block opens at its own tier", () => {
-  const card = buildCreatureCard({ uuid: "Actor.grim", entry, creature, viewerTier: 1 });
+  const card = buildCreatureCard({ uuid: "Actor.grim", entry, creature, lens: lens(1) });
   assert.equal(card.name, "Grimgnaw");
   assert.equal(card.typeKey, "fiend");
   assert.equal(card.cr, "", "CR stays hidden until tier 2");
@@ -43,7 +45,7 @@ test("each block opens at its own tier", () => {
 });
 
 test("a deleted actor keeps its name for the GM but shows no statistics", () => {
-  const card = buildCreatureCard({ uuid: "Actor.gone", entry: { ...entry, label: "QA Ghost" }, creature: null, viewerTier: 99 });
+  const card = buildCreatureCard({ uuid: "Actor.gone", entry: { ...entry, label: "QA Ghost" }, creature: null, lens: lens(99) });
   assert.equal(card.name, "QA Ghost");
   assert.equal(card.isMissing, true);
   assert.equal(card.knowsCr, false, "no «CR 0» for an actor that is gone");

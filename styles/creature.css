@@ -204,6 +204,7 @@
 .tier-row.is-overridden { background: color-mix(in srgb, var(--suite-accent) 8%, transparent); }
 .tier-row.is-never > span { color: var(--tier-never); }
 .tier-row select { width: 100%; height: 30px; font-size: .8rem; }
+.tier-row .tier-elsewhere { display: block; margin-top: 2px; font-size: .72rem; line-height: 1.3; color: var(--suite-muted); }
 /* In the card's narrow rail the label gets the room, so «Сопротивления урону» stays on one line. */
 .creature-rail .tier-row { grid-template-columns: minmax(0, 1fr) 124px; padding: 4px 2px; }
 

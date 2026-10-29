@@ -14,8 +14,8 @@ import {
   normalizeKnowledge,
   selectEntryContext
 } from "../core/bestiary-domain.js";
-import { MAX_RESEARCH_TIER, isBlockVisible, resolveResearchConfig } from "../core/research-model.js";
-import { getEntryBlockTiers } from "./creature-display.js";
+import { MAX_RESEARCH_TIER, resolveResearchConfig } from "../core/research-model.js";
+import { knowledgeLensFor } from "./creature-display.js";
 import { localize } from "./foundry-runtime.js";
 
 const MODULE_ID = "bestiary-journal";
@@ -85,7 +85,7 @@ export async function prepareResearchCommand(command, requester) {
     },
     finalize: async result => {
       if (!result?.changed) throw new ResearchRejection("BESTIARY.Errors.ResearchNotRecorded");
-      await postOutcome({ message, actor, requester, uuid, entry: context.entry, creature, skill, total, dc: config.dc, dcExplicit: config.isDcExplicit, success });
+      await postOutcome({ message, actor, requester, uuid, data, creature, skill, total, config, success });
     }
   };
 }
@@ -120,12 +120,13 @@ async function readCreatureTraits(uuid) {
  * whispered result, a blind roll is reported to the GMs only. The creature is
  * named only when the roller now knows its name.
  */
-async function postOutcome({ message, actor, requester, uuid, entry, creature, skill, total, dc, dcExplicit, success }) {
+async function postOutcome({ message, actor, requester, uuid, data, creature, skill, total, config, success }) {
+  // Read after the roll was recorded, so the outcome names what the roller knows now.
   const knowledge = normalizeKnowledge(game.settings.get(MODULE_ID, "bestiaryKnowledge"));
-  const tier = getUserTier(knowledge, requester.id, uuid);
-  const knowsName = isBlockVisible("name", tier, getEntryBlockTiers(entry)) && !!creature.name;
-  // An automatic DC is derived from CR, so it is printed only once the roller knows the CR.
-  const showsDc = dcExplicit || isBlockVisible("cr", tier, getEntryBlockTiers(entry));
+  const lens = knowledgeLensFor({ data, knowledge }, { id: requester.id, isGM: false }, uuid);
+  const knowsName = lens.knowsName && !!creature.name;
+  const showsDc = lens.knowsDc(config);
+  const { dc } = config;
 
   const card = document.createElement("div");
   card.className = `bestiary-research-card ${success ? "is-success" : "is-failure"}`;

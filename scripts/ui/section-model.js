@@ -1,5 +1,5 @@
-import { getUserTier, selectVisibleCreatureEntries } from "../core/bestiary-domain.js";
-import { GM_TIER } from "../core/research-model.js";
+import { selectVisibleCreatureEntries } from "../core/bestiary-domain.js";
+import { knowledgeLensFor } from "../foundry/creature-display.js";
 import { getCollapsedFamilies } from "../foundry/client-preferences.js";
 import { resolveShownEntries } from "../foundry/creature-cache.js";
 import { getPlayerUsers, localize } from "../foundry/foundry-runtime.js";
@@ -14,17 +14,17 @@ export const UNGROUPED_ID = "__ungrouped__";
 /** Where a player sees creatures whose name they do not know: their family would hint at what they are. */
 export const UNIDENTIFIED_ID = "__unidentified__";
 
-export async function resolveSectionCreatures(section, knowledge, isGM) {
+export async function resolveSectionCreatures(section, { data, knowledge }, isGM) {
   const players = isGM ? getPlayerUsers() : [];
   const { entries, resolved } = await resolveShownEntries(selectVisibleCreatureEntries(section, isGM), isGM);
 
   const creatures = entries.map(entry => {
-    const viewerTier = isGM ? GM_TIER : getUserTier(knowledge, game.user.id, entry.uuid);
+    const lens = knowledgeLensFor({ data, knowledge }, game.user, entry.uuid);
     const card = buildCreatureCard({
       uuid: entry.uuid,
       entry,
       creature: resolved.get(entry.uuid),
-      viewerTier,
+      lens,
       searchExtra: [section.name]
     });
     return {
@@ -34,9 +34,9 @@ export async function resolveSectionCreatures(section, knowledge, isGM) {
       familyId: !isGM && !card.knowsName ? UNIDENTIFIED_ID : entry.familyId ?? UNGROUPED_ID,
       isHidden: !!entry.hidden,
       isLocked: !!entry.locked || !!section.locked,
-      viewerTier,
-      isNew: isNewCreature(entry.uuid, viewerTier),
-      tierBadge: isGM ? buildPartyBadge(knowledge, entry.uuid, players) : describeTier(viewerTier)
+      viewerTier: lens.tier,
+      isNew: isNewCreature(entry.uuid, lens.tier),
+      tierBadge: isGM ? buildPartyBadge(knowledge, entry.uuid, players) : describeTier(lens.tier)
     };
   });
   return sortByKnownName(creatures);

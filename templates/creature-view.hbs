@@ -410,7 +410,7 @@
                     <h4><i class="fa-solid {{this.icon}}"></i>{{this.label}}{{#if this.overrideCount}}<em>{{this.overrideCount}}</em>{{/if}}</h4>
                     {{#each this.blocks}}
                       <label class="tier-row {{#if this.isChild}}is-child{{/if}} {{#if this.isOverridden}}is-overridden{{/if}} {{#if this.isNever}}is-never{{/if}}">
-                        <span>{{this.label}}</span>
+                        <span>{{this.label}}{{#if this.openedElsewhere}}<small class="tier-elsewhere">{{this.openedElsewhere}}</small>{{/if}}</span>
                         <select data-block-tier="{{this.key}}" {{#if ../../locked}}disabled{{/if}}>
                           {{#each this.choices}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
                         </select>

@@ -1,7 +1,6 @@
 import { formatMod, formatCR, localizeDndLabel, formatDistanceUnit } from "../integrations/dnd5e.js";
 import {
   MAX_RESEARCH_TIER,
-  isBlockVisible,
   isGmTier,
   isItemVisible,
   itemTierKey,
@@ -13,8 +12,8 @@ import { getDnd5eConfig, localize } from "../foundry/foundry-runtime.js";
 import { speedEntries } from "./creature-cards.js";
 
 /**
- * The statblock half of a creature card, already cut down to the viewer's tier: `show(key)` says
- * whether a block is known. Nothing hidden is returned, except to the GM, who keeps hidden content
+ * The statblock half of a creature card, already cut down to the viewer's tier: the knowledge lens says
+ * whether a block or an item is known. Nothing hidden is returned, except to the GM, who keeps hidden content
  * with a tier control.
  */
 
@@ -85,10 +84,10 @@ export function buildTierSteps(tier) {
   });
 }
 
-export function buildStatEntries(creature, tier, blockTiers) {
+export function buildStatEntries(creature, lens) {
   const dnd5e = getDnd5eConfig();
   const abilityEntries = Object.entries(creature.abilities)
-    .filter(([key]) => isBlockVisible(key, tier, blockTiers))
+    .filter(([key]) => lens.show(key))
     .map(([key, ability]) => ({
       key,
       label: localizeDndLabel("AbilityAbbreviations", {}, key, dnd5e.abilities?.[key]?.abbreviation ?? ability.label),
@@ -122,17 +121,17 @@ function buildSenseEntries(creature, dnd5e) {
  * dropped entirely; the GM instead keeps them with a tier control so the
  * hidden ones stay obvious. `expanded` holds the open section and item keys.
  */
-export function buildContentSections(creature, tier, blockTiers, entry, isGM, expanded) {
+export function buildContentSections(creature, lens, entry, isGM, expanded) {
   const sections = [];
   for (const [key, label, icon] of CONTENT_SECTION_DEFS) {
     const source = creature[key] ?? [];
     if (!source.length) continue;
-    const blockVisible = isBlockVisible(key, tier, blockTiers);
+    const blockVisible = lens.show(key);
     if (!blockVisible && !isGM) continue;
 
     const items = source
-      .filter(item => isGM || isItemVisible(key, item.id ?? item.name, tier, blockTiers, entry.itemTiers))
-      .map(item => decorateItem(item, key, blockTiers, entry, isGM, expanded.items));
+      .filter(item => isGM || lens.showItem(key, item.id ?? item.name))
+      .map(item => decorateItem(item, key, lens, entry, isGM, expanded.items));
     if (!items.length) continue;
 
     sections.push({
@@ -148,7 +147,7 @@ export function buildContentSections(creature, tier, blockTiers, entry, isGM, ex
     });
   }
 
-  if (creature.biography && (isBlockVisible("biography", tier, blockTiers) || isGM)) {
+  if (creature.biography && (lens.show("biography") || isGM)) {
     sections.push({
       key: "biography",
       label: localize("BESTIARY.Biography"),
@@ -157,18 +156,19 @@ export function buildContentSections(creature, tier, blockTiers, entry, isGM, ex
       expanded: expanded.sections.has("biography"),
       isBiography: true,
       biography: creature.biography,
-      blockHiddenForPlayers: !isBlockVisible("biography", tier, blockTiers),
+      blockHiddenForPlayers: !lens.show("biography"),
       items: []
     });
   }
   return sections;
 }
 
-function decorateItem(item, blockKey, blockTiers, entry, isGM, expandedItems) {
+/** `override` is this entry's own pick for the GM's control; what players get comes from the lens. */
+function decorateItem(item, blockKey, lens, entry, isGM, expandedItems) {
   const itemId = item.id ?? item.name;
   const itemKey = `${blockKey}:${itemId}`;
   const override = entry.itemTiers?.[itemTierKey(blockKey, itemId)];
-  const required = requiredTierForItem(blockKey, itemId, blockTiers, entry.itemTiers);
+  const required = requiredTierForItem(blockKey, itemId, lens.blockTiers, lens.itemTiers);
   return {
     ...item,
     itemKey,
@@ -177,7 +177,7 @@ function decorateItem(item, blockKey, blockTiers, entry, isGM, expandedItems) {
     expanded: expandedItems.has(itemKey),
     primaryActivity: item.activities?.[0] ?? null,
     hasActivity: (item.activities?.length ?? 0) > 0,
-    hiddenForPlayers: !isItemVisible(blockKey, itemId, MAX_RESEARCH_TIER, blockTiers, entry.itemTiers),
+    hiddenForPlayers: !isItemVisible(blockKey, itemId, MAX_RESEARCH_TIER, lens.blockTiers, lens.itemTiers),
     requiredTier: required,
     requiredTierLabel: describeTier(required).label,
     tierChoices: isGM

@@ -12,7 +12,8 @@ import {
   setLibraryViewMode,
   toggleCollapsedFamily
 } from "../foundry/client-preferences.js";
-import { partyTier, postCreatureToChat } from "./creature-cards.js";
+import { postCreatureToChat } from "./creature-cards.js";
+import { PARTY_VIEWER, viewerTier } from "../core/knowledge-lens.js";
 import { tierProgress } from "../core/knowledge-progress.js";
 import { BestiaryKnowledgeBoard } from "./knowledge-board.js";
 import { resolveShownEntries } from "../foundry/creature-cache.js";
@@ -107,7 +108,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
     if (!section) return { creatures: [], groups: [], allSections, isGM, isEmpty: true, missing: true };
 
-    const creatures = await resolveSectionCreatures(section, knowledge, isGM);
+    const creatures = await resolveSectionCreatures(section, { data, knowledge }, isGM);
     const families = selectVisibleFamilies(section, isGM);
     const groups = buildFamilyGroups(section, families, creatures, isGM);
     const { typeOptions, sizeOptions } = buildFilterOptions(creatures);
@@ -127,7 +128,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       sectionImage: section.image,
       sectionLocked: !!section.locked,
       resultCount: creatures.length,
-      progressLabel: this._progressLabel(creatures, isGM),
+      progressLabel: this._progressLabel(creatures, isGM, knowledge),
       viewMode: this._viewMode,
       isGrid: this._viewMode === "grid",
       filtersOpen: this._filtersOpen,
@@ -136,10 +137,11 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
   }
 
   /** «изучено 3 из 8»: the player's own, or for the GM the party's (the tier every player has reached). */
-  _progressLabel(creatures, isGM) {
-    if (isGM && !getPlayerUsers().length) return "";
+  _progressLabel(creatures, isGM, knowledge) {
+    const players = getPlayerUsers();
+    if (isGM && !players.length) return "";
     const progress = tierProgress(creatures.filter(creature => !creature.isMissing)
-      .map(creature => (isGM ? partyTier(creature.uuid) : creature.viewerTier)));
+      .map(creature => (isGM ? viewerTier(knowledge, PARTY_VIEWER, creature.uuid, players) : creature.viewerTier)));
     return progress.total ? game.i18n.format("BESTIARY.Progress.Known", progress) : "";
   }
 
@@ -590,7 +592,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
   /** Posts only what every player already knows, so a research prompt spoils nothing. */
   async _sendToChatByUuid(uuid) {
-    await postCreatureToChat({ uuid, sectionId: this.sectionId, viewer: { id: game.user.id, isGM: true }, tier: partyTier(uuid) });
+    await postCreatureToChat({ uuid, sectionId: this.sectionId, viewer: PARTY_VIEWER });
   }
 
   _onOpenEntryEditor(event, target) {

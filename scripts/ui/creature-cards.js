@@ -1,10 +1,11 @@
 import { formatCR, formatDistanceUnit } from "../integrations/dnd5e.js";
-import { getEntryBlockTiers } from "../foundry/creature-display.js";
+import { knowledgeLensFor } from "../foundry/creature-display.js";
 import { buildImageView, buildThumbView, SILHOUETTE_PLACEHOLDER } from "../core/image-framing.js";
-import { GM_TIER, isBlockVisible, RESEARCH_TIERS } from "../core/research-model.js";
-import { getUserTier, selectEntryContext } from "../core/bestiary-domain.js";
+import { RESEARCH_TIERS } from "../core/research-model.js";
+import { PARTY_VIEWER } from "../core/knowledge-lens.js";
+import { selectEntryContext } from "../core/bestiary-domain.js";
 import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store.js";
-import { getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtime.js";
+import { localize, resolveUuid } from "../foundry/foundry-runtime.js";
 
 /**
  * View model for a creature tile, row or quick preview, already cut down to
@@ -12,10 +13,9 @@ import { getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtim
  * not even into data attributes used for search, sort or filters — so the
  * library and collection views cannot leak what the full card keeps back.
  */
-export function buildCreatureCard({ uuid, entry, creature, viewerTier, searchExtra = [] }) {
+export function buildCreatureCard({ uuid, entry, creature, lens, searchExtra = [] }) {
   const source = creature ?? missingCreature(entry);
-  const blockTiers = getEntryBlockTiers(entry);
-  const show = key => isBlockVisible(key, viewerTier, blockTiers);
+  const { show } = lens;
   // A deleted actor has a name and art left in its entry, but no statistics to show.
   const showStat = key => !!creature && show(key);
 
@@ -93,28 +93,20 @@ export function sortByKnownName(cards) {
   return cards.sort((a, b) => (!a.sortName - !b.sortName) || a.sortName.localeCompare(b.sortName));
 }
 
-/** The tier every player has reached, so a public post spoils nothing for anyone. */
-export function partyTier(uuid) {
-  const knowledge = getBestiaryKnowledge();
-  const players = getPlayerUsers();
-  return players.length
-    ? Math.min(...players.map(user => getUserTier(knowledge, user.id, uuid)))
-    : GM_TIER;
-}
-
 /**
  * Posts a public card: an unknown creature goes out as a silhouette without a
  * name. A player (or a GM previewing as one) posts only what the whole party
- * knows, so the card never sidesteps the sharing rules; `tier` overrides that.
+ * knows, so the card never sidesteps the sharing rules; a GM posts it all
+ * unless `viewer` is PARTY_VIEWER.
  */
-export async function postCreatureToChat({ uuid, sectionId, viewer, tier }) {
+export async function postCreatureToChat({ uuid, sectionId, viewer }) {
   const actor = await resolveUuid(uuid);
   if (!actor) return;
-  const context = selectEntryContext(getBestiaryData(), uuid, viewer, sectionId);
-  tier ??= viewer.isGM ? GM_TIER : partyTier(uuid);
-  const blockTiers = getEntryBlockTiers(context?.entry);
-  const knowsName = isBlockVisible("name", tier, blockTiers);
-  const knowsPortrait = isBlockVisible("portrait", tier, blockTiers);
+  const data = getBestiaryData();
+  const context = selectEntryContext(data, uuid, viewer, sectionId);
+  const lens = knowledgeLensFor({ data, knowledge: getBestiaryKnowledge() }, viewer.isGM ? viewer : PARTY_VIEWER, uuid);
+  const { tier, knowsName } = lens;
+  const knowsPortrait = lens.show("portrait");
   const displayName = knowsName ? actor.name : localize("BESTIARY.Tier.UnknownName");
 
   const card = document.createElement("div");
