@@ -10,6 +10,12 @@ export function hasTranslation(key) {
   return !!game.i18n.has?.(key);
 }
 
+/** "{count} существа": the plural form (one, few, many, other) the language's rules pick for `count`. */
+export function formatCount(key, count) {
+  const form = new Intl.PluralRules(game.i18n.lang).select(Number(count) || 0);
+  return game.i18n.format(`${key}.${hasTranslation(`${key}.${form}`) ? form : "other"}`, { count });
+}
+
 export function getDnd5eConfig() {
   return CONFIG.DND5E ?? {};
 }

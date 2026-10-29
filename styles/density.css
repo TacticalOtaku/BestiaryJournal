@@ -1,0 +1,29 @@
+/* Bestiary Journal — compact density (data-density, set in the look drawer). Same layouts, tighter: more on screen.
+   The attribute raises every rule above the component's own, so the file's place in module.json does not matter. */
+
+.bestiary-app[data-density="compact"] .library-toolbar { padding-top: 14px; padding-bottom: 10px; }
+.bestiary-app[data-density="compact"] .library-scroll { padding: 14px 20px 20px; }
+.bestiary-app[data-density="compact"] .library-section-block { margin-bottom: 20px; }
+.bestiary-app[data-density="compact"] .collection-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.bestiary-app[data-density="compact"] .library-creature-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.bestiary-app[data-density="compact"] .recent-creature-strip { gap: 8px; }
+.bestiary-app[data-density="compact"] .recent-creature-card { padding: 6px; }
+
+.bestiary-app[data-density="compact"] .collection-header { padding-top: 12px; padding-bottom: 10px; }
+.bestiary-app[data-density="compact"] .family-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)); gap: 8px; }
+.bestiary-app[data-density="compact"] .collection-creature-copy { padding: 7px 9px 9px; }
+
+.bestiary-app[data-density="compact"] .creature-detail-view { padding: 12px 16px 20px; gap: 10px; }
+.bestiary-app[data-density="compact"] .creature-profile-card { grid-template-columns: minmax(150px, 190px) minmax(0, 1fr); gap: 16px; padding-bottom: 12px; }
+.bestiary-app[data-density="compact"] :is(.creature-main-column, .creature-expanded-layout) { gap: 8px; }
+.bestiary-app[data-density="compact"] .key-stat { min-height: 46px; padding: 5px 6px; }
+.bestiary-app[data-density="compact"] .key-stat strong { font-size: 16px; }
+.bestiary-app[data-density="compact"] .ability-score { height: 56px; }
+.bestiary-app[data-density="compact"] .ability-score em { font-size: 17px; }
+.bestiary-app[data-density="compact"] .creature-content-card { padding: 9px; }
+.bestiary-app[data-density="compact"] .section-toggle { min-height: 34px; }
+.bestiary-app[data-density="compact"] .creature-item-header { padding: 6px 9px; }
+.bestiary-app[data-density="compact"] .rail-tabs button { padding: 9px 6px; }
+
+.bestiary-app[data-density="compact"] .bulk-import-row { padding-top: 1px; padding-bottom: 1px; }
+.bestiary-app[data-density="compact"] .knowledge-board-table :is(th, td) { padding-top: 3px; padding-bottom: 3px; }

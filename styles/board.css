@@ -1,0 +1,26 @@
+/* Bestiary Journal — the party knowledge board. A table: creatures down, players across, a tier tag in each cell. */
+
+.bestiary-app.bestiary-knowledge-board .window-content { padding: 0; }
+.knowledge-board-shell { height: 100%; display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 12px; padding: 18px 22px 16px; }
+.knowledge-board-header h1 { font-family: var(--suite-font-display); font-size: 1.4rem; font-weight: 700; }
+.knowledge-board-hint { margin: 5px 0 0; max-width: 64ch; color: var(--suite-subtle); font-size: .82rem; line-height: 1.5; }
+.knowledge-board-controls { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+
+.knowledge-board-table { overflow: auto; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-lg); background: var(--suite-surface); }
+.knowledge-board-table table { width: 100%; margin: 0; border: 0; border-collapse: collapse; background: none; }
+.knowledge-board-table :is(th, td) { padding: 6px 10px; border: 0; border-bottom: 1px solid var(--suite-border); text-align: left; vertical-align: middle; }
+.knowledge-board-table thead th { position: sticky; top: 0; z-index: 1; background: var(--suite-raised); color: var(--suite-muted); font: 600 11px var(--suite-font-body); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.knowledge-board-table thead th span { border-left: 3px solid var(--user-color, var(--suite-accent)); padding-left: 6px; }
+.knowledge-board-table th img { display: inline-block; width: 26px; height: 26px; margin-right: 8px; border: 0; border-radius: var(--suite-radius-sm); object-fit: cover; vertical-align: middle; }
+.knowledge-board-table thead th img { display: none; }
+.knowledge-board-table tbody th { color: var(--suite-text); font-weight: 600; font-size: .86rem; }
+.knowledge-board-table tbody th .fa-lock { margin-left: 6px; color: var(--suite-subtle); }
+.knowledge-board-table tbody tr:hover { background: var(--suite-raised); box-shadow: inset 2px 0 0 var(--suite-accent-line); }
+.knowledge-board-table tbody tr.is-locked { opacity: .7; }
+
+/* Each cell is a tier tag that is also its own picker. */
+.board-tier { width: 100%; min-width: 118px; height: 28px; padding: 0 6px; border: 0; border-left: 3px solid var(--chip-color); border-radius: 3px; background: color-mix(in srgb, var(--chip-color) 13%, transparent); color: var(--chip-color); font: 600 12px var(--suite-font-body); }
+.board-tier.is-unknown { --chip-color: var(--tier-unknown); }
+.board-tier.is-rumors { --chip-color: var(--tier-rumors); }
+.board-tier.is-studied { --chip-color: var(--tier-studied); }
+.board-tier.is-mastered { --chip-color: var(--tier-mastered); }

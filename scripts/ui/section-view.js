@@ -1,6 +1,5 @@
 import {
   BESTIARY_COMMANDS,
-  getUserTier,
   isSectionVisible,
   selectVisibleCreatureEntries,
   selectVisibleFamilies,
@@ -9,27 +8,26 @@ import {
 import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store.js";
 import { runCommand } from "../foundry/command-feedback.js";
 import {
-  getCollapsedFamilies,
   getLibraryViewMode,
   setLibraryViewMode,
   toggleCollapsedFamily
 } from "../foundry/client-preferences.js";
-import { buildCreatureCard, partyTier, postCreatureToChat, sortByKnownName } from "./creature-cards.js";
+import { partyTier, postCreatureToChat } from "./creature-cards.js";
+import { tierProgress } from "../core/knowledge-progress.js";
+import { BestiaryKnowledgeBoard } from "./knowledge-board.js";
 import { resolveShownEntries } from "../foundry/creature-cache.js";
-import { buildPartyBadge } from "./knowledge-ui.js";
-import { GM_TIER } from "../core/research-model.js";
-import { describeTier } from "../foundry/research.js";
-import { getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtime.js";
+import { formatCount, getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtime.js";
 import { BestiaryTileEditor } from "./tile-editor.js";
 import { BestiaryEntryEditor } from "./entry-editor.js";
 import { BestiaryBulkImport } from "./bulk-import.js";
 import { BestiaryBulkResearch } from "./bulk-research.js";
 import { exportBestiary, exportCreatureEntry } from "../foundry/transfer.js";
 import { playApplicationEntrance, showContextMenu } from "./ui-effects.js";
+import { buildFamilyGroups, buildFilterOptions, resolveSectionCreatures, UNGROUPED_ID } from "./section-model.js";
+import { activeFilterCount, compareCollectionCards, matchesCollectionFilter } from "../core/collection-filter.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-const UNGROUPED_ID = "__ungrouped__";
 const CARD_DRAG_TYPE = "application/x-bestiary-card";
 
 export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -43,6 +41,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     window: { title: "BESTIARY.Title", icon: "fa-solid fa-book-open", resizable: true, minimizable: true },
     position: { width: 1280, height: 820 },
     actions: {
+      openKnowledgeBoard: function () { BestiaryKnowledgeBoard.open(this.sectionId); },
       goBack: function () { this._onGoBack(); },
       switchSection: function (event, target) { this._onSwitchSection(event, target); },
       toggleView: function (event, target) { this._onToggleView(event, target); },
@@ -108,10 +107,10 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
     if (!section) return { creatures: [], groups: [], allSections, isGM, isEmpty: true, missing: true };
 
-    const creatures = await this._resolveSectionCreatures(section, knowledge, isGM);
+    const creatures = await resolveSectionCreatures(section, knowledge, isGM);
     const families = selectVisibleFamilies(section, isGM);
-    const groups = this._buildGroups(section, families, creatures, isGM);
-    const { typeOptions, sizeOptions } = this._buildFilterOptions(creatures);
+    const groups = buildFamilyGroups(section, families, creatures, isGM);
+    const { typeOptions, sizeOptions } = buildFilterOptions(creatures);
 
     return {
       creatures,
@@ -128,11 +127,20 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       sectionImage: section.image,
       sectionLocked: !!section.locked,
       resultCount: creatures.length,
+      progressLabel: this._progressLabel(creatures, isGM),
       viewMode: this._viewMode,
       isGrid: this._viewMode === "grid",
       filtersOpen: this._filtersOpen,
       hasFamilies: families.length > 0
     };
+  }
+
+  /** «изучено 3 из 8»: the player's own, or for the GM the party's (the tier every player has reached). */
+  _progressLabel(creatures, isGM) {
+    if (isGM && !getPlayerUsers().length) return "";
+    const progress = tierProgress(creatures.filter(creature => !creature.isMissing)
+      .map(creature => (isGM ? partyTier(creature.uuid) : creature.viewerTier)));
+    return progress.total ? game.i18n.format("BESTIARY.Progress.Known", progress) : "";
   }
 
   _buildSectionNavigation(data, isGM) {
@@ -141,82 +149,6 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       creatureCount: (await resolveShownEntries(selectVisibleCreatureEntries(section, isGM), isGM)).entries.length,
       isActive: section.id === this.sectionId
     })));
-  }
-
-  async _resolveSectionCreatures(section, knowledge, isGM) {
-    const players = isGM ? getPlayerUsers() : [];
-    const { entries, resolved } = await resolveShownEntries(selectVisibleCreatureEntries(section, isGM), isGM);
-
-    const creatures = entries.map(entry => {
-      const viewerTier = isGM ? GM_TIER : getUserTier(knowledge, game.user.id, entry.uuid);
-      return {
-        ...buildCreatureCard({
-          uuid: entry.uuid,
-          entry,
-          creature: resolved.get(entry.uuid),
-          viewerTier,
-          searchExtra: [section.name]
-        }),
-        entry,
-        familyId: entry.familyId ?? UNGROUPED_ID,
-        isHidden: !!entry.hidden,
-        isLocked: !!entry.locked || !!section.locked,
-        viewerTier,
-        tierBadge: isGM ? buildPartyBadge(knowledge, entry.uuid, players) : describeTier(viewerTier)
-      };
-    });
-    return sortByKnownName(creatures);
-  }
-
-  _buildGroups(section, families, creatures, isGM) {
-    const collapsed = getCollapsedFamilies();
-    const groups = families.map(family => ({
-      id: family.id,
-      name: family.name,
-      image: family.image,
-      hidden: !!family.hidden,
-      isUngrouped: false,
-      collapsed: collapsed.has(`${section.id}:${family.id}`),
-      creatures: creatures.filter(creature => creature.familyId === family.id)
-    }));
-
-    const ungrouped = creatures.filter(creature => creature.familyId === UNGROUPED_ID);
-    if (ungrouped.length || !families.length) {
-      groups.push({
-        id: UNGROUPED_ID,
-        name: localize(families.length ? "BESTIARY.Families.Ungrouped" : "BESTIARY.Families.AllCreatures"),
-        image: "",
-        hidden: false,
-        isUngrouped: true,
-        collapsed: collapsed.has(`${section.id}:${UNGROUPED_ID}`),
-        creatures: ungrouped
-      });
-    }
-    return groups
-      .filter(group => isGM || group.creatures.length)
-      .map(group => ({
-        ...group,
-        count: group.creatures.length,
-        isEmpty: group.creatures.length === 0
-      }));
-  }
-
-  _buildFilterOptions(creatures) {
-    return {
-      typeOptions: this._uniqueSortedOptions(
-        creatures.filter(creature => creature.typeKey)
-          .map(creature => [creature.typeKey, creature.typeName || creature.typeKey])
-      ),
-      sizeOptions: this._uniqueSortedOptions(
-        creatures.filter(creature => creature.size).map(creature => [creature.size, creature.size])
-      )
-    };
-  }
-
-  _uniqueSortedOptions(entries) {
-    return [...new Map(entries).entries()]
-      .map(([value, label]) => ({ value, label }))
-      .sort((left, right) => left.label.localeCompare(right.label));
   }
 
   // ── Rendering ──
@@ -457,51 +389,36 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     }
   }
 
+  _filterState() {
+    return {
+      query: this._searchQuery,
+      types: this._typeFilters,
+      sizes: this._sizeFilters,
+      families: this._familyFilters,
+      crMin: this._crMin,
+      crMax: this._crMax
+    };
+  }
+
   _applyClientState() {
     if (!this.element) return;
-    const min = this._crMin === "" ? -Infinity : Number(this._crMin);
-    const max = this._crMax === "" ? Infinity : Number(this._crMax);
-
-    const hasCrBound = this._crMin !== "" || this._crMax !== "";
-    const matches = element => {
-      // A creature whose CR the viewer has not learned never matches a CR range.
-      const knownCr = element.dataset.cr !== "";
-      const cr = Number(element.dataset.cr);
-      return (!this._searchQuery || element.dataset.searchText.includes(this._searchQuery))
-        && (!this._typeFilters.size || this._typeFilters.has(element.dataset.type))
-        && (!this._sizeFilters.size || this._sizeFilters.has(element.dataset.size))
-        && (!this._familyFilters.size || this._familyFilters.has(element.dataset.familyId))
-        && (!hasCrBound || (knownCr && cr >= min && cr <= max));
-    };
+    const state = this._filterState();
 
     let visible = 0;
     for (const element of this.element.querySelectorAll("[data-creature-entry]")) {
-      const show = matches(element);
+      const show = matchesCollectionFilter(element.dataset, state);
       element.classList.toggle("is-filtered-out", !show);
       if (show && element.closest(".collection-grid-view")) visible += 1;
     }
 
-    // Unnamed and unrated creatures always sort after the ones the viewer knows.
-    const byName = (a, b, direction) => (!a.dataset.name - !b.dataset.name)
-      || direction * a.dataset.name.localeCompare(b.dataset.name);
-    const byCr = (a, b, direction) => ((a.dataset.cr === "") - (b.dataset.cr === ""))
-      || direction * (Number(a.dataset.cr) - Number(b.dataset.cr))
-      || byName(a, b, 1);
-    const compare = (a, b) => {
-      if (this._sortMode === "name-desc") return byName(a, b, -1);
-      if (this._sortMode === "cr-asc") return byCr(a, b, 1);
-      if (this._sortMode === "cr-desc") return byCr(a, b, -1);
-      return byName(a, b, 1);
-    };
     for (const container of this.element.querySelectorAll(".family-grid, .collection-list-body")) {
       [...container.children]
         .filter(child => child.matches("[data-creature-entry]"))
-        .sort(compare)
+        .sort((a, b) => compareCollectionCards(a.dataset, b.dataset, this._sortMode))
         .forEach(child => container.appendChild(child));
     }
 
-    const activeFilters = this._typeFilters.size + this._sizeFilters.size
-      + this._familyFilters.size + Number(this._crMin !== "") + Number(this._crMax !== "");
+    const activeFilters = activeFilterCount(state);
     const isNarrowing = activeFilters > 0 || !!this._searchQuery;
 
     for (const group of this.element.querySelectorAll("[data-family-group]")) {
@@ -516,6 +433,9 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     }
     for (const count of this.element.querySelectorAll(".collection-result-count")) {
       count.textContent = String(visible);
+    }
+    for (const label of this.element.querySelectorAll(".collection-result-label")) {
+      label.textContent = formatCount("BESTIARY.Count.Creatures", visible);
     }
     const badge = this.element.querySelector(".filter-count-badge");
     if (badge) {
@@ -704,6 +624,8 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     if (!familyId) return;
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: localize("BESTIARY.Families.Delete") },
+      yes: { label: localize("BESTIARY.Families.Delete") },
+      no: { label: localize("BESTIARY.Cancel") },
       content: `<p>${localize("BESTIARY.Families.ConfirmDelete")}</p>`,
       rejectClose: false
     });
@@ -851,6 +773,8 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     }
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: localize("BESTIARY.RemoveCreature") },
+      yes: { label: localize("BESTIARY.RemoveCreature") },
+      no: { label: localize("BESTIARY.Cancel") },
       content: `<p>${localize("BESTIARY.ConfirmRemoveCreature")}</p>`,
       rejectClose: false
     });
@@ -894,7 +818,9 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
   async refreshFromExternalUpdate(payload = {}) {
     const changed = payload.changed ?? {};
-    if (!changed.data && !changed.knowledge) return;
+    const showsChangedCreature = (changed.creatures || changed.seen) && (!Array.isArray(payload.uuids)
+      || payload.uuids.some(uuid => this.element?.querySelector(`[data-uuid="${CSS.escape(uuid)}"]`)));
+    if (!changed.data && !changed.knowledge && !showsChangedCreature) return;
     const scrollTop = this.element?.querySelector(".collection-results-scroll")?.scrollTop ?? 0;
     await this.render();
     const scroller = this.element?.querySelector(".collection-results-scroll");

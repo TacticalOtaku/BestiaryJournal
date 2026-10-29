@@ -1,4 +1,3 @@
-import { BestiaryApp } from "./ui/bestiary-app.js";
 import { BestiaryCreatureView } from "./ui/creature-view.js";
 import { BestiarySectionView } from "./ui/section-view.js";
 import { BestiaryTierSettings } from "./ui/tier-settings.js";
@@ -10,9 +9,18 @@ import {
 } from "./foundry/bestiary-store.js";
 import { runMigrations } from "./foundry/migrations.js";
 import { registerSharingClock } from "./foundry/sharing-window.js";
+import { registerEncounterReveal } from "./foundry/encounter.js";
 import { SHARING_WINDOWS } from "./core/bestiary-domain.js";
 import { migrateClientPreferencesToUser } from "./foundry/client-preferences.js";
 import { splitDisplayName } from "./core/display-names.js";
+import { SILHOUETTE_PLACEHOLDER } from "./core/image-framing.js";
+import { formatCount } from "./foundry/foundry-runtime.js";
+import { registerThemeRoot, restampAll } from "./foundry/theme-root.js";
+import { announceKnowledge, startKnowledgeWatch } from "./foundry/knowledge-watch.js";
+import { registerActorIntegration } from "./ui/actor-integration.js";
+import { createApi } from "./ui/api.js";
+import { BestiaryKnowledgeBoard } from "./ui/knowledge-board.js";
+import { ACCENTS, DENSITIES, MOTION_LEVELS, THEMES } from "./core/theme.js";
 import { log, setDebugLogging } from "./core/logger.js";
 
 const MODULE_ID = "bestiary-journal";
@@ -26,6 +34,8 @@ Hooks.once("init", () => {
   registerMenus();
   registerKeybindings();
   registerHandlebarsHelpers();
+  registerThemeRoot();
+  registerActorIntegration();
   log.debug("Initialized");
 });
 
@@ -90,6 +100,11 @@ function registerWorldOptions() {
     scope: "world", config: true, type: Boolean, default: true,
     onChange: refreshCards
   });
+  game.settings.register(MODULE_ID, "encounterReveal", {
+    name: "BESTIARY.Settings.EncounterReveal",
+    hint: "BESTIARY.Settings.EncounterRevealHint",
+    scope: "world", config: true, type: Boolean, default: false
+  });
   // Only read by the authority when the next roll is judged; nothing to redraw.
   game.settings.register(MODULE_ID, "researchSingleAttempt", {
     name: "BESTIARY.Settings.SingleAttempt",
@@ -112,11 +127,37 @@ function registerPreferences() {
   game.settings.register(MODULE_ID, "previewAsUser", {
     name: "Preview As User", scope: "client", config: false, type: String, default: ""
   });
+  // Tier at which the player last opened each creature ({uuid: tier}); null until their first run seeds it.
+  game.settings.register(MODULE_ID, "seenTiers", {
+    name: "Seen Creatures", scope: "user", config: false, type: Object, default: null
+  });
   game.settings.register(MODULE_ID, "collapsedFamilies", {
     name: "Collapsed Families", scope: "user", config: false, type: Array, default: []
   });
   game.settings.register(MODULE_ID, "commentChannel", {
     name: "Preferred Comment Channel", scope: "client", config: false, type: String, default: "private"
+  });
+  // The window look follows the user (AIM keeps the same split): theme, accent and density per user, motion per
+  // device. Like AIM, they are set in the window itself (the library's look drawer), not in Foundry's settings.
+  const lookChoices = (values, prefix) => Object.fromEntries(values.map(value => [value, `BESTIARY.Settings.${prefix}_${value}`]));
+  game.settings.register(MODULE_ID, "uiTheme", {
+    name: "BESTIARY.Settings.Theme", hint: "BESTIARY.Settings.ThemeHint",
+    scope: "user", config: false, type: String, default: "auto", choices: lookChoices(THEMES, "Theme"),
+    onChange: restampAll
+  });
+  game.settings.register(MODULE_ID, "uiAccent", {
+    name: "BESTIARY.Settings.Accent", hint: "BESTIARY.Settings.AccentHint",
+    scope: "user", config: false, type: String, default: "brass", choices: lookChoices(ACCENTS, "Accent"),
+    onChange: restampAll
+  });
+  game.settings.register(MODULE_ID, "uiMotion", {
+    name: "BESTIARY.Settings.Motion", hint: "BESTIARY.Settings.MotionHint",
+    scope: "client", config: false, type: String, default: "full", choices: lookChoices(MOTION_LEVELS, "Motion"),
+    onChange: restampAll
+  });
+  game.settings.register(MODULE_ID, "uiDensity", {
+    name: "BESTIARY.Settings.Density", scope: "user", config: false, type: String, default: "comfortable",
+    choices: lookChoices(DENSITIES, "Density"), onChange: restampAll
   });
   game.settings.register(MODULE_ID, "debug", {
     name: "BESTIARY.Settings.Debug",
@@ -173,53 +214,29 @@ function registerHandlebarsHelpers() {
   Handlebars.registerHelper("bjConcat", (...args) => args.slice(0, -1).join(""));
   Handlebars.registerHelper("bjNameParts", splitDisplayName);
   Handlebars.registerHelper("bjFormat", (key, options) => game.i18n.format(key, options?.hash ?? {}));
+  Handlebars.registerHelper("bjCount", (key, count) => formatCount(key, count));
 }
 
 Hooks.once("ready", async () => {
   log.debug("Ready");
 
-  game.bestiaryJournal = {
-    mainApp: null,
-    open() {
-      if (!this.mainApp) this.mainApp = new BestiaryApp();
-      this.mainApp.render({ force: true });
-    },
-    close() {
-      if (this.mainApp?.rendered) this.mainApp.close();
-    },
-    toggle() {
-      if (this.mainApp?.rendered) this.close();
-      else this.open();
-    },
-    openCreature(uuid, options = {}) {
-      if (!uuid) return;
-      if (!canUserViewBestiaryCreature(uuid)) {
-        ui.notifications.warn(game.i18n.localize("BESTIARY.CreatureUnavailable"));
-        return;
-      }
-      const current = [...BestiaryCreatureView._instances]
-        .find(app => app.actorUuid === uuid && app.rendered);
-      if (current) {
-        current.bringToFront();
-        return current;
-      }
-      const app = new BestiaryCreatureView({ uuid, ...options });
-      app.render({ force: true });
-      return app;
-    }
-  };
+  game.bestiaryJournal = createApi();
+  game.modules.get(MODULE_ID).api = game.bestiaryJournal;
 
   // Listen before migrating, so player requests sent meanwhile are not lost.
   game.socket.on(`module.${MODULE_ID}`, async data => {
     if (await handleBestiaryStoreSocket(data)) return;
-    if (data.action === "refreshBestiary") scheduleBestiaryRefresh(data);
+    // Through the hook, so other modules hear every change on every client (API.md).
+    if (data.action === "refreshBestiary") Hooks.callAll("bestiaryJournalRefresh", data);
   });
   Hooks.on("bestiaryJournalRefresh", payload => scheduleBestiaryRefresh(payload));
   registerSharingClock(isAuthorityGm);
+  registerEncounterReveal(isAuthorityGm);
 
   if (game.user.isGM && isAuthorityGm()) await runMigrations();
   // Every user, players included: their favorites move off this browser.
   await migrateClientPreferencesToUser();
+  await startKnowledgeWatch();
 });
 
 /**
@@ -249,6 +266,7 @@ function scheduleBestiaryRefresh(payload = {}) {
 }
 
 function refreshBestiaryViews(payload) {
+  if (payload.changed?.knowledge) announceKnowledge();
   const main = game.bestiaryJournal?.mainApp;
   if (main?.rendered) main.refreshFromExternalUpdate(payload);
   for (const app of BestiarySectionView._instances) {
@@ -257,6 +275,8 @@ function refreshBestiaryViews(payload) {
   for (const app of BestiaryCreatureView._instances) {
     if (app.rendered) app.refreshFromExternalUpdate(payload);
   }
+  const board = foundry.applications.instances.get(BestiaryKnowledgeBoard.DEFAULT_OPTIONS.id);
+  if (board?.rendered && (payload.changed?.knowledge || payload.changed?.data || payload.changed?.creatures)) board.render();
   refreshBestiaryChatLinks();
 }
 
@@ -301,6 +321,14 @@ function refreshBestiaryChatLinks() {
     refreshBestiaryChatLink(link, data);
   }
 }
+
+/** Art that fails to load (a broken compendium path) shows the silhouette, not the browser's broken-image glyph. */
+document.addEventListener("error", event => {
+  const img = event.target;
+  if (!(img instanceof HTMLImageElement) || !img.closest(".bestiary-app") || img.dataset.bestiaryFallback) return;
+  img.dataset.bestiaryFallback = "true";
+  img.src = SILHOUETTE_PLACEHOLDER;
+}, true);
 
 /**
  * Sidebar tabs are ApplicationV2 since v13, so the hook is named after the

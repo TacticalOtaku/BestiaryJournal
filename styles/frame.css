@@ -1,0 +1,187 @@
+/* Bestiary Journal — window frame. Every window: frame, resets, artwork, shared controls, the context menu. */
+
+/* The frame follows the window's theme, not Foundry's, so a parchment window never wears a dark title bar. */
+.bestiary-app { background: var(--suite-bg); font-family: var(--suite-font-body); }
+/* Foundry draws tooltips on its own element in Signika, which has no Cyrillic; theme-root.js tags ours. */
+#tooltip.bestiary-tooltip { font-family: "Bestiary Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.bestiary-app > .window-header { background: var(--suite-surface); border-bottom: 1px solid var(--suite-border); color: var(--suite-muted); }
+.bestiary-app > .window-header .window-title { color: var(--suite-text); font-family: var(--suite-font-body); }
+
+.bestiary-app .window-content {
+  padding: 0;
+  overflow: hidden;
+  /* Layouts respond to the window's width, not the monitor's. */
+  container: bestiary-window / inline-size;
+  background: var(--suite-bg);
+  color: var(--suite-text);
+  font-family: var(--suite-font-body);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.bestiary-app .window-content button,
+.bestiary-app .window-content input,
+.bestiary-app .window-content select,
+.bestiary-app .window-content textarea { font: inherit; }
+/* Foundry's `elements.forms` layer pins every button to `--button-size`
+   (height and min-height). Its `compatibility` reset only lifts that inside
+   `.app`, the ApplicationV1 root, so ApplicationV2 windows like ours keep the
+   fixed size: cards collapse and their content spills out of the tile, while
+   small chip buttons get inflated. Sizing is ours to decide here.
+   `:where()` keeps this at element specificity, so every component rule below
+   still wins; layer order already puts module styles above core. */
+:where(.bestiary-app .window-content) button { height: auto; min-height: 0; min-width: 0; }
+
+.bestiary-app .window-content button { color: inherit; cursor: pointer; }
+.bestiary-app .window-content button:active:not(:disabled) { transform: translateY(1px) scale(.99); }
+.bestiary-app .window-content button:disabled { opacity: .45; cursor: not-allowed; }
+.bestiary-app .window-content ::selection { background: color-mix(in srgb, var(--suite-accent) 32%, transparent); }
+
+/* Foundry gives each heading level its own face (Signika, Amiri); ours inherit the window's unless a rule names one. */
+.bestiary-app :is(h1, h2, h3, h4, h5, h6) { border: 0; margin: 0; color: inherit; font-family: inherit; }
+.library-heading h1, .collection-title-copy h1, .creature-profile-heading h1,
+.entry-editor-heading h1, .bulk-import-header h1, .tier-settings-header h1 {
+  font-family: var(--suite-font-display);
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1.12;
+}
+
+.bestiary-app .window-content button:focus-visible,
+.bestiary-app .window-content input:focus-visible,
+.bestiary-app .window-content select:focus-visible,
+.bestiary-app .window-content textarea:focus-visible,
+.bestiary-app .window-content [tabindex]:focus-visible {
+  outline: 2px solid var(--suite-accent);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* Author styles below set `display` on many elements; `hidden` must still win. */
+:where(.bestiary-app) [hidden] { display: none !important; }
+
+.bestiary-app .is-filtered-out,
+.collection-grid-view.is-hidden,
+.collection-list-view.is-hidden,
+.family-group.is-empty-after-filter { display: none !important; }
+
+.bestiary-scrollable { scrollbar-color: color-mix(in srgb, var(--suite-muted) 50%, transparent) transparent; scrollbar-width: thin; }
+.bestiary-scrollable::-webkit-scrollbar { width: 8px; height: 8px; }
+.bestiary-scrollable::-webkit-scrollbar-track { background: transparent; }
+.bestiary-scrollable::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--suite-muted) 45%, transparent); border-radius: 99px; }
+:where(.bestiary-app) .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+@keyframes suite-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.suite-entering { animation: suite-rise 320ms var(--suite-ease) both; }
+
+/* ── Artwork frames ─────────────────────────────────────────────────────── */
+
+.bestiary-frame { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: inherit; background: var(--suite-sunken); }
+.bestiary-frame > img { position: relative; z-index: 1; width: 100%; height: 100%; display: block; border: 0; transition: transform 520ms var(--suite-ease); }
+.bestiary-frame.is-silhouette > img { filter: brightness(0) invert(1) opacity(.32); }
+.bestiary-app[data-theme="parchment"] .bestiary-frame.is-silhouette > img { filter: brightness(0) opacity(.42); }
+/* Foundry's placeholder art is white: it glares at night and vanishes on parchment, so it takes the silhouette ink. */
+.bestiary-app img[src$="mystery-man.svg"] { filter: opacity(.32); }
+.bestiary-app[data-theme="parchment"] img[src$="mystery-man.svg"] { filter: brightness(0) opacity(.42); }
+.bestiary-frame.is-thumb { border-radius: 8px; }
+
+.bestiary-frame::after { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 22%) 50%, transparent 62%); transform: translateX(-120%); }
+:is(.collection-creature-card, .library-creature-card, .recent-creature-card):hover .bestiary-frame::after { transform: translateX(120%); transition: transform 700ms var(--suite-ease); }
+.bestiary-app:not([data-motion="full"]) .bestiary-frame::after { display: none; }
+
+.bestiary-spot { position: relative; overflow: hidden; isolation: isolate; }
+.bestiary-spot::before {
+  content: ""; position: absolute; left: 0; top: 0; z-index: -1; width: 280px; height: 280px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgb(255 255 255 / 7%), transparent 70%); opacity: 0;
+  transform: translate(calc(var(--mx, 50%) - 140px), calc(var(--my, 50%) - 140px)); transition: opacity var(--suite-normal);
+}
+.bestiary-spot:hover::before { opacity: 1; }
+.bestiary-app[data-theme="parchment"] .bestiary-spot::before { background: radial-gradient(circle, rgb(255 255 255 / 50%), transparent 70%); }
+.bestiary-app[data-motion="off"] .bestiary-spot::before { display: none; }
+
+/* ── Shared controls ────────────────────────────────────────────────────── */
+
+.suite-primary-button, .suite-secondary-button, .suite-danger-button, .suite-toolbar-button {
+  min-height: 40px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm);
+  padding: 0 15px; display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  background: var(--suite-surface); color: var(--suite-text); white-space: nowrap;
+  transition: background var(--suite-fast), border-color var(--suite-fast), box-shadow var(--suite-fast), transform var(--suite-fast);
+}
+.suite-primary-button {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--suite-accent-bright), var(--suite-accent) 62%);
+  color: var(--suite-on-accent) !important;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--suite-accent) 28%, transparent);
+}
+.suite-primary-button:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
+.suite-primary-button.is-compact { min-height: 34px; padding: 0 12px; font-size: .86rem; }
+.suite-secondary-button:hover, .suite-toolbar-button:hover { background: var(--suite-hover); border-color: var(--suite-border-strong); }
+.suite-danger-button { color: var(--suite-danger); }
+.suite-danger-button:hover { border-color: var(--suite-danger); background: color-mix(in srgb, var(--suite-danger) 10%, transparent); }
+
+.suite-icon-button {
+  width: 36px; height: 36px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm);
+  background: var(--suite-surface); color: var(--suite-muted);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: color var(--suite-fast), background var(--suite-fast), border-color var(--suite-fast);
+}
+.suite-icon-button:hover { color: var(--suite-text); background: var(--suite-hover); border-color: var(--suite-border-strong); }
+.suite-icon-button.is-active { color: var(--suite-accent); border-color: var(--suite-accent); background: var(--suite-accent-soft); }
+
+.suite-segmented { display: inline-flex; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm); overflow: hidden; background: var(--suite-surface); }
+.suite-segmented button { min-height: 40px; padding: 0 13px; border: 0; border-right: 1px solid var(--suite-border); border-radius: 0; background: transparent; color: var(--suite-muted); display: inline-flex; align-items: center; gap: 7px; }
+.suite-segmented button:last-child { border-right: 0; }
+.suite-segmented button:hover { color: var(--suite-text); background: var(--suite-hover); }
+.suite-segmented button.is-active { color: var(--suite-accent); background: var(--suite-accent-soft); box-shadow: inset 0 2px 0 var(--suite-accent); }
+
+.suite-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 99px; background: rgb(20 16 12 / 62%); color: #fff; font-size: .72rem; backdrop-filter: blur(6px); }
+.suite-badge.is-warning { background: color-mix(in srgb, var(--suite-warning) 82%, black); }
+.suite-badge.is-locked { background: color-mix(in srgb, var(--tier-unknown) 78%, black); }
+.suite-badge.is-danger { background: color-mix(in srgb, var(--suite-danger) 82%, black); }
+.suite-badge.is-inline { background: var(--suite-sunken); color: var(--suite-muted); backdrop-filter: none; }
+
+.suite-empty-state { min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 11px; padding: 32px; color: var(--suite-muted); text-align: center; }
+.suite-empty-state.is-inline { min-height: 0; padding: 22px 16px; border-top: 1px solid var(--suite-border); }
+/* The profile already closes with a rule; the first block under it does not draw a second one. */
+.suite-empty-state > i { font-size: 2rem; color: var(--suite-subtle); }
+.suite-empty-state h2, .suite-empty-state p { margin: 0; }
+.suite-empty-state h2 { color: var(--suite-text); font-family: var(--suite-font-display); font-size: 1.1rem; }
+
+.suite-breadcrumbs { display: flex; align-items: center; gap: 8px; color: var(--suite-subtle); font-size: .82rem; }
+.suite-breadcrumbs button { border: 0; background: none; padding: 0; color: var(--suite-muted); }
+.suite-breadcrumbs button:hover { color: var(--suite-accent); }
+.suite-breadcrumbs i { font-size: .62rem; }
+
+/* Tier chips */
+.tier-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px 2px 7px; border: 0; border-left: 3px solid var(--chip-color, var(--tier-unknown)); border-radius: 3px; background: color-mix(in srgb, var(--chip-color, var(--tier-unknown)) 13%, transparent); color: var(--chip-color, var(--tier-unknown)); font-size: .74rem; font-weight: 600; white-space: nowrap; }
+.tier-chip.is-large { padding: 6px 13px; font-size: .84rem; }
+.tier-chip.is-unknown, .tier-chip.is-none { --chip-color: var(--tier-unknown); }
+.tier-chip.is-rumors, .tier-chip.is-partial { --chip-color: var(--tier-rumors); }
+.tier-chip.is-studied { --chip-color: var(--tier-studied); }
+.tier-chip.is-mastered, .tier-chip.is-gm { --chip-color: var(--tier-mastered); }
+.tier-chip.is-never { --chip-color: var(--tier-never); }
+
+/* Context menu */
+.bestiary-context-menu { position: fixed; z-index: 9999; min-width: 216px; padding: 6px; border: 1px solid var(--suite-border-strong); border-radius: var(--suite-radius); background: var(--suite-raised); box-shadow: var(--suite-shadow); }
+.bestiary-context-menu ol { list-style: none; margin: 0; padding: 0; }
+:where(.bestiary-app) .context-item { display: flex; align-items: center; gap: 10px; padding: 8px 11px; border-radius: var(--suite-radius-sm); color: var(--suite-text); cursor: pointer; font-size: .87rem; }
+:where(.bestiary-app) .context-item:hover { background: var(--suite-hover); }
+:where(.bestiary-app) .context-item > i { width: 16px; color: var(--suite-subtle); }
+:where(.bestiary-app) .context-item.is-danger { color: var(--suite-danger); }
+:where(.bestiary-app) .context-item.is-danger > i { color: var(--suite-danger); }
+:where(.bestiary-app) .context-separator { height: 1px; margin: 5px 8px; background: var(--suite-border); }
+
+:where(.bestiary-app) .bestiary-name-part { display: block; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+:where(.bestiary-app) .bestiary-name-part + .bestiary-name-part { margin-top: 2px; font-size: .88em; font-weight: 500; color: var(--suite-muted); }
+
+/* Below this the big windows stop being usable: Foundry clamps resizing to these minimums. */
+.bestiary-app:is(.bestiary-main, .bestiary-section-view, .bestiary-creature-view, .bestiary-knowledge-board) { min-width: 540px; min-height: 420px; }
+
+:where(.bestiary-app) .context-item.is-disabled { opacity: .45; cursor: not-allowed; }
+:where(.bestiary-app) .context-item.is-disabled:hover { background: transparent; }
+:where(.bestiary-app) .context-item:focus-visible { outline: 2px solid var(--suite-accent); outline-offset: -2px; }
+
+/* «New since you last looked»: AIM's accent dot, on the art of every creature tile a player has news about. */
+.bestiary-new-dot { position: absolute; top: 9px; left: 9px; z-index: 4; width: 10px; height: 10px; border-radius: 50%; background: var(--suite-accent); box-shadow: 0 0 0 2px var(--suite-surface), 0 0 10px var(--suite-accent); }
+.recent-creature-card .bestiary-new-dot { top: 5px; left: 5px; }

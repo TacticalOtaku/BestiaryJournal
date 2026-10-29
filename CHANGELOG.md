@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.4.0
+
+### Added
+- A new look based on the AIM design system: **Night** and **Parchment** themes, six accents, the Onest interface font (bundled, with Cyrillic) and Palatino for Latin headings. Big collection covers, creature cards built from AIM's tiles and cards, tier tags with a tier ladder, and one form style across the editors.
+- **Window look** drawer in the library: theme (Auto, Night, Parchment, or Like AIM), accent, density (comfortable or compact) and motion (full, reduced, off), chosen per user. The OS reduced-motion setting turns motion off; Foundry's low performance mode reduces it.
+- **Party knowledge** board for the GM: creatures down, players across, a tier in each cell, and one tier for a whole selection after a confirmation. Locked creatures are skipped.
+- **Bestiary…** in the actor directory's context menu, an NPC sheet's ⋮ menu and the token HUD: open the creature, add it to a collection, give the party a tier.
+- **Encounter reveal** world setting: when a creature from the bestiary fights the party, players who do not know it get Rumours.
+- Collection covers show progress: the player's own, or for the GM what the whole party knows.
+- A «new» marker on creatures a player learned more about since they last looked, and a notification when their tier rises.
+- **Party notes** in the library: every note about the creatures a player can open, newest first.
+- An «Unidentified» group: a player sees a creature they cannot name there, not in its family, which would hint at what it is.
+- A public API for macros and other modules, `game.bestiaryJournal` (see `API.md`).
+- Empty lists say what to do next: create a collection, open the collections, or clear the search.
+
+### Changed
+- The research panel shows the DC only once the player knows the CR or the GM set the DC, and the skill only once they know the type or the GM set it. Chat results follow the same rule.
+- Chat cards carry the tier they were posted at and follow Foundry's chat theme.
+- Plural forms in every count («1 существо», «4 существа»).
+- Confirmations name their action («Remove creature», «Delete collection») instead of Yes and No.
+- Windows do not shrink below 540 × 420; narrow collection windows turn their toolbar into icons.
+
+### Fixed
+- Per-action tier lists showed «Unknown» instead of «Same as block» when there was no override.
+- Languages showed dnd5e keys instead of their names.
+- Broken artwork shows the silhouette, and a deleted actor shows no CR, AC or HP.
+- Open windows refresh after an actor in the bestiary is edited.
+- A collection or family cannot be saved without a name, and an editor stays open when saving fails, so nothing typed is lost.
+- Exporting one creature says so.
+- A chat card of an actor with no artwork showed a broken image.
+- The closed filter panel of a collection could take keyboard focus off screen.
+- Headings, context menus and tooltips no longer fall back to Foundry's fonts.
+
+### Development
+- The collection window's search, filters and sort order are a pure module with tests (`core/collection-filter.js`); the collection view model and the creature statblock moved out of their windows.
+- `docs/live-check.md` and `tools/live-check.js`: the release check in a running Foundry, with a script for fonts, clipping, overflow and unlabelled buttons.
+- The stylesheet is split into tokens, frame, library, collection, creature, editors, board, density, motion and content, with a contrast test for both themes.
+
 ## 0.3.3
 
 ### Fixed

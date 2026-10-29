@@ -1,0 +1,24 @@
+/* Bestiary Journal — motion levels. Listed last in module.json so it overrides every component. */
+
+/* Motion levels: data-motion is stamped by foundry/theme-root.js, the OS «reduce motion» folded in as «off».
+   «Выключены»: transitions and animations collapse to 1ms; !important is the usual way to override every
+   component's own timing at once. «Сдержанно»: no entrance (ui-effects.js), no lift or zoom on hover. */
+.bestiary-app[data-motion="off"] {
+  --suite-fast: 1ms;
+  --suite-normal: 1ms;
+}
+
+.bestiary-app[data-motion="off"] *,
+.bestiary-app[data-motion="off"] *::before,
+.bestiary-app[data-motion="off"] *::after {
+  animation-duration: 1ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+
+.bestiary-app:not([data-motion="full"]) :is(.collection-card, .recent-creature-card, .library-creature-card,
+  .collection-creature-card, .suite-primary-button):hover,
+.bestiary-app:not([data-motion="full"]) .collection-card:hover > img { transform: none; }

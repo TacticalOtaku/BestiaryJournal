@@ -2,7 +2,7 @@
   "id": "bestiary-journal",
   "title": "Bestiary Journal",
   "description": "A visually rich bestiary module with tile-based sections and detailed creature cards, inspired by AAA game bestiary designs.",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "compatibility": {
     "minimum": "14.367",
     "verified": "14.367",
@@ -29,7 +29,15 @@
     "scripts/main.js"
   ],
   "styles": [
-    "styles/suite-ui.css",
+    "styles/tokens.css",
+    "styles/frame.css",
+    "styles/library.css",
+    "styles/collection.css",
+    "styles/creature.css",
+    "styles/editors.css",
+    "styles/board.css",
+    "styles/density.css",
+    "styles/motion.css",
     "styles/content.css"
   ],
   "languages": [
@@ -48,5 +56,5 @@
   "flags": {},
   "url": "https://github.com/TacticalOtaku/BestiaryJournal",
   "manifest": "https://raw.githubusercontent.com/TacticalOtaku/BestiaryJournal/main/module.json",
-  "download": "https://github.com/TacticalOtaku/BestiaryJournal/releases/download/v0.3.3/bestiary-journal-v0.3.3.zip"
+  "download": "https://github.com/TacticalOtaku/BestiaryJournal/releases/download/v0.4.0/bestiary-journal-v0.4.0.zip"
 }

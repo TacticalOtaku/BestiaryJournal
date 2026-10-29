@@ -1,0 +1,149 @@
+/* Bestiary Journal — tokens. Type, palettes, accents. Listed first in module.json. */
+
+/* Bestiary Journal — the window design system.
+   Palettes, accents, type and motion follow AIM: Actor Window (its styles/theme/tokens.css): «Ночь» is the
+   default, «Пергамент» overrides every colour, and the six accents are named so each theme keeps its own value.
+   Tokens live on the window root, never on :root; foundry/theme-root.js stamps data-theme, data-accent and
+   data-motion on it. Text and tier colours reach 4.5:1 on every surface in both themes
+   (tests/theme-contrast.test.js), so every colour below stays a plain hex. */
+
+/* Type, as in AIM: Onest (OFL, assets/fonts, copied from AIM) for the interface, and a display face that is
+   Palatino for Latin only. Palatino's Cyrillic stands apart from the interface font, so Cyrillic and any glyph
+   Palatino lacks fall through to Onest. local() faces: nothing is downloaded for the display face. */
+@font-face {
+  font-family: "Bestiary Display"; font-weight: 400;
+  src: local("Palatino Linotype"), local("PalatinoLinotype-Roman"), local("Book Antiqua"), local("Palatino"), local("Palatino-Roman");
+  unicode-range: U+0000-024F, U+1E00-1EFF, U+2000-206F, U+20A0-20CF, U+2100-214F;
+}
+@font-face {
+  font-family: "Bestiary Display"; font-weight: 700;
+  src: local("Palatino Linotype Bold"), local("PalatinoLinotype-Bold"), local("Book Antiqua Bold"), local("Palatino Bold"), local("Palatino-Bold");
+  unicode-range: U+0000-024F, U+1E00-1EFF, U+2000-206F, U+20A0-20CF, U+2100-214F;
+}
+/* onest-cyrillic-ext-wght-normal */
+@font-face {
+  font-family: "Bestiary Onest";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(../assets/fonts/onest-cyrillic-ext-wght-normal.woff2) format('woff2-variations');
+  unicode-range: U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;
+}
+
+/* onest-cyrillic-wght-normal */
+@font-face {
+  font-family: "Bestiary Onest";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(../assets/fonts/onest-cyrillic-wght-normal.woff2) format('woff2-variations');
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+
+/* onest-latin-ext-wght-normal */
+@font-face {
+  font-family: "Bestiary Onest";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(../assets/fonts/onest-latin-ext-wght-normal.woff2) format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+/* onest-latin-wght-normal */
+@font-face {
+  font-family: "Bestiary Onest";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(../assets/fonts/onest-latin-wght-normal.woff2) format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+.bestiary-app {
+  /* surfaces: window, panel, raised control, inset */
+  --suite-bg: #11131a;
+  --suite-surface: #161922;
+  --suite-raised: #1d212c;
+  --suite-sunken: #0c0e13;
+  --suite-border: rgb(255 255 255 / 8%);
+  --suite-border-strong: rgb(255 255 255 / 15%);
+  --suite-hover: rgb(255 255 255 / 6%);
+  /* text */
+  --suite-text: #ece6da;
+  --suite-muted: #aaa499;
+  --suite-subtle: #96928a;
+  /* meaning */
+  --suite-danger: #e56f69;
+  --suite-positive: #5fc28a;
+  --suite-warning: #e7b04a;
+  /* the research ladder, carried across every screen */
+  --tier-unknown: #a19c92;
+  --tier-rumors: #d8955a;
+  --tier-studied: #63b3c2;
+  --tier-mastered: #ddb659;
+  --tier-never: #ef7079;
+  /* accents, picked by name (data-accent) */
+  --acc-brass: #d4a55a;
+  --acc-embers: #e2734a;
+  --acc-arcane: #9d7eff;
+  --acc-forest: #5fbf8f;
+  --acc-frost: #6fb7e8;
+  --acc-rose: #e07aa0;
+  --suite-accent: var(--acc-brass);
+  --suite-on-accent: #1b1206;
+  --suite-accent-bright: color-mix(in oklab, var(--suite-accent) 80%, white);
+  --suite-accent-soft: color-mix(in oklab, var(--suite-accent) 16%, transparent);
+  --suite-accent-line: color-mix(in oklab, var(--suite-accent) 45%, transparent);
+  /* shape */
+  --suite-radius-sm: 6px;
+  --suite-radius: 10px;
+  --suite-radius-lg: 14px;
+  --suite-shadow: 0 18px 40px rgb(0 0 0 / 50%);
+  --suite-shadow-card: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 8px 24px rgb(0 0 0 / 35%);
+  /* type (AIM's): Onest, then the system font; headings in Palatino for Latin, Onest for Cyrillic */
+  --suite-font-body: "Bestiary Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --suite-font-display: "Bestiary Display", var(--suite-font-body);
+  /* motion */
+  --suite-ease: cubic-bezier(.22, 1, .36, 1);
+  --suite-fast: 140ms;
+  --suite-normal: 240ms;
+  color: var(--suite-text);
+}
+
+.bestiary-app[data-theme="parchment"] {
+  --suite-bg: #f4eedf;
+  --suite-surface: #ece3cf;
+  --suite-raised: #faf6ec;
+  --suite-sunken: #e3d8c0;
+  --suite-border: rgb(70 45 15 / 14%);
+  --suite-border-strong: rgb(70 45 15 / 26%);
+  --suite-hover: rgb(70 45 15 / 7%);
+  --suite-text: #1f180e;
+  --suite-muted: #43392d;
+  --suite-subtle: #605544;
+  --suite-danger: #a4241d;
+  --suite-positive: #1f613c;
+  --suite-warning: #725114;
+  --tier-unknown: #5d5548;
+  --tier-rumors: #8a4513;
+  --tier-studied: #1e5f59;
+  --tier-mastered: #6f4f12;
+  --tier-never: #a4241d;
+  --acc-brass: #745017;
+  --acc-embers: #933a1a;
+  --acc-arcane: #592fda;
+  --acc-forest: #216141;
+  --acc-frost: #185a87;
+  --acc-rose: #a41d4f;
+  --suite-on-accent: #fffaf0;
+  --suite-accent-bright: color-mix(in oklab, var(--suite-accent) 82%, black);
+  --suite-shadow: 0 16px 36px rgb(70 45 15 / 22%);
+  --suite-shadow-card: 0 1px 0 rgb(255 255 255 / 55%) inset, 0 6px 18px rgb(70 45 15 / 14%);
+}
+
+.bestiary-app[data-accent="embers"] { --suite-accent: var(--acc-embers); }
+.bestiary-app[data-accent="arcane"] { --suite-accent: var(--acc-arcane); }
+.bestiary-app[data-accent="forest"] { --suite-accent: var(--acc-forest); }
+.bestiary-app[data-accent="frost"] { --suite-accent: var(--acc-frost); }
+.bestiary-app[data-accent="rose"] { --suite-accent: var(--acc-rose); }

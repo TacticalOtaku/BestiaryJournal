@@ -13,7 +13,8 @@ import { sharingBlockKey } from "../foundry/sharing-window.js";
 const SOURCE_LABELS = {
   gm: "BESTIARY.Knowledge.SourceGm",
   roll: "BESTIARY.Knowledge.SourceRoll",
-  share: "BESTIARY.Knowledge.SourceShare"
+  share: "BESTIARY.Knowledge.SourceShare",
+  encounter: "BESTIARY.Knowledge.SourceEncounter"
 };
 
 /** One row per player for the GM assignment board. */

@@ -6,7 +6,8 @@ import {
   selectVisibleFamilies,
   selectVisibleSections
 } from "../core/bestiary-domain.js";
-import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store.js";
+import { getBestiaryData, getBestiaryKnowledge, getBestiarySocial } from "../foundry/bestiary-store.js";
+import { buildNotesFeed, selectPartyNotes } from "./comments.js";
 import { runCommand } from "../foundry/command-feedback.js";
 import {
   getFavoriteCreatureUuids,
@@ -14,7 +15,10 @@ import {
   setLibraryViewMode,
   toggleFavoriteCreature
 } from "../foundry/client-preferences.js";
-import { buildCreatureCard, sortByKnownName } from "./creature-cards.js";
+import { buildCreatureCard, partyTier, sortByKnownName } from "./creature-cards.js";
+import { tierProgress } from "../core/knowledge-progress.js";
+import { ACCENTS, DENSITIES, MOTION_LEVELS, THEMES } from "../core/theme.js";
+import { isNewCreature } from "../foundry/knowledge-watch.js";
 import { getCreatureDataMany, resolveShownEntries } from "../foundry/creature-cache.js";
 import { buildPartyBadge } from "./knowledge-ui.js";
 import { GM_TIER, MIN_RESEARCH_TIER } from "../core/research-model.js";
@@ -23,12 +27,14 @@ import { getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtim
 import { BestiaryTileEditor } from "./tile-editor.js";
 import { BestiarySectionView } from "./section-view.js";
 import { BestiaryTierSettings } from "./tier-settings.js";
+import { BestiaryKnowledgeBoard } from "./knowledge-board.js";
 import { exportBestiary, importBestiaryFromFile } from "../foundry/transfer.js";
 import { playApplicationEntrance, showContextMenu } from "./ui-effects.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+const MODULE_ID = "bestiary-journal";
 
-const LIBRARY_VIEWS = ["overview", "all", "recent", "favorites"];
+const LIBRARY_VIEWS = ["overview", "all", "recent", "favorites", "notes"];
 const RECENT_LIMIT = 24;
 const CARD_DRAG_TYPE = "application/x-bestiary-card";
 
@@ -46,13 +52,17 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       editSection: function (event, target) { this._onEditSection(event, target); },
       setLibraryView: function (event, target) { this._onSetLibraryView(event, target); },
       openCreature: function (event, target) { this._onOpenCreature(event, target); },
+      openCreatureNotes: function (event, target) { game.bestiaryJournal?.openCreature(target.dataset.uuid, { rail: "comments" }); },
       openSheet: function (event, target) { this._onOpenSheet(event, target); },
       toggleFavorite: function (event, target) { this._onToggleFavorite(event, target); },
       toggleCreatureLayout: function (event, target) { this._onToggleCreatureLayout(event, target); },
       clearSearch: function () { this._clearSearch(); },
       exportAll: function () { exportBestiary({}); },
       importSnapshot: function () { importBestiaryFromFile(); },
-      openTierSettings: function () { new BestiaryTierSettings().render({ force: true }); }
+      openTierSettings: function () { new BestiaryTierSettings().render({ force: true }); },
+      openKnowledgeBoard: function () { BestiaryKnowledgeBoard.open(); },
+      toggleLookDrawer: function () { this._onToggleLookDrawer(); },
+      setLook: function (event, target) { this._onSetLook(target); }
     }
   };
 
@@ -72,7 +82,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const knowledge = getBestiaryKnowledge();
     const isGM = game.user.isGM;
     const visibleSections = selectVisibleSections(data, isGM);
-    const sections = await this._buildSectionCards(visibleSections, isGM);
+    const sections = await this._buildSectionCards(visibleSections, isGM, knowledge);
     const creatures = await this._resolveLibraryCreatures(visibleSections, knowledge, isGM);
     const byDate = [...creatures].sort((a, b) => b.addedAt - a.addedAt);
     const favoriteCreatures = byDate.filter(creature => creature.isFavorite);
@@ -80,8 +90,14 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       overview: creatures,
       all: creatures,
       recent: byDate.slice(0, RECENT_LIMIT),
-      favorites: favoriteCreatures
+      favorites: favoriteCreatures,
+      notes: []
     }[this._activeView];
+    // Notes are named as the viewer knows each creature; only open creatures take part.
+    const viewer = { id: game.user.id, isGM };
+    const names = new Map(creatures.map(creature => [creature.uuid, creature.name]));
+    const social = getBestiarySocial();
+    const notes = this._activeView === "notes" ? await buildNotesFeed(social, viewer, names) : [];
 
     return {
       sections,
@@ -89,6 +105,8 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       displayedCreatures: displayed,
       totalCreatures: creatures.length,
       favoriteCount: favoriteCreatures.length,
+      notes,
+      notesCount: selectPartyNotes(social, viewer, names).length,
       collectionCount: sections.length,
       knownCount: creatures.filter(creature => creature.viewerTier > MIN_RESEARCH_TIER).length,
       activeView: this._activeView,
@@ -96,22 +114,44 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isAll: this._activeView === "all",
       isRecent: this._activeView === "recent",
       isFavorites: this._activeView === "favorites",
+      isNotes: this._activeView === "notes",
+      look: this._buildLook(),
+      lookOpen: !!this._lookOpen,
       viewTitle: localize({
         all: "BESTIARY.AllCreatures",
         recent: "BESTIARY.Recent",
-        favorites: "BESTIARY.Favorites"
+        favorites: "BESTIARY.Favorites",
+        notes: "BESTIARY.Notes.Title"
       }[this._activeView] ?? "BESTIARY.Title"),
       creatureLayout: this._creatureLayout,
       isGrid: this._creatureLayout === "grid",
       isGM,
       noSections: sections.length === 0,
-      noCreatures: displayed.length === 0
+      emptyState: displayed.length ? null : this._emptyState(isGM, sections.length)
     };
   }
 
-  _buildSectionCards(visibleSections, isGM) {
+  /** What an empty list says, and the one step that fills it. */
+  _emptyState(isGM, sectionCount) {
+    if (this._activeView === "favorites") {
+      return { icon: "fa-regular fa-star", title: "BESTIARY.Empty.FavoritesTitle", hint: "BESTIARY.Empty.FavoritesHint" };
+    }
+    if (!isGM) return { icon: "fa-solid fa-dragon", title: "BESTIARY.Empty.LibraryTitle", hint: "BESTIARY.Empty.LibraryHintPlayer" };
+    const action = sectionCount
+      ? { name: "setLibraryView", view: "overview", icon: "fa-solid fa-layer-group", label: "BESTIARY.AllCollections" }
+      : { name: "createSection", icon: "fa-solid fa-plus", label: "BESTIARY.NewCollection" };
+    return { icon: "fa-solid fa-dragon", title: "BESTIARY.Empty.LibraryTitle", hint: "BESTIARY.Empty.LibraryHintGM", action };
+  }
+
+  _buildSectionCards(visibleSections, isGM, knowledge) {
+    const hasPlayers = getPlayerUsers().length > 0;
     return Promise.all(visibleSections.map(async section => {
-      const { entries } = await resolveShownEntries(selectVisibleCreatureEntries(section, isGM), isGM);
+      const { entries, resolved } = await resolveShownEntries(selectVisibleCreatureEntries(section, isGM), isGM);
+      // A player sees their own progress; the GM sees the party's, at the tier every player has reached.
+      // A deleted actor the GM still sees is nothing to learn, so it stays out of the count.
+      const tiers = isGM && !hasPlayers ? [] : entries.filter(entry => resolved.get(entry.uuid))
+        .map(entry => (isGM ? partyTier(entry.uuid) : getUserTier(knowledge, game.user.id, entry.uuid)));
+      const progress = tierProgress(tiers);
       const families = selectVisibleFamilies(section, isGM);
       const updatedAt = Math.max(
         section.updatedAt ?? 0,
@@ -121,7 +161,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
         ...section,
         creatureCount: entries.length,
         familyCount: families.length,
-        displayImage: section.image || "icons/svg/book.svg",
+        progress: progress.total ? { ...progress, label: game.i18n.format("BESTIARY.Progress.Known", progress) } : null,
         isHidden: !!section.hidden,
         isLocked: !!section.locked,
         searchText: section.name.toLocaleLowerCase(),
@@ -155,6 +195,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
         collectionLabel: item.collections.join(", "),
         isFavorite: favorites.has(item.uuid),
         viewerTier,
+        isNew: isNewCreature(item.uuid, viewerTier),
         tierBadge: isGM ? buildPartyBadge(knowledge, item.uuid, players) : describeTier(viewerTier)
       });
     }
@@ -179,7 +220,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async refreshFromExternalUpdate(payload = {}) {
     const changed = payload.changed ?? {};
-    if (changed.data || changed.knowledge) await this.render();
+    if (changed.data || changed.knowledge || changed.creatures || changed.seen || changed.social) await this.render();
   }
 
   _onShellKeydown(event) {
@@ -213,10 +254,12 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     this.element.querySelector(".library-search-clear")?.classList.toggle("is-visible", !!query);
     this.element.querySelector(".library-scroll")?.classList.toggle("is-searching", !!query);
-    const results = this.element.querySelector(".library-search-results");
+    const results = this.element.querySelector(".library-search-results, .library-creature-results");
     if (results) {
-      const shown = results.querySelectorAll(".library-creature-card:not(.is-filtered-out)").length;
-      results.classList.toggle("is-empty", shown === 0);
+      const cards = results.querySelectorAll(".library-creature-card");
+      const shown = [...cards].filter(card => !card.classList.contains("is-filtered-out")).length;
+      // An empty list has its own message; this one is only for a query that hides every card.
+      results.classList.toggle("is-empty", !!query && cards.length > 0 && shown === 0);
     }
   }
 
@@ -291,6 +334,35 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   // ── Actions ──
 
+  /** The look drawer's choices, AIM's settings drawer: theme, accent, density, motion; «Как в AIM» only with AIM on. */
+  _buildLook() {
+    const choices = (key, values, prefix) => values.map(value => ({
+      key, value, label: localize(`BESTIARY.Settings.${prefix}_${value}`), active: game.settings.get(MODULE_ID, key) === value
+    }));
+    const aimActive = !!game.modules.get("actor-inventory-manager")?.active;
+    return {
+      themes: choices("uiTheme", THEMES.filter(theme => theme !== "aim" || aimActive), "Theme"),
+      accents: choices("uiAccent", ACCENTS, "Accent"),
+      densities: choices("uiDensity", DENSITIES, "Density"),
+      motions: choices("uiMotion", MOTION_LEVELS, "Motion")
+    };
+  }
+
+  _onToggleLookDrawer() {
+    this._lookOpen = !this._lookOpen;
+    this.element.querySelector(".look-drawer")?.classList.toggle("is-open", this._lookOpen);
+  }
+
+  /** Applies at once: the setting's onChange restamps every open window; only the drawer's marks move here. */
+  async _onSetLook(target) {
+    const { key, value } = target.dataset;
+    await game.settings.set(MODULE_ID, key, value);
+    for (const option of this.element.querySelectorAll(`[data-action="setLook"][data-key="${key}"]`)) {
+      option.classList.toggle("is-active", option.dataset.value === value);
+      option.setAttribute("aria-pressed", String(option.dataset.value === value));
+    }
+  }
+
   _onSetLibraryView(event, target) {
     const view = target.dataset.libraryView;
     if (!LIBRARY_VIEWS.includes(view)) return;
@@ -364,6 +436,8 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   async _deleteSectionById(sectionId) {
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: localize("BESTIARY.DeleteSection") },
+      yes: { label: localize("BESTIARY.DeleteSection") },
+      no: { label: localize("BESTIARY.Cancel") },
       content: `<p>${localize("BESTIARY.ConfirmDelete")}</p>`,
       rejectClose: false
     });

@@ -35,12 +35,14 @@ export function getEntryBlockTiers(entry) {
 
 export function localizedTierChoices(selected, { includeNever = true, includeInherit = false } = {}) {
   const choices = [];
+  // Number("") and Number(null) are 0: without this guard "inherit" would also mark "Unknown" as chosen.
+  const isUnset = selected === "" || selected === null || selected === undefined;
   if (includeInherit) {
     choices.push({
       value: "",
       label: localize("BESTIARY.Tier.Inherit"),
       icon: "fa-link",
-      selected: selected === "" || selected === null || selected === undefined
+      selected: isUnset
     });
   }
   for (const choice of TIER_CHOICES) {
@@ -51,7 +53,7 @@ export function localizedTierChoices(selected, { includeNever = true, includeInh
       label: localize(choice.label),
       hint: localize(choice.hint),
       icon: choice.icon,
-      selected: Number(selected) === choice.value
+      selected: !isUnset && Number(selected) === choice.value
     });
   }
   return choices;

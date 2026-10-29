@@ -1,0 +1,68 @@
+<section class="knowledge-board-shell">
+  <header class="knowledge-board-header">
+    <p class="library-eyebrow">{{localize "BESTIARY.Board.Kicker"}}</p>
+    <h1>{{localize "BESTIARY.Board.Title"}}</h1>
+    <p class="knowledge-board-hint">{{localize "BESTIARY.Board.Hint"}}</p>
+  </header>
+
+  <div class="knowledge-board-controls">
+    <label class="bulk-field">
+      <span>{{localize "BESTIARY.Board.Scope"}}</span>
+      <select class="board-scope">
+        {{#each scopes}}<option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
+      </select>
+    </label>
+    <label class="bulk-field">
+      <span>{{localize "BESTIARY.Board.BulkTier"}}</span>
+      <select class="board-bulk-tier">
+        {{#each tierOptions}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
+      </select>
+    </label>
+    <label class="bulk-field">
+      <span>{{localize "BESTIARY.Board.BulkWho"}}</span>
+      <select class="board-bulk-user">
+        <option value="">{{localize "BESTIARY.Board.WholeParty"}}</option>
+        {{#each players}}<option value="{{this.id}}">{{this.name}}</option>{{/each}}
+      </select>
+    </label>
+    <button type="button" class="suite-primary-button" data-action="applyBulk" {{#unless rows.length}}disabled{{/unless}}>
+      <i class="fa-solid fa-check-double"></i>{{localize "BESTIARY.Board.Apply"}}
+    </button>
+  </div>
+
+  {{#if players.length}}
+    <div class="knowledge-board-table bestiary-scrollable">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{localize "BESTIARY.Creature"}}</th>
+            {{#each players}}
+              <th scope="col" style="--user-color: {{this.color}}"><img src="{{this.avatar}}" alt="" /><span>{{this.name}}</span></th>
+            {{/each}}
+          </tr>
+        </thead>
+        <tbody>
+          {{#each rows}}
+            <tr class="{{#if this.locked}}is-locked{{/if}}">
+              <th scope="row">
+                <img src="{{this.img}}" alt="" />
+                <span>{{this.name}}</span>
+                {{#if this.locked}}<i class="fa-solid fa-lock" data-tooltip="{{localize 'BESTIARY.Lock.Locked'}}"></i>{{/if}}
+              </th>
+              {{#each this.cells}}
+                <td>
+                  <select class="board-tier is-{{this.key}}" data-uuid="{{../uuid}}" data-user-id="{{this.userId}}" aria-label="{{../name}}" {{#if ../locked}}disabled{{/if}}>
+                    {{#each this.options}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
+                  </select>
+                </td>
+              {{/each}}
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+      {{#unless rows.length}}<div class="suite-empty-state"><i class="fa-solid fa-inbox"></i><h2>{{localize "BESTIARY.Board.NoCreatures"}}</h2></div>{{/unless}}
+    </div>
+  {{else}}
+    <div class="suite-empty-state"><i class="fa-solid fa-user-slash"></i><h2>{{localize "BESTIARY.Board.NoPlayers"}}</h2></div>
+  {{/if}}
+</section>

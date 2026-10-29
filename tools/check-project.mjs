@@ -149,7 +149,7 @@ for (const file of locales) {
 
 const usedKeys = new Set();
 const KEY_PATTERN = /BESTIARY\.[A-Za-z0-9_.]+/g;
-const DYNAMIC_PREFIXES = ["BESTIARY.Data.", "BESTIARY.Speed", "BESTIARY.Block.", "BESTIARY.Tier."];
+const DYNAMIC_PREFIXES = ["BESTIARY.Data.", "BESTIARY.Speed", "BESTIARY.Block.", "BESTIARY.Tier.", "BESTIARY.Count."];
 
 for (const file of [...scripts, ...templates]) {
   const source = readFileSync(join(root, file), "utf8");

@@ -1,13 +1,32 @@
+import { stampTheme } from "../foundry/theme-root.js";
+
 const entrancePlayed = new WeakSet();
 const disclosureAnimations = new WeakMap();
 const motionQuery = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)");
 
-function reduceMotion() {
-  return motionQuery?.matches ?? false;
+/** The motion level stamped on the element's window (theme-root.js), or the OS preference before stamping. */
+function motionLevel(element) {
+  return element?.closest?.("[data-motion]")?.dataset.motion ?? (motionQuery?.matches ? "off" : "full");
 }
 
+/** AIM's cursor light: a card marked .bestiary-spot glows softly under the pointer (the CSS hides it with motion off). */
+let spotFrame = 0;
+document.addEventListener("pointermove", event => {
+  const card = event.target.closest?.(".bestiary-spot");
+  if (!card || spotFrame) return;
+  spotFrame = requestAnimationFrame(() => {
+    spotFrame = 0;
+    const box = card.getBoundingClientRect();
+    card.style.setProperty("--mx", `${event.clientX - box.left}px`);
+    card.style.setProperty("--my", `${event.clientY - box.top}px`);
+  });
+}, { passive: true });
+
+/** Entrances are ornament: only at the full level. */
 export function playApplicationEntrance(application, selector) {
-  if (entrancePlayed.has(application) || reduceMotion()) return;
+  // The render hook stamps the window only after _onRender, where the entrance is decided.
+  stampTheme(application.element);
+  if (entrancePlayed.has(application) || motionLevel(application.element) !== "full") return;
   const root = application.element?.querySelector(selector);
   if (!root) return;
   entrancePlayed.add(application);
@@ -18,7 +37,8 @@ export function animateDisclosure(element, expanded) {
   if (!element) return;
   disclosureAnimations.get(element)?.cancel();
 
-  if (reduceMotion() || typeof element.animate !== "function") {
+  // Opening a section explains where its content came from, so it plays at «reduced» too.
+  if (motionLevel(element) === "off" || typeof element.animate !== "function") {
     element.classList.toggle("is-collapsed", !expanded);
     return;
   }
@@ -63,6 +83,10 @@ export function showContextMenu(event, items) {
   const menu = document.createElement("nav");
   menu.className = "bestiary-context-menu bestiary-app";
   menu.setAttribute("role", "menu");
+  // It lives on <body>, outside any window: it borrows the look of the window it was opened from.
+  const origin = event.target?.closest?.(".bestiary-app");
+  if (origin) Object.assign(menu.dataset, { theme: origin.dataset.theme, accent: origin.dataset.accent, motion: origin.dataset.motion });
+  else stampTheme(menu);
   const list = document.createElement("ol");
   list.className = "context-items";
   menu.appendChild(list);

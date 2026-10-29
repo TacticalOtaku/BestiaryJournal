@@ -1,6 +1,8 @@
 import {
   BESTIARY_COMMANDS,
   canEditComment,
+  canSeeComment,
+  normalizeSocial,
   selectComments
 } from "../core/bestiary-domain.js";
 import { dispatchBestiaryCommand } from "../foundry/bestiary-store.js";
@@ -38,6 +40,29 @@ export async function buildCommentThreads(social, uuid, viewer, { locked = false
     total: rendered.length,
     locked
   };
+}
+
+const FEED_LIMIT = 60;
+
+/**
+ * The notes the party shares (party channel, GM notes opened to players), newest first, across every creature
+ * the viewer can open. `names` maps each such creature to the name the viewer knows it by.
+ */
+export function selectPartyNotes(social, viewer, names) {
+  return normalizeSocial(social).comments
+    .filter(comment => comment.channel !== "private" && names.has(comment.uuid) && canSeeComment(comment, viewer))
+    .sort((left, right) => right.createdAt - left.createdAt);
+}
+
+export function buildNotesFeed(social, viewer, names) {
+  const channels = new Map(COMMENT_CHANNEL_META.map(meta => [meta.key, meta]));
+  return Promise.all(selectPartyNotes(social, viewer, names).slice(0, FEED_LIMIT).map(async comment => ({
+    ...(await decorateComment(comment, viewer, true)),
+    creatureName: names.get(comment.uuid),
+    channelLabel: localize(channels.get(comment.channel).label),
+    channelIcon: channels.get(comment.channel).icon,
+    searchText: `${names.get(comment.uuid)} ${comment.text}`.toLocaleLowerCase()
+  })));
 }
 
 async function decorateComment(comment, viewer, locked) {

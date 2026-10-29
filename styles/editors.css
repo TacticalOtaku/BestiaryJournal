@@ -1,0 +1,141 @@
+/* Bestiary Journal — editors and dialogs. Forms, bulk import, bulk research, world tiers, dialogs. */
+
+/* ── Forms and dialogs ──────────────────────────────────────────────────── */
+
+.bestiary-app.bestiary-tile-editor .window-content,
+.bestiary-app.bestiary-entry-editor .window-content { padding: 16px; overflow: auto; }
+.tile-editor-form, .entry-editor-form { display: flex; flex-direction: column; gap: 14px; }
+.tile-editor-preview { position: relative; height: 170px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius); overflow: hidden; background: var(--suite-sunken); }
+.tile-editor-preview.is-empty { height: 64px; border-style: dashed; border-color: var(--suite-border-strong); background: none; }
+.tile-editor-preview.is-empty .tile-editor-preview-actions { inset: 0; align-items: center; justify-content: center; padding: 0 12px; }
+.tile-editor-preview.is-empty .btn-pick-image { flex: 0 1 auto; padding: 0 14px; }
+.tile-editor-preview img { width: 100%; height: 100%; border: 0; object-fit: cover; }
+.tile-editor-preview img.is-empty { display: none; }
+.tile-editor-preview-actions { position: absolute; inset: auto 10px 10px 10px; display: flex; gap: 7px; }
+.btn-pick-image { flex: 1; min-height: 36px; border: 1px solid var(--suite-border-strong); border-radius: var(--suite-radius-sm); background: var(--suite-raised); color: var(--suite-text); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-clear-image { width: 36px; min-height: 36px; border: 1px solid var(--suite-border-strong); border-radius: var(--suite-radius-sm); background: var(--suite-raised); color: var(--suite-danger); }
+
+/* Foundry shares these class names. Keep our overrides inside Bestiary windows;
+   :where() preserves the original specificity of the component rules. */
+:where(.bestiary-app) .form-group { display: flex; flex-direction: column; gap: 6px; }
+:where(.bestiary-app) .form-group > label { color: var(--suite-muted); font-size: .8rem; }
+/* Form controls take the window's theme, not Foundry's: zero specificity, so every component rule still wins. */
+:where(.bestiary-app .window-content) :where(input[type="text"], input[type="number"], select) {
+  height: 34px; padding: 0 9px; border: 1px solid var(--suite-border-strong); border-radius: var(--suite-radius-sm);
+  background: var(--suite-sunken); color: var(--suite-text); font-size: .86rem;
+}
+:where(.bestiary-app .window-content) :where(option) { background: var(--suite-raised); color: var(--suite-text); }
+:where(.bestiary-app .window-content) input[type="checkbox"] { accent-color: var(--suite-accent); }
+:where(.bestiary-app) .form-group-checkbox > label { display: flex; align-items: center; gap: 9px; color: var(--suite-text); font-size: .86rem; }
+:where(.bestiary-app) .form-group-checkbox i { color: var(--suite-subtle); }
+:where(.bestiary-app) .form-hint { margin: 0; color: var(--suite-subtle); font-size: .76rem; line-height: 1.5; }
+/* Editors close on one ruled footer; the action keeps its own width instead of Foundry's full-width flexrow. */
+:where(.bestiary-app) .sheet-footer { display: flex; justify-content: flex-end; gap: 9px; margin-top: 2px; padding-top: 12px; border-top: 1px solid var(--suite-border); }
+.bestiary-app .sheet-footer > button, .bestiary-app .bulk-import-footer > button { flex: 0 0 auto; min-width: 140px; }
+
+.entry-editor-heading h1 { font-size: 1.35rem; }
+.entry-editor-grid { display: grid; grid-template-columns: minmax(200px, 224px) minmax(0, 1fr); gap: 20px; }
+.entry-editor-frame { display: flex; flex-direction: column; gap: 10px; }
+.entry-focus-stage { position: relative; aspect-ratio: 3 / 4; border: 1px solid var(--suite-border); border-radius: var(--suite-radius); overflow: hidden; cursor: crosshair; touch-action: none; }
+.entry-focus-stage .bestiary-frame { position: absolute; inset: 0; }
+.entry-focus-dot { position: absolute; z-index: 3; width: 20px; height: 20px; margin: -10px 0 0 -10px; border: 2px solid #fff; border-radius: 50%; background: color-mix(in srgb, var(--suite-accent) 70%, transparent); box-shadow: 0 0 0 2px rgb(0 0 0 / 35%); opacity: .45; pointer-events: none; transition: opacity var(--suite-fast); }
+.entry-focus-dot.is-active { opacity: 1; }
+.entry-frame-controls { display: flex; flex-direction: column; gap: 8px; }
+.entry-frame-controls .suite-segmented { width: 100%; }
+/* Text only: with an icon «Кадрирование» no longer fits half of the art column. */
+.entry-frame-controls .suite-segmented button { flex: 1 1 0; min-width: 0; min-height: 32px; padding: 0 8px; justify-content: center; font-size: .8rem; white-space: nowrap; }
+.entry-frame-controls .suite-segmented button > i { display: none; }
+.entry-editor-fields { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.entry-dc-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.entry-skill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 6px; }
+.entry-skill-option { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm); background: var(--suite-surface); font-size: .8rem; }
+.entry-skill-option:has(input:checked) { border-color: var(--suite-accent); background: var(--suite-accent-soft); }
+
+/* Bulk import */
+.bestiary-app.bestiary-bulk-import .window-content { padding: 0; }
+/* A column, not a fixed row grid: the "copy to world" row only exists for
+   compendium sources, and the list must always take the remaining height. */
+.bulk-import-shell { height: 100%; display: flex; flex-direction: column; padding: 18px 22px 16px; gap: 12px; }
+.bulk-import-shell > * { flex: 0 0 auto; }
+.bulk-import-shell > .bulk-import-list { flex: 1 1 auto; min-height: 0; }
+.bulk-import-header h1 { font-size: 1.4rem; }
+.bulk-import-lead { margin: 5px 0 0; color: var(--suite-subtle); font-size: .82rem; }
+.bulk-import-controls { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(200px, 1.3fr) 150px; gap: 10px; align-items: end; }
+.bulk-field { display: flex; flex-direction: column; gap: 5px; }
+.bulk-field span { color: var(--suite-subtle); font-size: .75rem; }
+
+.bulk-cr-range { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bulk-cr-range label { display: flex; flex-direction: column; gap: 5px; }
+.bulk-cr-range span { color: var(--suite-subtle); font-size: .75rem; }
+.bulk-cr-range input { width: 100%; }
+.bulk-copy-field { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 9px; color: var(--suite-text); font-size: .86rem; }
+.bulk-copy-field small { color: var(--suite-subtle); font-size: .75rem; }
+.bulk-import-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.bulk-import-counts { display: flex; gap: 16px; color: var(--suite-subtle); font-size: .8rem; }
+.bulk-import-counts strong { color: var(--suite-text); }
+.bulk-import-bulk-actions { display: flex; gap: 7px; }
+.bulk-import-list { display: flex; flex-direction: column; overflow-y: auto; padding-right: 4px; border-top: 1px solid var(--suite-border); }
+.bulk-import-row { display: grid; grid-template-columns: 18px 30px minmax(0, 1.6fr) minmax(0, 1fr) 74px auto; align-items: center; gap: 10px; padding: 3px 8px; border-bottom: 1px solid var(--suite-border); font-size: .84rem; cursor: pointer; }
+.bulk-import-row:hover { background: var(--suite-hover); }
+.bulk-import-row.is-present { opacity: .55; cursor: not-allowed; }
+.bulk-import-row img { width: 30px; height: 30px; border: 0; border-radius: var(--suite-radius-sm); object-fit: cover; }
+.bulk-row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bulk-row-meta, .bulk-row-cr { color: var(--suite-subtle); font-size: .77rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bulk-row-flag { color: var(--suite-warning); font-size: .73rem; font-style: normal; }
+.bulk-import-footer { display: flex; justify-content: flex-end; gap: 9px; padding-top: 12px; border-top: 1px solid var(--suite-border); }
+
+/* Tier settings */
+.bestiary-app.bestiary-tier-settings .window-content { padding: 0; }
+.tier-settings-shell { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; padding: 18px 22px 16px; gap: 14px; }
+.tier-settings-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.tier-settings-header h1 { font-size: 1.4rem; }
+.tier-settings-hint { margin: 6px 0 0; max-width: 62ch; color: var(--suite-subtle); font-size: .82rem; line-height: 1.55; }
+.tier-settings-body { overflow-y: auto; padding-right: 6px; }
+.tier-settings-body .tier-group { padding: 10px 0 6px; border-top: 1px solid var(--suite-border); }
+.tier-settings-body .tier-group:first-child { border-top: 0; }
+
+/* Dialog helpers */
+.bestiary-dialog .bestiary-share-lead, .bestiary-import-dialog p { margin: 0 0 11px; font-size: .87rem; }
+.bestiary-share-list { display: flex; flex-direction: column; gap: 5px; max-height: 260px; overflow-y: auto; margin-bottom: 12px; }
+.bestiary-share-row { display: grid; grid-template-columns: 18px 28px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 9px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm); font-size: .84rem; cursor: pointer; }
+.bestiary-share-row:hover { background: var(--suite-hover); }
+.bestiary-share-row img { width: 28px; height: 28px; border: 0; border-radius: 50%; object-fit: cover; }
+.bestiary-share-name { color: var(--user-color, inherit); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bestiary-share-row em { color: var(--suite-subtle); font-size: .76rem; font-style: normal; }
+.bestiary-share-tier { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; font-size: .85rem; }
+.bestiary-share-tier select { height: 34px; padding: 0 9px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm); background: var(--suite-surface); color: inherit; }
+.bestiary-share-note, .bestiary-import-note { margin: 0; color: var(--suite-subtle); font-size: .78rem; line-height: 1.5; }
+
+:where(.bestiary-app) .bulk-row-name { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+
+/* Batch research editor. All selectors stay inside module windows. */
+.bestiary-app.bestiary-bulk-research .window-content { padding: 0; overflow: auto; }
+:where(.bestiary-app) .bulk-research-form { padding: 22px; display: flex; flex-direction: column; gap: 20px; }
+:where(.bestiary-app) .bulk-research-form [hidden] { display: none !important; }
+:where(.bestiary-app) .bulk-research-heading h1 { font-family: var(--suite-font-display); font-size: 1.45rem; line-height: 1.15; }
+:where(.bestiary-app) .bulk-research-heading p { margin: 8px 0 0; color: var(--suite-muted); font-size: .84rem; line-height: 1.5; }
+:where(.bestiary-app) .bulk-research-fields { display: grid; gap: 14px; }
+:where(.bestiary-app) .bulk-research-fields .form-group { margin: 0; flex: none; align-items: stretch; }
+:where(.bestiary-app) .bulk-research-fields .form-group > span { color: var(--suite-muted); font-size: .82rem; }
+:where(.bestiary-app) .bulk-research-fields select,
+:where(.bestiary-app) .bulk-research-fields input[type="number"] { width: 100%; flex: none; }
+:where(.bestiary-app) .bulk-research-divider { height: 1px; background: var(--suite-border); margin: 2px 0; }
+:where(.bestiary-app) .bulk-research-skills { margin: 0; padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm); }
+:where(.bestiary-app) .bulk-research-skills legend { font-size: .78rem; color: var(--suite-muted); padding: 0 5px; }
+:where(.bestiary-app) .bulk-research-skills label { display: flex; gap: 8px; align-items: center; font-size: .86rem; }
+:where(.bestiary-app) .bulk-research-footer { border-top: 1px solid var(--suite-border); padding-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+:where(.bestiary-app) .bulk-research-footer p { margin: 0; color: var(--suite-muted); font-size: .8rem; line-height: 1.5; }
+:where(.bestiary-app) .bulk-research-footer button { flex: 0 0 auto; min-width: 160px; }
+
+/* Windows whose content is a plain form or dialog keep a comfortable inset. */
+.bestiary-app.bestiary-dialog .window-content { padding: 14px 16px; overflow: auto; }
+/* The button reset above drops Foundry's min-width, so footer buttons shrank
+   until their labels overlapped; keep the label width and wrap instead. */
+.bestiary-app.bestiary-dialog .form-footer > button { flex: 1 1 auto; white-space: nowrap; }
+.bestiary-import-plan-title { margin: 4px 0 6px; font-size: .82rem; font-weight: 600; }
+.bestiary-import-plan { margin: 0 0 11px; padding-left: 18px; font-size: .8rem; line-height: 1.5; color: var(--suite-muted); }
+
+@container bestiary-window (max-width: 520px) {
+  .entry-editor-grid { grid-template-columns: minmax(0, 1fr); }
+  .entry-editor-frame { max-width: 220px; }
+}

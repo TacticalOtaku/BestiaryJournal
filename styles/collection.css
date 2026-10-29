@@ -1,0 +1,154 @@
+/* Bestiary Journal — collection. A collection's creatures, families, filters and quick preview. */
+
+/* ── Collection view ────────────────────────────────────────────────────── */
+
+.collection-workspace { position: relative; min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.collection-header { padding: 18px 26px 14px; border-bottom: 1px solid var(--suite-border); background: linear-gradient(180deg, color-mix(in srgb, var(--suite-raised) 62%, transparent), transparent); }
+.collection-title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 10px 0 14px; flex-wrap: wrap; }
+.collection-title-copy h1 { font-size: clamp(1.5rem, 2.6vw, 1.95rem); display: flex; align-items: center; gap: 10px; }
+.collection-lock-flag { font-size: .8rem; color: var(--suite-subtle); }
+.collection-title-copy p { margin: 4px 0 0; color: var(--suite-subtle); font-size: .84rem; }
+.collection-title-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.collection-toolbar { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.collection-search { flex: 1 1 240px; }
+.filter-count-badge { min-width: 19px; height: 19px; display: inline-grid; place-items: center; padding: 0 5px; border-radius: 99px; background: var(--suite-accent); color: var(--suite-on-accent); font-size: .68rem; }
+.collection-sort { position: relative; display: inline-flex; align-items: center; }
+.collection-sort select { height: 40px; padding: 0 32px 0 12px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm); background: var(--suite-raised); color: inherit; appearance: none; }
+.collection-sort > i { position: absolute; right: 12px; pointer-events: none; color: var(--suite-subtle); font-size: .7rem; }
+
+.collection-layout { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 0; min-height: 0; transition: grid-template-columns var(--suite-normal) var(--suite-ease); }
+.collection-layout.has-preview { grid-template-columns: minmax(0, 1fr) 316px; }
+.collection-results-scroll { padding: 16px 26px 26px; overflow-y: auto; min-width: 0; }
+.active-filter-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+.active-filter-chips:empty { display: none; }
+.active-filter-chips button { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border: 1px solid var(--suite-border); border-radius: 99px; background: var(--suite-surface); color: var(--suite-muted); font-size: .77rem; }
+.active-filter-chips button:hover { border-color: var(--suite-accent); color: var(--suite-accent); }
+.clear-filter-chips { color: var(--suite-danger) !important; }
+
+.family-group { margin-bottom: 22px; }
+.family-header { display: flex; align-items: center; gap: 10px; padding: 7px 10px; margin-bottom: 11px; border: 1px solid transparent; border-radius: var(--suite-radius-sm); background: var(--suite-sunken); transition: border-color var(--suite-fast), background var(--suite-fast); }
+.family-header.is-dragging-actor { border-color: var(--suite-accent); background: var(--suite-accent-soft); }
+.family-toggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; border: 0; background: none; color: var(--suite-text); text-align: left; }
+.family-chevron { width: 12px; color: var(--suite-subtle); font-size: .78rem; }
+.family-cover { width: 26px; height: 26px; border: 0; border-radius: 7px; object-fit: cover; }
+.family-dot { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 7px; background: var(--suite-hover); color: var(--suite-subtle); font-size: .75rem; }
+.family-name { font-family: var(--suite-font-display); font-size: .96rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.family-count { padding: 1px 8px; border-radius: 99px; background: var(--suite-hover); color: var(--suite-subtle); font-size: .74rem; font-style: normal; }
+.family-flag { color: var(--suite-warning); font-size: .76rem; }
+.family-actions { display: flex; gap: 5px; opacity: 0; transition: opacity var(--suite-fast); }
+.family-header:hover .family-actions { opacity: 1; }
+.family-actions button { width: 28px; height: 28px; border: 1px solid var(--suite-border); border-radius: 7px; background: var(--suite-raised); color: var(--suite-subtle); font-size: .76rem; }
+.family-actions button:hover { color: var(--suite-accent); border-color: var(--suite-accent); }
+.family-group.is-collapsed .family-grid, .family-group.is-collapsed .collection-list-body { display: none; }
+.family-group.is-hidden-family .family-header { border-style: dashed; border-color: var(--suite-border-strong); }
+
+.family-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 172px), 1fr)); gap: 10px; }
+.family-empty-hint { grid-column: 1 / -1; margin: 0; padding: 16px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px dashed var(--suite-border-strong); border-radius: var(--suite-radius); color: var(--suite-subtle); font-size: .82rem; }
+.collection-creature-card { position: relative; overflow: hidden; border: 1px solid var(--suite-border); border-radius: var(--suite-radius); background: var(--suite-surface); cursor: pointer; transition: transform var(--suite-normal) var(--suite-ease), border-color var(--suite-fast); }
+.collection-creature-card:hover { transform: translateY(-2px); border-color: var(--suite-border-strong); }
+.collection-creature-card.is-selected { border-color: var(--suite-accent); box-shadow: 0 0 0 1px var(--suite-accent); }
+.collection-creature-card.is-hidden { opacity: .68; }
+.collection-creature-card.is-missing { border-style: dashed; border-color: var(--suite-danger); }
+.collection-creature-image { position: relative; aspect-ratio: 4 / 3; }
+.collection-creature-image .bestiary-frame { position: absolute; inset: 0; }
+.creature-card-flags { position: absolute; z-index: 2; top: 8px; left: 8px; display: flex; gap: 5px; }
+.collection-creature-copy { display: flex; align-items: flex-start; justify-content: space-between; gap: 9px; padding: 10px 12px 12px; }
+.collection-creature-copy h3 { font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collection-creature-copy p { margin: 2px 0 0; color: var(--suite-muted); font-size: .76rem; }
+.creature-card-open { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border: 0; border-radius: 8px; background: rgb(18 14 10 / 55%); color: #fff; opacity: 0; transition: opacity var(--suite-fast); }
+.collection-creature-card:hover .creature-card-open { opacity: 1; }
+
+.collection-list-view { display: flex; flex-direction: column; gap: 4px; }
+.collection-list-header, .collection-creature-row { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.3fr) 64px 128px 44px; align-items: center; gap: 12px; }
+.collection-list-header { padding: 0 12px 8px; color: var(--suite-subtle); font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; }
+.collection-creature-row { padding: 8px 12px; border: 1px solid transparent; border-radius: var(--suite-radius-sm); background: var(--suite-surface); cursor: pointer; }
+.collection-creature-row:hover { border-color: var(--suite-border-strong); }
+.collection-creature-row.is-selected { border-color: var(--suite-accent); background: var(--suite-accent-soft); }
+.collection-creature-row.is-hidden { opacity: .66; }
+.collection-creature-row > span { color: var(--suite-muted); font-size: .82rem; }
+.collection-creature-row > button { width: 32px; height: 32px; border: 1px solid var(--suite-border); border-radius: 8px; background: transparent; color: var(--suite-subtle); }
+.collection-row-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.collection-row-name .bestiary-frame { width: 40px; height: 40px; flex: 0 0 auto; }
+.collection-row-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-flag { color: var(--suite-subtle); font-size: .72rem; }
+
+.collection-preview-panel { min-width: 0; overflow: hidden auto; border-left: 1px solid var(--suite-border); background: color-mix(in srgb, var(--suite-surface) 80%, transparent); }
+.collection-layout:not(.has-preview) .collection-preview-panel { visibility: hidden; border-left-color: transparent; }
+.collection-preview-panel .creature-preview-content { display: none; padding: 16px; }
+.collection-preview-panel .creature-preview-content.is-active { display: block; }
+.collection-preview-panel.has-selection .preview-placeholder { display: none; }
+.preview-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; height: 100%; padding: 26px; color: var(--suite-subtle); text-align: center; }
+.preview-placeholder i { font-size: 1.7rem; }
+.preview-placeholder h3 { font-size: .98rem; color: var(--suite-text); }
+.preview-placeholder p { margin: 0; font-size: .8rem; }
+.creature-preview-content > header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; color: var(--suite-subtle); font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; }
+.creature-preview-content > header button { width: 26px; height: 26px; border: 0; border-radius: 7px; background: var(--suite-hover); color: var(--suite-muted); }
+.preview-portrait { position: relative; width: 100%; aspect-ratio: 4 / 3; border: 1px solid var(--suite-border); border-radius: var(--suite-radius); box-shadow: var(--suite-shadow-card); }
+.preview-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin: 12px 0 10px; }
+.preview-heading h2 { font-family: var(--suite-font-display); font-size: 1.05rem; }
+.preview-heading p { margin: 2px 0 0; color: var(--suite-muted); font-size: .79rem; }
+.preview-heading .creature-cr-chip { position: static; background: var(--suite-hover); color: var(--suite-text); backdrop-filter: none; }
+.preview-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+/* The card's key-stat tiles in small: the number first, the label under it. */
+.preview-stats > div { display: grid; justify-items: center; gap: 2px; padding: 8px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius); background: var(--suite-surface); text-align: center; }
+.preview-stats span { order: 2; color: var(--suite-subtle); font: 600 10px var(--suite-font-body); letter-spacing: .12em; text-transform: uppercase; }
+.preview-stats strong { order: 1; font: 700 18px/1.1 var(--suite-font-body); }
+.preview-tier { margin: -4px 0 10px; }
+.preview-speed { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: var(--suite-muted); font-size: .79rem; }
+.preview-actions { display: flex; flex-direction: column; gap: 7px; }
+.preview-actions button { justify-content: flex-start; }
+
+.filter-backdrop { position: absolute; inset: 0; z-index: 4; background: rgb(10 8 6 / 34%); opacity: 0; pointer-events: none; transition: opacity var(--suite-normal); }
+.filter-backdrop.is-open { opacity: 1; pointer-events: auto; }
+.collection-filter-panel { position: absolute; z-index: 5; inset: 0 auto 0 100%; width: 320px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; border-left: 1px solid var(--suite-border-strong); background: var(--suite-raised); box-shadow: var(--suite-shadow); visibility: hidden; transition: transform var(--suite-normal) var(--suite-ease), visibility 0s linear var(--suite-normal); }
+/* Hidden while closed so Tab never lands in a panel that is off screen. */
+.collection-filter-panel.is-open { transform: translateX(-100%); visibility: visible; transition-delay: 0s; }
+.collection-filter-panel > header { display: flex; align-items: center; justify-content: space-between; padding: 15px 17px; border-bottom: 1px solid var(--suite-border); }
+.collection-filter-panel > header h2 { font-family: var(--suite-font-display); font-size: 1.05rem; }
+.collection-filter-panel > header button { width: 30px; height: 30px; border: 0; border-radius: 8px; background: var(--suite-hover); color: var(--suite-muted); }
+.filter-panel-scroll { padding: 15px 17px; overflow-y: auto; }
+.collection-filter-panel fieldset { margin: 0 0 16px; padding: 0; border: 0; }
+.collection-filter-panel legend { padding: 0 0 7px; color: var(--suite-subtle); font-size: .73rem; letter-spacing: .07em; text-transform: uppercase; }
+.collection-filter-panel label { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: .85rem; }
+.collection-filter-panel input[type="checkbox"] { width: 15px; height: 15px; }
+.filter-range { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.filter-range label { flex-direction: column; align-items: flex-start; gap: 4px; }
+.filter-range span { color: var(--suite-subtle); font-size: .74rem; }
+.filter-range input { width: 100%; height: 34px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm); background: var(--suite-surface); color: inherit; padding: 0 9px; }
+.collection-filter-panel > footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 17px; border-top: 1px solid var(--suite-border); font-size: .83rem; }
+
+.collection-drop-overlay { position: absolute; inset: 12px; z-index: 6; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 2px dashed var(--suite-accent); border-radius: var(--suite-radius-lg); background: color-mix(in srgb, var(--suite-accent) 12%, rgb(255 255 255 / 60%)); color: var(--suite-accent); pointer-events: none; }
+.bestiary-app:not([data-theme="parchment"]) .collection-drop-overlay { background: color-mix(in srgb, var(--suite-accent) 14%, rgb(0 0 0 / 62%)); }
+.collection-drop-overlay i { font-size: 1.8rem; }
+.collection-workspace.is-dragging-actor .collection-drop-overlay { display: flex; }
+
+:where(.bestiary-app) .collection-creature-copy { display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; }
+:where(.bestiary-app) .collection-creature-copy > div { min-width: 0; }
+:where(.bestiary-app) .collection-creature-copy > .tier-chip { justify-self: start; }
+:where(.bestiary-app) .collection-creature-card { display: flex; flex-direction: column; }
+:where(.bestiary-app) .collection-creature-card .collection-creature-copy { flex: 1; align-content: space-between; }
+:where(.bestiary-app) .family-toggle { justify-content: flex-start; padding: 9px 10px; }
+:where(.bestiary-app) .family-name { white-space: normal; overflow-wrap: anywhere; }
+:where(.bestiary-app) .family-actions { flex-shrink: 0; }
+:where(.bestiary-app) .collection-title-actions { flex-wrap: wrap; justify-content: flex-end; }
+:where(.bestiary-app) .collection-creature-copy h3,
+:where(.bestiary-app) .collection-row-name strong { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.collection-row-tier { display: flex; align-items: center; min-width: 0; }
+
+@container bestiary-window (max-width: 900px) {
+  .collection-header { padding-left: 18px; padding-right: 18px; }
+  .collection-results-scroll { padding-left: 18px; padding-right: 18px; }
+  .collection-layout.has-preview { grid-template-columns: minmax(0, 1fr) 0; }
+  .collection-layout.has-preview .collection-preview-panel {
+    position: absolute; z-index: 3; inset: 0 0 0 auto; width: min(316px, 100%);
+    box-shadow: var(--suite-shadow); background: var(--suite-raised);
+  }
+  .collection-list-header, .collection-creature-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 52px 104px 36px; gap: 8px; }
+}
+
+/* Narrow collection windows keep every header tool as an icon with its tooltip instead of a second row. */
+@container bestiary-window (max-width: 760px) {
+  .collection-title-actions > button > span,
+  .collection-toolbar .toolbar-label { display: none; }
+  .collection-title-actions > button { min-width: 40px; padding: 0 11px; }
+}

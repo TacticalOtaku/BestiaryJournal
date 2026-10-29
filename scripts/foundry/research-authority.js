@@ -85,7 +85,7 @@ export async function prepareResearchCommand(command, requester) {
     },
     finalize: async result => {
       if (!result?.changed) throw new ResearchRejection("BESTIARY.Errors.ResearchNotRecorded");
-      await postOutcome({ message, actor, requester, uuid, entry: context.entry, creature, skill, total, dc: config.dc, success });
+      await postOutcome({ message, actor, requester, uuid, entry: context.entry, creature, skill, total, dc: config.dc, dcExplicit: config.isDcExplicit, success });
     }
   };
 }
@@ -120,17 +120,19 @@ async function readCreatureTraits(uuid) {
  * whispered result, a blind roll is reported to the GMs only. The creature is
  * named only when the roller now knows its name.
  */
-async function postOutcome({ message, actor, requester, uuid, entry, creature, skill, total, dc, success }) {
+async function postOutcome({ message, actor, requester, uuid, entry, creature, skill, total, dc, dcExplicit, success }) {
   const knowledge = normalizeKnowledge(game.settings.get(MODULE_ID, "bestiaryKnowledge"));
   const tier = getUserTier(knowledge, requester.id, uuid);
   const knowsName = isBlockVisible("name", tier, getEntryBlockTiers(entry)) && !!creature.name;
+  // An automatic DC is derived from CR, so it is printed only once the roller knows the CR.
+  const showsDc = dcExplicit || isBlockVisible("cr", tier, getEntryBlockTiers(entry));
 
   const card = document.createElement("div");
   card.className = `bestiary-research-card ${success ? "is-success" : "is-failure"}`;
   const title = document.createElement("strong");
   title.textContent = localize("BESTIARY.Research.ChatTitle");
   const body = document.createElement("p");
-  body.textContent = game.i18n.format("BESTIARY.Research.ChatBody", {
+  body.textContent = game.i18n.format(showsDc ? "BESTIARY.Research.ChatBody" : "BESTIARY.Research.ChatBodyNoDc", {
     actor: actor.name,
     creature: knowsName ? creature.name : localize("BESTIARY.Tier.UnknownName"),
     skill: CONFIG.DND5E?.skills?.[skill]?.label ?? skill,
