@@ -1,5 +1,4 @@
 import {
-  GM_TIER,
   MAX_RESEARCH_TIER,
   MIN_RESEARCH_TIER,
   RESEARCH_SKILLS,
@@ -14,7 +13,7 @@ import {
  * rewrite the whole structure blob:
  *   data      – sections, families, creature entries, locks, tier overrides
  *   knowledge – what each user has researched
- *   social    – comments and the share log
+ *   social    – comments
  */
 
 export const STORE_KEYS = Object.freeze(["data", "knowledge", "social"]);
@@ -186,11 +185,9 @@ function normalizeKnowledgeRecord(value) {
 export function normalizeSocial(value) {
   const source = isObject(value) ? value : {};
   const comments = Array.isArray(source.comments) ? source.comments : [];
-  const shares = Array.isArray(source.shares) ? source.shares : [];
   return {
     revision: safeInt(source.revision, 0),
-    comments: comments.filter(isObject).map(normalizeComment),
-    shares: shares.filter(isObject).map(normalizeShare)
+    comments: comments.filter(isObject).map(normalizeComment)
   };
 }
 
@@ -205,17 +202,6 @@ function normalizeComment(value) {
     text: String(value.text ?? ""),
     createdAt: safeInt(value.createdAt, 0),
     editedAt: value.editedAt ? safeInt(value.editedAt, 0) : null
-  };
-}
-
-function normalizeShare(value) {
-  return {
-    id: String(value.id ?? ""),
-    uuid: String(value.uuid ?? ""),
-    fromUserId: String(value.fromUserId ?? ""),
-    toUserId: String(value.toUserId ?? ""),
-    tier: clampKnownTier(value.tier, MIN_RESEARCH_TIER),
-    at: safeInt(value.at, 0)
   };
 }
 
@@ -280,19 +266,19 @@ export function findFamily(section, familyId) {
   return section?.families?.find(family => family.id === familyId) ?? null;
 }
 
-/** All (section, entry) pairs holding this creature — it may live in several. */
+/**
+ * All (section, entry) pairs holding this creature — it may live in several —
+ * in display order, so every view picks the same first collection. `data` must
+ * already be normalized.
+ */
 export function getEntryContexts(data, uuid) {
   const contexts = [];
-  for (const section of normalizeBestiaryData(data).sections) {
+  for (const section of [...(data?.sections ?? [])].sort((left, right) => left.sort - right.sort)) {
     for (const entry of section.creatures) {
       if (entry.uuid === uuid) contexts.push({ section, entry });
     }
   }
   return contexts;
-}
-
-export function findCreatureEntry(data, uuid) {
-  return getEntryContexts(data, uuid)[0]?.entry ?? null;
 }
 
 /**
@@ -369,20 +355,6 @@ export function getUserTier(knowledge, userId, uuid) {
   return clampKnownTier(getKnowledgeRecord(knowledge, userId, uuid)?.tier, MIN_RESEARCH_TIER);
 }
 
-export function getViewerTier(knowledge, uuid, viewer) {
-  if (isGameMaster(viewer)) return GM_TIER;
-  return getUserTier(knowledge, viewerId(viewer), uuid);
-}
-
-/** Tier assignments for a whole roster, used by the GM assignment board. */
-export function getTierRoster(knowledge, uuid, users) {
-  return (users ?? []).map(user => ({
-    ...user,
-    tier: getUserTier(knowledge, user.id, uuid),
-    record: getKnowledgeRecord(knowledge, user.id, uuid)
-  }));
-}
-
 // ── Comment selectors ──────────────────────────────────────────────────────
 
 export function canSeeComment(comment, viewer) {
@@ -402,16 +374,6 @@ export function selectComments(social, uuid, viewer) {
   return normalizeSocial(social).comments
     .filter(comment => comment.uuid === uuid && canSeeComment(comment, viewer))
     .sort((left, right) => (right.pinned - left.pinned) || (left.createdAt - right.createdAt));
-}
-
-export function countComments(social, uuid, viewer) {
-  return selectComments(social, uuid, viewer).length;
-}
-
-export function selectShareLog(social, uuid) {
-  return normalizeSocial(social).shares
-    .filter(share => !uuid || share.uuid === uuid)
-    .sort((left, right) => right.at - left.at);
 }
 
 // ── Command reducer ────────────────────────────────────────────────────────
@@ -992,9 +954,9 @@ function handleRecordResearch(state, command, { now }) {
 
 /**
  * Sharing never grants more than the sender knows, and never lowers what the
- * recipient already had.
+ * recipient already had. The record itself notes who shared it.
  */
-function handleShareKnowledge(state, command, { now, generateId, isPlayerUser }) {
+function handleShareKnowledge(state, command, { now, isPlayerUser }) {
   const fromUserId = String(command.userId ?? "");
   const uuid = String(command.uuid ?? "");
   const targets = [...new Set(toArray(command.toUserIds ?? command.toUserId))]
@@ -1016,17 +978,9 @@ function handleShareKnowledge(state, command, { now, generateId, isPlayerUser })
     record.grantedBy = fromUserId;
     record.blocked = false;
     record.updatedAt = now();
-    state.social.shares.push({
-      id: generateId(),
-      uuid,
-      fromUserId,
-      toUserId,
-      tier: offered,
-      at: now()
-    });
     changed = true;
   }
-  return changed ? ["knowledge", "social"] : TOUCHED_NONE;
+  return changed ? TOUCHED_KNOWLEDGE : TOUCHED_NONE;
 }
 
 function ensureKnowledgeRecord(knowledge, userId, uuid) {
@@ -1129,8 +1083,6 @@ function toArray(value) {
   if (Array.isArray(value)) return value.filter(Boolean).map(String);
   return value ? [String(value)] : [];
 }
-
-export { MAX_RESEARCH_TIER, MIN_RESEARCH_TIER };
 
 // ── Sharing window ───────────────────────────────────────────────────────────
 

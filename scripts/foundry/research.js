@@ -27,10 +27,6 @@ export function researchSkillOptions(selected = []) {
   }));
 }
 
-export function isSingleAttemptWorld() {
-  return game.settings.get(MODULE_ID, "researchSingleAttempt") === true;
-}
-
 export function isResearchRollEnabled() {
   return game.settings.get(MODULE_ID, "researchRollEnabled") !== false;
 }

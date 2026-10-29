@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.3
+
+### Fixed
+- A creature that sits in several collections is read through the same collection everywhere: the first one on display. Before, after collections were reordered, a library tile and the card it opens could follow different reveal settings.
+- Removing a creature from a collection is blocked only by a lock in that collection, not by a lock on the same creature elsewhere.
+- Bulk import with **Copy into world** creates all actors in one request (20 monsters in about half a second) and says so when the copy fails, instead of only writing to the console.
+
+### Changed
+- Sharing knowledge no longer keeps a separate share log in the world settings. Nothing displayed it, and it grew with every share; the knowledge record still notes who shared it.
+
+### Development
+- Tests for the creature card (nothing an unknown creature hides reaches the card) and for the pre-0.2 data migration (a failed write leaves the world untouched).
+- The entry lookup no longer re-normalises the whole bestiary on every call.
+- Removed unused exports.
+
 ## 0.3.2
 
 ### Fixed

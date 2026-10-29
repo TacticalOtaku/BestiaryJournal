@@ -81,19 +81,7 @@ export const DISPLAY_GROUPS = Object.freeze([
   { key: "lore", label: "BESTIARY.Group.Lore", hint: "BESTIARY.Group.LoreHint", icon: "fa-feather-pointed" }
 ]);
 
-export const BLOCK_KEYS = Object.freeze(DISPLAY_BLOCKS.map(block => block.key));
-
-/** Blocks holding a list of items whose visibility can be tuned one by one. */
-export const ITEM_BLOCK_KEYS = Object.freeze([
-  "features", "actions", "bonusActions", "reactions",
-  "legendaryActions", "spells", "inventory"
-]);
-
 const BLOCK_BY_KEY = new Map(DISPLAY_BLOCKS.map(block => [block.key, block]));
-
-export function getBlockDefinition(key) {
-  return BLOCK_BY_KEY.get(key) ?? null;
-}
 
 export function defaultBlockTiers() {
   return Object.fromEntries(DISPLAY_BLOCKS.map(block => [block.key, block.tier]));
