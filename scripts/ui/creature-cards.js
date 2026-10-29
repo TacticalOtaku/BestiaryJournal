@@ -1,7 +1,7 @@
 import { formatCR, formatDistanceUnit } from "../integrations/dnd5e.js";
 import { getEntryBlockTiers } from "../foundry/creature-display.js";
 import { buildImageView, buildThumbView, SILHOUETTE_PLACEHOLDER } from "../core/image-framing.js";
-import { GM_TIER, isBlockVisible } from "../core/research-model.js";
+import { GM_TIER, isBlockVisible, RESEARCH_TIERS } from "../core/research-model.js";
 import { getUserTier, selectEntryContext } from "../core/bestiary-domain.js";
 import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store.js";
 import { getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtime.js";
@@ -16,10 +16,12 @@ export function buildCreatureCard({ uuid, entry, creature, viewerTier, searchExt
   const source = creature ?? missingCreature(entry);
   const blockTiers = getEntryBlockTiers(entry);
   const show = key => isBlockVisible(key, viewerTier, blockTiers);
+  // A deleted actor has a name and art left in its entry, but no statistics to show.
+  const showStat = key => !!creature && show(key);
 
   const knowsName = show("name");
   const knowsType = show("type");
-  const knowsCr = show("cr");
+  const knowsCr = showStat("cr");
   const name = knowsName ? source.name : localize("BESTIARY.Tier.UnknownName");
   const typeLabel = knowsType
     ? [source.size, source.creatureType].filter(Boolean).join(" · ")
@@ -38,11 +40,11 @@ export function buildCreatureCard({ uuid, entry, creature, viewerTier, searchExt
     knowsCr,
     cr: knowsCr ? Number(source.cr ?? 0) : "",
     crFormatted: knowsCr ? formatCR(source.cr) : "",
-    showAc: show("ac"),
-    ac: show("ac") ? source.ac?.value ?? "" : "",
-    showHp: show("hp"),
-    hp: show("hp") ? { value: source.hp?.value ?? 0, max: source.hp?.max ?? 0 } : null,
-    speedLabel: show("speed") ? formatSpeed(source) : "",
+    showAc: showStat("ac"),
+    ac: showStat("ac") ? source.ac?.value ?? "" : "",
+    showHp: showStat("hp"),
+    hp: showStat("hp") ? { value: source.hp?.value ?? 0, max: source.hp?.max ?? 0 } : null,
+    speedLabel: showStat("speed") ? formatSpeed(source) : "",
     image: buildImageView(entry, source, { silhouette }),
     thumb: buildThumbView(entry, source, { silhouette }),
     searchText: [
@@ -117,15 +119,21 @@ export async function postCreatureToChat({ uuid, sectionId, viewer, tier }) {
 
   const card = document.createElement("div");
   card.className = "bestiary-chat-card";
+  // The tier the card was posted at; a GM's full card names none.
+  const posted = RESEARCH_TIERS[tier];
+  if (posted) card.dataset.tier = posted.key;
 
   const portrait = document.createElement("img");
-  portrait.src = knowsPortrait ? actor.img : SILHOUETTE_PLACEHOLDER;
+  portrait.src = knowsPortrait ? actor.img || context?.entry?.thumb || CONST.DEFAULT_TOKEN : SILHOUETTE_PLACEHOLDER;
   portrait.alt = displayName;
   // Keeps the card small once the module (and its CSS) is disabled.
   portrait.width = portrait.height = 52;
   if (!knowsPortrait) portrait.className = "is-silhouette";
 
   const copy = document.createElement("div");
+  const kicker = document.createElement("span");
+  kicker.className = "bestiary-chat-kicker";
+  kicker.textContent = [localize("BESTIARY.Title"), posted && localize(posted.label)].filter(Boolean).join(" · ");
   const name = document.createElement("strong");
   name.textContent = displayName;
 
@@ -139,7 +147,7 @@ export async function postCreatureToChat({ uuid, sectionId, viewer, tier }) {
   link.append(icon, document.createTextNode(localize("BESTIARY.OpenBestiaryCard")));
 
   action.appendChild(link);
-  copy.append(name, action);
+  copy.append(kicker, name, action);
   card.append(portrait, copy);
 
   await ChatMessage.create({

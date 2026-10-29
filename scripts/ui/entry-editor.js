@@ -24,7 +24,8 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
     form: {
       handler: function (event, form, formData) { return this._onFormSubmit(event, form, formData); },
       submitOnChange: false,
-      closeOnSubmit: true
+      // Closed by the handler once the change is saved, so a refused save keeps the draft.
+      closeOnSubmit: false
     },
     actions: {
       setImageSource: function (event, target) { this._onSetImageSource(event, target); },
@@ -170,22 +171,12 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
     const preview = buildImageView(this._draft, this._creature ?? {});
     const frame = this.element.querySelector(".entry-focus-stage .bestiary-frame");
     const image = this.element.querySelector(".entry-focus-stage .bestiary-frame img");
-    const backdrop = this.element.querySelector(".entry-focus-stage .bestiary-frame-backdrop");
     const dot = this.element.querySelector(".entry-focus-dot");
 
     if (frame) frame.className = preview.frameClass;
     if (image) {
       image.setAttribute("style", preview.imageStyle);
       if (image.getAttribute("src") !== preview.src) image.src = preview.src;
-    }
-    if (backdrop) {
-      backdrop.setAttribute("style", preview.backdropStyle);
-      backdrop.hidden = !preview.useBackdrop;
-    } else if (preview.useBackdrop && frame) {
-      const layer = document.createElement("div");
-      layer.className = "bestiary-frame-backdrop";
-      layer.setAttribute("style", preview.backdropStyle);
-      frame.prepend(layer);
     }
     if (dot) {
       dot.style.left = `${preview.focusX}%`;
@@ -233,7 +224,8 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
       patch
     });
     if (wantsLocked) await this._setLock(true);
-    if (result && !result.changed) ui.notifications.warn(localize("BESTIARY.Lock.Blocked"));
+    if (result?.changed) await this.close();
+    else if (result) ui.notifications.warn(localize("BESTIARY.Lock.Blocked"));
   }
 
   async _setLock(locked) {

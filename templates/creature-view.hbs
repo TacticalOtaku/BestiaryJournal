@@ -6,7 +6,7 @@
       <div class="suite-empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h2>{{localize "BESTIARY.CreatureLoadError"}}</h2></div>
     {{/if}}
   {{else}}
-    <div class="creature-detail-view">
+    <div class="creature-detail-view {{#if isBlank}}is-blank{{/if}}">
 
       <header class="creature-topbar">
         <div class="creature-topbar-left">
@@ -49,13 +49,11 @@
 
       <header class="creature-profile-card">
         <div class="creature-portrait {{image.frameClass}}">
-          {{#if image.useBackdrop}}<div class="bestiary-frame-backdrop" style="{{image.backdropStyle}}"></div>{{/if}}
           <img src="{{image.src}}" alt="{{creature.displayName}}" style="{{image.imageStyle}}" />
         </div>
 
         <div class="creature-profile-main">
           <div class="creature-profile-heading">
-            <p class="creature-kicker">{{localize "BESTIARY.CreatureProfile"}}</p>
             <h1 class="{{#unless creature.knowsName}}is-unknown{{/unless}}">{{#each (bjNameParts creature.displayName)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h1>
             <p class="creature-type-line">{{creature.typeLabel}}{{#if creature.showAlignment}} · {{creature.alignment}}{{/if}}</p>
           </div>
@@ -63,22 +61,22 @@
           <ol class="tier-ladder" aria-label="{{localize 'BESTIARY.Tier.Ladder'}}">
             {{#each tierSteps}}
               <li class="{{#if this.reached}}is-reached{{/if}} {{#if this.isCurrent}}is-current{{/if}}">
-                <i class="fa-solid {{this.icon}}"></i><span>{{this.label}}</span>
+                <span><i class="fa-solid {{this.icon}}"></i>{{this.label}}</span>
               </li>
             {{/each}}
           </ol>
 
           {{#if showVitals}}
             <div class="creature-key-stats">
-              {{#if showBlock.ac}}<div class="key-stat"><span>{{localize "BESTIARY.ACShort"}}</span><strong>{{creature.ac.value}}</strong></div>{{/if}}
+              {{#if showBlock.ac}}<div class="key-stat bestiary-spot"><span>{{localize "BESTIARY.ACShort"}}</span><strong>{{creature.ac.value}}</strong></div>{{/if}}
               {{#if showBlock.hp}}
-                <div class="key-stat hp-stat {{#if creature.lowHp}}is-danger{{/if}}">
+                <div class="key-stat bestiary-spot hp-stat {{#if creature.lowHp}}is-danger{{/if}}">
                   <span>{{localize "BESTIARY.HP"}}</span><strong>{{creature.hp.max}}</strong>
                   {{#if creature.hp.formula}}<small class="hp-formula">{{creature.hp.formula}}</small>{{/if}}
                 </div>
               {{/if}}
-              {{#if showBlock.cr}}<div class="key-stat"><span>{{localize "BESTIARY.CRShort"}}</span><strong>{{creature.crFormatted}}</strong></div>{{/if}}
-              {{#if showBlock.xp}}<div class="key-stat"><span>{{localize "BESTIARY.XP"}}</span><strong>{{creature.xp}}</strong></div>{{/if}}
+              {{#if showBlock.cr}}<div class="key-stat bestiary-spot"><span>{{localize "BESTIARY.CRShort"}}</span><strong>{{creature.crFormatted}}</strong></div>{{/if}}
+              {{#if showBlock.xp}}<div class="key-stat bestiary-spot"><span>{{localize "BESTIARY.XP"}}</span><strong>{{creature.xp}}</strong></div>{{/if}}
             </div>
           {{/if}}
 
@@ -106,12 +104,10 @@
 
           {{#if showAbilities}}
             <section class="creature-content-card ability-section">
-              <header>
-                <div><p>{{localize "BESTIARY.CoreStats"}}</p><h2>{{localize "BESTIARY.Abilities"}}</h2></div>
-              </header>
+              <header><h2>{{localize "BESTIARY.Abilities"}}</h2></header>
               <div class="ability-scores-grid">
                 {{#each abilityEntries}}
-                  <div class="ability-score" title="{{this.fullLabel}}">
+                  <div class="ability-score bestiary-spot" title="{{this.fullLabel}}">
                     <span>{{this.label}}</span><strong>{{this.value}}</strong><em>{{this.mod}}</em>
                     <small>{{localize "BESTIARY.SaveShort"}} {{this.save}}</small>
                   </div>
@@ -122,26 +118,26 @@
 
           <div class="creature-info-grid">
             {{#if showBlock.skills}}
-              <section class="creature-content-card compact-info-card">
-                <header><div><p>{{localize "BESTIARY.Proficiencies"}}</p><h2>{{localize "BESTIARY.Skills"}}</h2></div><i class="fa-solid fa-hand-sparkles"></i></header>
+              <section class="creature-content-card compact-info-card bestiary-spot">
+                <header><h2>{{localize "BESTIARY.Skills"}}</h2></header>
                 <div class="trait-chip-list">{{#each skillEntries}}<span>{{this.label}} <strong>{{this.total}}</strong></span>{{/each}}</div>
               </section>
             {{/if}}
             {{#if showBlock.senses}}
-              <section class="creature-content-card compact-info-card">
-                <header><div><p>{{localize "BESTIARY.Perception"}}</p><h2>{{localize "BESTIARY.Senses"}}</h2></div><i class="fa-regular fa-eye"></i></header>
+              <section class="creature-content-card compact-info-card bestiary-spot">
+                <header><h2>{{localize "BESTIARY.Senses"}}</h2></header>
                 <div class="trait-chip-list">{{#each senseEntries}}<span>{{this.label}} <strong>{{this.value}}</strong></span>{{/each}}</div>
               </section>
             {{/if}}
             {{#if showBlock.languages}}
-              <section class="creature-content-card compact-info-card">
-                <header><div><p>{{localize "BESTIARY.Communication"}}</p><h2>{{localize "BESTIARY.Languages"}}</h2></div><i class="fa-solid fa-language"></i></header>
+              <section class="creature-content-card compact-info-card bestiary-spot">
+                <header><h2>{{localize "BESTIARY.Languages"}}</h2></header>
                 <div class="trait-chip-list">{{#each creature.languages}}<span>{{this}}</span>{{/each}}</div>
               </section>
             {{/if}}
             {{#if showDefenses}}
-              <section class="creature-content-card compact-info-card">
-                <header><div><p>{{localize "BESTIARY.Defense"}}</p><h2>{{localize "BESTIARY.Defenses"}}</h2></div><i class="fa-solid fa-shield-halved"></i></header>
+              <section class="creature-content-card compact-info-card bestiary-spot">
+                <header><h2>{{localize "BESTIARY.Defenses"}}</h2></header>
                 {{#if damageDefenses.length}}
                   <div class="defense-group">
                     <h3>{{localize "BESTIARY.DefenseDamage"}}</h3>
@@ -163,20 +159,11 @@
           </div>
 
           {{#if hasContent}}
-            <nav class="creature-section-nav">
-              {{#each contentSections}}
-                <button type="button" data-action="toggleSection" data-section-key="{{this.key}}">
-                  <i class="fa-solid {{this.icon}}"></i>{{this.label}}{{#if this.count}}<span>{{this.count}}</span>{{/if}}
-                </button>
-              {{/each}}
-            </nav>
-
             <div class="creature-expanded-layout">
               {{#each contentSections}}
                 <section class="creature-items-accordion {{#if this.expanded}}is-expanded{{/if}} {{#if this.blockHiddenForPlayers}}is-gm-only{{/if}}" data-content-section="{{this.key}}">
                   <button type="button" class="section-toggle" data-action="toggleSection" data-section-key="{{this.key}}">
-                    <span class="section-icon"><i class="fa-solid {{this.icon}}"></i></span>
-                    <span class="section-label"><small>{{localize "BESTIARY.Section"}}</small><strong>{{this.label}}</strong></span>
+                    <span class="section-label"><i class="fa-solid {{this.icon}}"></i><strong>{{this.label}}</strong></span>
                     {{#if this.blockHiddenForPlayers}}<em class="section-gm-flag"><i class="fa-solid fa-eye-slash"></i>{{localize "BESTIARY.Tier.GmOnly"}}</em>{{/if}}
                     {{#if this.count}}<em>{{this.count}}</em>{{/if}}
                     <i class="fa-solid section-chevron {{#if this.expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
@@ -313,12 +300,16 @@
                             </select>
                           </label>
                         {{/if}}
-                        <label class="rail-field">
-                          <span>{{localize "BESTIARY.Research.Skill"}}</span>
-                          <select class="research-skill-select">
-                            {{#each research.skills}}<option value="{{this.value}}">{{this.label}}</option>{{/each}}
-                          </select>
-                        </label>
+                        {{#if research.skillHidden}}
+                          <p class="rail-note"><i class="fa-solid fa-circle-question"></i>{{localize "BESTIARY.Research.SkillHidden"}}</p>
+                        {{else}}
+                          <label class="rail-field">
+                            <span>{{localize "BESTIARY.Research.Skill"}}</span>
+                            <select class="research-skill-select">
+                              {{#each research.skills}}<option value="{{this.value}}">{{this.label}}</option>{{/each}}
+                            </select>
+                          </label>
+                        {{/if}}
                         <button type="button" class="suite-primary-button" data-action="runResearch" {{#unless research.canRoll}}disabled{{/unless}}>
                           <i class="fa-solid fa-dice-d20"></i>{{localize "BESTIARY.Research.Roll"}}
                         </button>

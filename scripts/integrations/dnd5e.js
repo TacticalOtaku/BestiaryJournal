@@ -617,8 +617,20 @@ function _numericValue(value) {
 
 export function localizeConfigLabel(config, key, fallback = "") {
   if (!key) return _labelText(fallback);
-  const configured = config?.get?.(key) ?? config?.[key];
+  const configured = _configEntry(config, key);
   return _labelText(configured?.label ?? configured?.name ?? configured) || _labelText(fallback);
+}
+
+/** dnd5e nests some catalogues (languages: standard → children → common), so a key may sit at any depth. */
+function _configEntry(config, key) {
+  const direct = config?.get?.(key) ?? config?.[key];
+  if (direct !== undefined) return direct;
+  if (!config || typeof config !== "object") return undefined;
+  for (const entry of Object.values(config)) {
+    const nested = entry?.children ? _configEntry(entry.children, key) : undefined;
+    if (nested !== undefined) return nested;
+  }
+  return undefined;
 }
 
 export function localizeDndLabel(category, config, key, fallback = "") {

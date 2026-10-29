@@ -1,4 +1,6 @@
+import { getEntryContexts } from "../core/bestiary-domain.js";
 import { extractCreatureData } from "../integrations/dnd5e.js";
+import { getBestiaryData } from "./bestiary-store.js";
 import { resolveUuid } from "./foundry-runtime.js";
 import { log } from "../core/logger.js";
 
@@ -65,7 +67,14 @@ function owningActorUuid(document) {
   return null;
 }
 
-const invalidate = document => invalidateCreature(owningActorUuid(document));
+/** A changed actor that sits in the bestiary also redraws the open windows showing it. */
+function invalidate(document) {
+  const uuid = owningActorUuid(document);
+  invalidateCreature(uuid);
+  if (uuid && getEntryContexts(getBestiaryData(), uuid).length) {
+    Hooks.callAll("bestiaryJournalRefresh", { changed: { creatures: true }, uuids: [uuid] });
+  }
+}
 for (const hook of [
   "updateActor", "deleteActor",
   "createItem", "updateItem", "deleteItem",

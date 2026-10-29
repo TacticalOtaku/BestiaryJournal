@@ -1,6 +1,6 @@
 import { BESTIARY_COMMANDS } from "../core/bestiary-domain.js";
 import { runCommand } from "../foundry/command-feedback.js";
-import { openFilePicker } from "../foundry/foundry-runtime.js";
+import { localize, openFilePicker } from "../foundry/foundry-runtime.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -19,7 +19,8 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
     form: {
       handler: function (event, form, formData) { return this._onFormSubmit(event, form, formData); },
       submitOnChange: false,
-      closeOnSubmit: true
+      // Closed by the handler once the change is saved, so a refused save keeps what was typed.
+      closeOnSubmit: false
     },
     actions: {
       pickImage: function (event, target) { this._onPickImage(event, target); },
@@ -93,9 +94,15 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
       image: data.image || "",
       hidden: !!data.hidden
     };
+    // `required` lets a name of spaces through.
+    if (!patch.name) {
+      ui.notifications.warn(localize("BESTIARY.Errors.NameRequired"));
+      return;
+    }
 
+    let result;
     if (this.mode === "family") {
-      await runCommand(this.tileData
+      result = await runCommand(this.tileData
         ? {
             type: BESTIARY_COMMANDS.UPDATE_FAMILY,
             sectionId: this.sectionId,
@@ -109,10 +116,11 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
           },
       { unchanged: "BESTIARY.Lock.Blocked" });
     } else {
-      await runCommand(this.tileData
+      result = await runCommand(this.tileData
         ? { type: BESTIARY_COMMANDS.UPDATE_SECTION, sectionId: this.tileData.id, patch }
         : { type: BESTIARY_COMMANDS.CREATE_SECTION, section: patch },
       { unchanged: "BESTIARY.Lock.Blocked" });
     }
+    if (result?.changed) await this.close();
   }
 }

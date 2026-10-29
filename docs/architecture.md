@@ -12,17 +12,24 @@ scripts/
     bestiary-domain.js   normalisation, selectors, the command reducer, rights for notes and sharing
     display-names.js     splitting display names
     image-framing.js     image framing and focal point
+    theme.js             window look rules: theme, accent and motion level with the OS and Foundry caps
+    knowledge-progress.js  tier progress bars, tier rises, the "new to this viewer" rule
+    collection-filter.js   search, filters and sort order of a collection window
     logger.js            the only console writer: "Bestiary Journal |" prefix, debug output behind the
                          client "debug" setting
   integrations/
     dnd5e.js         reading creature data from dnd5e actors, dnd5e labels (was helpers.mjs)
   foundry/           everything that touches the Foundry runtime
     foundry-runtime.js   thin adapter over Foundry/dnd5e globals (localize, fromUuid, enrichHTML, users)
+    theme-root.js        stamps data-theme, data-accent and data-motion on every bestiary window
     bestiary-store.js    world state, command relay to the authoritative GM over the module socket
     research-authority.js  GM-side check of a research roll
     research.js, migrations.js, transfer.js, creature-cache.js, creature-display.js,
-    client-preferences.js, command-feedback.js
+    client-preferences.js, command-feedback.js, knowledge-watch.js, encounter.js
   ui/                ApplicationV2 windows and view helpers: view-model preparation and DOM only
+    bestiary-app.js      the library; section-view.js a collection (its view model in section-model.js);
+    creature-view.js     a creature's card (its statblock in creature-statblock.js);
+    knowledge-board.js   the GM's party knowledge table; api.js the public API (API.md)
 ```
 
 The dependency direction is one-way: `ui` → `foundry` / `integrations` → `core`. `core/` must stay importable in
@@ -41,6 +48,25 @@ message only names a request; it never carries authority by itself.
 Research rolls are judged by the GM (`foundry/research-authority.js`): the chat message, the character's owner, the
 skill, freshness and single use are checked there; the player never reports a result.
 
+## Window look
+
+The windows share AIM: Actor Window's design system without copying its layouts. Tokens live on `.bestiary-app`
+in `styles/tokens.css`: «Ночь» is the default palette, `data-theme="parchment"` overrides every colour, and the six
+accents are named (`data-accent`), each with its own value per theme. The user picks theme and accent (scope `user`)
+and the motion level (scope `client`); «Авто» follows Foundry's colour scheme and «Как в AIM» borrows AIM's own
+theme and accent. `foundry/theme-root.js` stamps the attributes on render and restamps open windows when a choice,
+Foundry's scheme or AIM's settings change. The OS «reduce motion» caps the level at «off», Foundry's
+`performance-low` at «reduced». `tests/theme-contrast.test.js` keeps text and tier colours at 4.5:1 on every surface
+in both themes. Type follows AIM too: the interface is Onest (OFL, `assets/fonts`, copied from AIM), the
+display face is Palatino for Latin only (`local()`, nothing downloaded), and Cyrillic headings fall through to Onest.
+Cards, ability tiles, the row accent edge, the tab ink, the art sweep and the cursor light (`.bestiary-spot`,
+`ui/ui-effects.js`) are AIM's recipes.
+
+Stylesheets, in the order `module.json` loads them: `tokens.css` (type, palettes, accents), `frame.css` (every
+window: frame, resets, artwork, shared controls, the context menu), `library.css`, `collection.css`, `creature.css`,
+`editors.css` (forms, bulk import and research, world tiers, dialogs), `motion.css` (motion levels, last so they
+override every component) and `content.css` (cards posted to chat).
+
 ## Localisation
 
 `lang/en.json` and `lang/ru.json`. `ru` also carries `BESTIARY.Data.*` overrides of dnd5e labels;
@@ -49,4 +75,5 @@ skill, freshness and single use are checked there; the player never reports a re
 ## Checks
 
 `npm run check` runs ESLint, `tools/check-project.mjs` (syntax, JSON, manifest paths, imports, localisation keys,
-unique application ids) and the `node --test` suite.
+unique application ids) and the `node --test` suite. The release check in a running Foundry is in
+`docs/live-check.md`, with `tools/live-check.js` for fonts, clipping, overflow and unlabelled buttons.

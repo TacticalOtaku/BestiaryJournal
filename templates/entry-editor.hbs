@@ -3,7 +3,7 @@
     <div class="suite-empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h2>{{localize "BESTIARY.Entry.Missing"}}</h2></div>
   {{else}}
     <header class="entry-editor-heading">
-      <p class="creature-kicker">{{sectionName}}</p>
+      <p class="library-eyebrow">{{sectionName}}</p>
       <h1>{{#each (bjNameParts name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h1>
     </header>
 
@@ -11,7 +11,6 @@
       <div class="entry-editor-frame">
         <div class="entry-focus-stage" data-tooltip="{{localize 'BESTIARY.Entry.FocusHint'}}">
           <div class="{{preview.frameClass}}">
-            {{#if preview.useBackdrop}}<div class="bestiary-frame-backdrop" style="{{preview.backdropStyle}}"></div>{{/if}}
             <img src="{{preview.src}}" alt="{{name}}" style="{{preview.imageStyle}}" />
           </div>
           <span class="entry-focus-dot {{#if isCover}}is-active{{/if}}" style="left: {{focusX}}%; top: {{focusY}}%;"></span>

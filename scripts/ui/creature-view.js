@@ -1,4 +1,3 @@
-import { formatMod, formatCR, localizeDndLabel, formatDistanceUnit } from "../integrations/dnd5e.js";
 import { getCreatureData } from "../foundry/creature-cache.js";
 import {
   GM_TIER,
@@ -6,9 +5,7 @@ import {
   MIN_RESEARCH_TIER,
   isBlockVisible,
   isGmTier,
-  isItemVisible,
-  itemTierKey,
-  requiredTierForItem
+  itemTierKey
 } from "../core/research-model.js";
 import {
   BESTIARY_COMMANDS,
@@ -27,7 +24,7 @@ import {
   localizedTierChoices
 } from "../foundry/creature-display.js";
 import { buildImageView } from "../core/image-framing.js";
-import { postCreatureToChat, speedEntries } from "./creature-cards.js";
+import { postCreatureToChat } from "./creature-cards.js";
 import { buildCommentThreads, editComment, postComment, removeComment, toggleCommentPin } from "./comments.js";
 import {
   buildKnowledgeRoster,
@@ -53,49 +50,24 @@ import {
   toggleFavoriteCreature
 } from "../foundry/client-preferences.js";
 import {
-  getDnd5eConfig,
   getPlayerUsers,
   localize,
   resolveUuid
 } from "../foundry/foundry-runtime.js";
 import { BestiaryEntryEditor } from "./entry-editor.js";
+import {
+  buildBlockVisibility,
+  buildContentSections,
+  buildDamageDefenses,
+  buildStatEntries,
+  buildTierSteps,
+  decorateCreature
+} from "./creature-statblock.js";
 import { animateDisclosure, playApplicationEntrance } from "./ui-effects.js";
+import { markSeen } from "../foundry/knowledge-watch.js";
+import { log } from "../core/logger.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
-
-const CONTENT_SECTION_DEFS = [
-  ["features", "BESTIARY.Features", "fa-wand-magic-sparkles"],
-  ["actions", "BESTIARY.Actions", "fa-khanda"],
-  ["bonusActions", "BESTIARY.BonusActions", "fa-bolt"],
-  ["reactions", "BESTIARY.Reactions", "fa-shield"],
-  ["legendaryActions", "BESTIARY.LegendaryActions", "fa-crown"],
-  ["spells", "BESTIARY.Spellcasting", "fa-wand-sparkles"],
-  ["inventory", "BESTIARY.Inventory", "fa-bag-shopping"]
-];
-
-/**
- * Damage defenses as one list of chips, only for blocks the viewer knows:
- * green protects (full shield = immunity, half = resistance, arrow = flat
- * reduction), red hurts (vulnerability, flat increase).
- */
-function buildDamageDefenses(creature, showBlock) {
-  const chips = [];
-  const add = (block, title, values, chip) => {
-    if (!showBlock[block]) return;
-    for (const value of values) chips.push({ title: localize(title), ...chip(value) });
-  };
-  add("immunities", "BESTIARY.Immunities", creature.immunities,
-    label => ({ label, kind: "positive", icon: "fa-shield" }));
-  add("resistances", "BESTIARY.Resistances", creature.resistances,
-    label => ({ label, kind: "positive", icon: "fa-shield-halved" }));
-  add("damageModifications", "BESTIARY.DamageModifications", creature.damageModifications,
-    ({ text, amount }) => amount < 0
-      ? { label: text, kind: "positive", icon: "fa-arrow-down" }
-      : { label: text, kind: "danger", icon: "fa-arrow-up" });
-  add("vulnerabilities", "BESTIARY.Vulnerabilities", creature.vulnerabilities,
-    label => ({ label, kind: "danger", icon: "fa-heart-crack" }));
-  return chips;
-}
 
 export class BestiaryCreatureView extends HandlebarsApplicationMixin(ApplicationV2) {
 
@@ -143,8 +115,9 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     this.actorUuid = options.uuid;
     this.sectionId = options.sectionId ?? null;
     this._expandedItems = new Set();
-    this._expandedSections = new Set(["features", "actions"]);
-    this._rail = "knowledge";
+    // A stat block reads open: what the creature does is shown, the long lists stay folded.
+    this._expandedSections = new Set(["features", "actions", "bonusActions", "reactions", "legendaryActions"]);
+    this._rail = ["knowledge", "comments", "config"].includes(options.rail) ? options.rail : "knowledge";
     this._commentChannel = null;
     this._commentDraft = "";
     this._editingCommentId = null;
@@ -192,18 +165,21 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const tier = effective.isGM
       ? GM_TIER
       : getUserTier(knowledge, effective.id, this.actorUuid);
+    // A player opening the card has now seen what they know of it.
+    if (!real.isGM) markSeen(this.actorUuid, tier).catch(error => log.warn("Could not mark a creature as seen", error));
     const blockTiers = getEntryBlockTiers(entry);
     const show = key => isBlockVisible(key, tier, blockTiers);
 
-    const creature = this._decorateCreature(creatureData, show);
+    const creature = decorateCreature(creatureData, show);
     const locked = isCreatureLocked(data, this.actorUuid);
-    const stats = this._buildStatEntries(creature, tier, blockTiers);
+    const stats = buildStatEntries(creature, tier, blockTiers);
     // While previewing as a player, hidden content has to disappear the way it
     // does for them — otherwise the preview is not a preview.
-    const contentSections = this._buildContentSections(
-      creature, tier, blockTiers, entry, real.isGM && !previewUser
+    const contentSections = buildContentSections(
+      creature, tier, blockTiers, entry, real.isGM && !previewUser,
+      { sections: this._expandedSections, items: this._expandedItems }
     );
-    const showBlock = this._buildBlockVisibility(creature, stats, show);
+    const showBlock = buildBlockVisibility(creature, stats, show);
     const comments = await buildCommentThreads(social, this.actorUuid, real, { locked });
 
     this._title = creature.displayName;
@@ -223,7 +199,8 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       hasContent: contentSections.length > 0,
       isBlank: !showBlock.ac && !showBlock.hp && !show("abilities") && contentSections.length === 0,
 
-      collections: getCreatureCollections(data, this.actorUuid, real),
+      collections: getCreatureCollections(data, this.actorUuid, real)
+        .map(collection => (real.isGM || creature.knowsName ? collection : { ...collection, familyName: "" })),
       locked,
       lockLabel: localize(locked ? "BESTIARY.Lock.Unlock" : "BESTIARY.Lock.Lock"),
       isGM: real.isGM,
@@ -236,9 +213,9 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       tierBadge: isGmTier(tier)
         ? { label: localize("BESTIARY.Tier.GmView"), key: "gm", icon: "fa-user-shield" }
         : describeTier(tier),
-      tierSteps: this._buildTierSteps(tier),
+      tierSteps: buildTierSteps(tier),
 
-      research: this._buildResearchPanel(entry, creatureData, tier, locked),
+      research: this._buildResearchPanel(entry, creatureData, tier, locked, show),
       knowledgeRoster: real.isGM ? buildKnowledgeRoster(knowledge, this.actorUuid) : [],
       partyTierOptions: localizedTierChoices(null, { includeNever: false }),
       shareEnabled: !real.isGM && isSharingEnabled() && !locked && tier > MIN_RESEARCH_TIER,
@@ -259,25 +236,6 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     };
   }
 
-  _decorateCreature(creature, show) {
-    const hpRatio = creature.hp.max > 0 ? creature.hp.value / creature.hp.max : 0;
-    const knowsName = show("name");
-    const typeLabel = [
-      creature.size,
-      creature.creatureType,
-      creature.creatureSubtype ? `(${creature.creatureSubtype})` : ""
-    ].filter(Boolean).join(" · ");
-    return {
-      ...creature,
-      displayName: knowsName ? creature.name : localize("BESTIARY.Tier.UnknownName"),
-      knowsName,
-      crFormatted: formatCR(creature.cr),
-      typeLabel: show("type") ? typeLabel : localize("BESTIARY.Tier.UnknownType"),
-      showAlignment: show("alignment") && !!creature.alignment,
-      lowHp: creature.hp.max > 0 && hpRatio <= 0.25
-    };
-  }
-
   _buildPreviewOptions() {
     if (!game.user.isGM) return [];
     const current = getPreviewUserId();
@@ -287,23 +245,14 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     ];
   }
 
-  _buildTierSteps(tier) {
-    const current = isGmTier(tier) ? MAX_RESEARCH_TIER : tier;
-    return [0, 1, 2, 3].map(value => {
-      const definition = describeTier(value);
-      return {
-        value,
-        label: definition.label,
-        icon: definition.icon,
-        reached: value <= current,
-        isCurrent: value === current
-      };
-    });
-  }
-
-  _buildResearchPanel(entry, creature, tier, locked) {
+  _buildResearchPanel(entry, creature, tier, locked, show) {
     if (game.user.isGM) return null;
     const config = resolveResearchConfig(entry, creature);
+    // An automatic DC follows CR and an automatic skill the creature type: shown only once those are known.
+    const knowsDc = config.isDcExplicit || show("cr");
+    const knowsSkill = config.isSkillsExplicit || show("type");
+    // Kept off the page: the roll uses it when the player cannot pick the skill themselves.
+    this._researchSkill = config.skills[0];
     const record = getBestiaryKnowledge().users?.[game.user.id]?.[this.actorUuid] ?? null;
     const actors = researchActors();
     const canRoll = isResearchRollEnabled()
@@ -316,14 +265,15 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       canRoll,
       blocked: !!record?.blocked,
       attempts: record?.attempts ?? 0,
-      dc: config.dc,
+      dc: knowsDc ? config.dc : "?",
       isMaxed: tier >= MAX_RESEARCH_TIER,
       nextTierLabel: describeTier(Math.min(tier + 1, MAX_RESEARCH_TIER)).label,
-      skills: config.skills.map(skill => ({ value: skill, label: skillLabel(skill) })),
+      skills: knowsSkill ? config.skills.map(skill => ({ value: skill, label: skillLabel(skill) })) : [],
+      skillHidden: !knowsSkill,
       actors: actors.map(actor => ({ id: actor.id, name: actor.name, img: actor.img })),
       noActors: actors.length === 0,
       lastRoll: record?.lastRoll
-        ? game.i18n.format("BESTIARY.Research.LastAttempt", {
+        ? game.i18n.format(knowsDc ? "BESTIARY.Research.LastAttempt" : "BESTIARY.Research.LastAttemptNoDc", {
             total: record.lastRoll.total,
             dc: record.lastRoll.dc
           })
@@ -339,128 +289,6 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     return channels.some(channel => channel.key === preferred)
       ? preferred
       : channels[0].key;
-  }
-
-  _buildStatEntries(creature, tier, blockTiers) {
-    const dnd5e = getDnd5eConfig();
-    const abilityEntries = Object.entries(creature.abilities)
-      .filter(([key]) => isBlockVisible(key, tier, blockTiers))
-      .map(([key, ability]) => ({
-        key,
-        label: localizeDndLabel("AbilityAbbreviations", {}, key, dnd5e.abilities?.[key]?.abbreviation ?? ability.label),
-        fullLabel: ability.label,
-        value: ability.value,
-        mod: formatMod(ability.mod),
-        save: formatMod(ability.save)
-      }));
-
-    return {
-      abilityEntries,
-      skillEntries: Object.values(creature.skills)
-        .map(skill => ({ label: skill.label, total: formatMod(skill.total) })),
-      speedEntries: speedEntries(creature),
-      senseEntries: this._buildSenseEntries(creature, dnd5e)
-    };
-  }
-
-  _buildSenseEntries(creature, dnd5e) {
-    const unit = formatDistanceUnit(creature.senseUnits);
-    return Object.entries(creature.senses).map(([key, value]) => ({
-      label: key === "special"
-        ? localize("BESTIARY.SpecialSenses")
-        : localizeDndLabel("Senses", dnd5e.senses, key, key),
-      value: typeof value === "number" ? `${value} ${unit}` : value
-    }));
-  }
-
-  /**
-   * Builds one accordion per content block. Items the viewer may not see are
-   * dropped entirely; the GM instead keeps them with a tier control so the
-   * hidden ones stay obvious.
-   */
-  _buildContentSections(creature, tier, blockTiers, entry, isGM) {
-    const sections = [];
-    for (const [key, label, icon] of CONTENT_SECTION_DEFS) {
-      const source = creature[key] ?? [];
-      if (!source.length) continue;
-      const blockVisible = isBlockVisible(key, tier, blockTiers);
-      if (!blockVisible && !isGM) continue;
-
-      const items = source
-        .filter(item => isGM || isItemVisible(key, item.id ?? item.name, tier, blockTiers, entry.itemTiers))
-        .map(item => this._decorateItem(item, key, tier, blockTiers, entry, isGM));
-      if (!items.length) continue;
-
-      sections.push({
-        key,
-        label: localize(label),
-        icon,
-        count: items.length,
-        expanded: this._expandedSections.has(key),
-        items,
-        isSpells: key === "spells",
-        blockHiddenForPlayers: !blockVisible,
-        hiddenItemCount: items.filter(item => item.hiddenForPlayers).length
-      });
-    }
-
-    if (creature.biography && (isBlockVisible("biography", tier, blockTiers) || isGM)) {
-      sections.push({
-        key: "biography",
-        label: localize("BESTIARY.Biography"),
-        icon: "fa-feather-pointed",
-        count: null,
-        expanded: this._expandedSections.has("biography"),
-        isBiography: true,
-        biography: creature.biography,
-        blockHiddenForPlayers: !isBlockVisible("biography", tier, blockTiers),
-        items: []
-      });
-    }
-    return sections;
-  }
-
-  _decorateItem(item, blockKey, tier, blockTiers, entry, isGM) {
-    const itemId = item.id ?? item.name;
-    const itemKey = `${blockKey}:${itemId}`;
-    const override = entry.itemTiers?.[itemTierKey(blockKey, itemId)];
-    const required = requiredTierForItem(blockKey, itemId, blockTiers, entry.itemTiers);
-    return {
-      ...item,
-      itemKey,
-      blockKey,
-      itemId,
-      expanded: this._expandedItems.has(itemKey),
-      primaryActivity: item.activities?.[0] ?? null,
-      hasActivity: (item.activities?.length ?? 0) > 0,
-      hiddenForPlayers: !isItemVisible(blockKey, itemId, MAX_RESEARCH_TIER, blockTiers, entry.itemTiers),
-      requiredTier: required,
-      requiredTierLabel: describeTier(required).label,
-      tierChoices: isGM
-        ? localizedTierChoices(override === undefined ? "" : override, { includeInherit: true })
-        : []
-    };
-  }
-
-  _buildBlockVisibility(creature, stats, show) {
-    return {
-      portrait: show("portrait"),
-      name: show("name"),
-      type: show("type"),
-      ac: show("ac"),
-      hp: show("hp"),
-      cr: show("cr"),
-      xp: show("xp"),
-      speed: show("speed") && stats.speedEntries.length > 0,
-      skills: show("skills") && stats.skillEntries.length > 0,
-      senses: show("senses") && stats.senseEntries.length > 0,
-      languages: show("languages") && creature.languages.length > 0,
-      resistances: show("resistances") && creature.resistances.length > 0,
-      immunities: show("immunities") && creature.immunities.length > 0,
-      vulnerabilities: show("vulnerabilities") && creature.vulnerabilities.length > 0,
-      damageModifications: show("damageModifications") && creature.damageModifications.length > 0,
-      conditionImmunities: show("conditionImmunities") && creature.conditionImmunities.length > 0
-    };
   }
 
   // ── Rendering hooks ──
@@ -625,6 +453,8 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     if (!commentId) return;
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: localize("BESTIARY.Comments.Delete") },
+      yes: { label: localize("BESTIARY.Comments.Delete") },
+      no: { label: localize("BESTIARY.Cancel") },
       content: `<p>${localize("BESTIARY.Comments.ConfirmDelete")}</p>`,
       rejectClose: false
     });
@@ -659,7 +489,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     if (this._researchPending) return;
     const actorId = this.element.querySelector(".research-actor-select")?.value
       ?? target.dataset.actorId;
-    const skill = this.element.querySelector(".research-skill-select")?.value || undefined;
+    const skill = this.element.querySelector(".research-skill-select")?.value || this._researchSkill;
     const actor = game.actors?.get(actorId) ?? researchActors()[0];
 
     this._researchPending = true;
@@ -694,6 +524,8 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     if (!game.user.isGM) return;
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: localize("BESTIARY.Knowledge.Reset") },
+      yes: { label: localize("BESTIARY.Knowledge.Reset") },
+      no: { label: localize("BESTIARY.Cancel") },
       content: `<p>${localize("BESTIARY.Knowledge.ConfirmReset")}</p>`,
       rejectClose: false
     });
@@ -819,8 +651,8 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   async refreshFromExternalUpdate(payload = {}) {
     const changed = payload.changed ?? {};
     const concernsThis = !Array.isArray(payload.uuids) || payload.uuids.includes(this.actorUuid);
-    // `settings`: a world option changed which actions the card may offer.
-    if (changed.data || changed.settings || ((changed.knowledge || changed.social) && concernsThis)) {
+    // `settings`: a world option changed which actions the card may offer; `creatures`: the actor itself changed.
+    if (changed.data || changed.settings || ((changed.knowledge || changed.social || changed.creatures) && concernsThis)) {
       await this._refreshPreservingScroll();
     }
   }

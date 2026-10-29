@@ -41,3 +41,12 @@ test("each block opens at its own tier", () => {
   assert.equal(card.cr, "", "CR stays hidden until tier 2");
   assert.ok(!card.searchText.includes("17"));
 });
+
+test("a deleted actor keeps its name for the GM but shows no statistics", () => {
+  const card = buildCreatureCard({ uuid: "Actor.gone", entry: { ...entry, label: "QA Ghost" }, creature: null, viewerTier: 99 });
+  assert.equal(card.name, "QA Ghost");
+  assert.equal(card.isMissing, true);
+  assert.equal(card.knowsCr, false, "no «CR 0» for an actor that is gone");
+  assert.equal(card.showAc, false);
+  assert.equal(card.hp, null);
+});

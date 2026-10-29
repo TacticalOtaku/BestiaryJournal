@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { enrichText, extractItemActivities } from "../scripts/integrations/dnd5e.js";
+import { enrichText, extractItemActivities, localizeConfigLabel } from "../scripts/integrations/dnd5e.js";
 
 globalThis.game = { i18n: { localize: key => key, has: () => false } };
 globalThis.CONFIG = { DND5E: { abilities: { dex: { abbreviation: "DEX" }, con: { abbreviation: "CON" } } } };
@@ -44,4 +44,15 @@ test("a failed enrichment shows nothing instead of the raw text with its GM secr
   } finally {
     console.warn = warn;
   }
+});
+
+test("languages are named from dnd5e's nested catalogue, not shown as keys", () => {
+  const languages = {
+    standard: { label: "Standard", children: { common: "Common", goblin: { label: "Goblin" } } },
+    druidic: "Druidic"
+  };
+  assert.equal(localizeConfigLabel(languages, "common", "common"), "Common");
+  assert.equal(localizeConfigLabel(languages, "goblin", "goblin"), "Goblin");
+  assert.equal(localizeConfigLabel(languages, "druidic"), "Druidic");
+  assert.equal(localizeConfigLabel(languages, "abyssal", "abyssal"), "abyssal", "an unknown key keeps its fallback");
 });

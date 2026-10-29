@@ -1,7 +1,7 @@
 import { BESTIARY_COMMANDS, planSnapshotImport } from "../core/bestiary-domain.js";
 import { getBestiaryData, getBestiaryState } from "./bestiary-store.js";
 import { runCommand } from "./command-feedback.js";
-import { localize } from "./foundry-runtime.js";
+import { formatCount, localize } from "./foundry-runtime.js";
 
 const MODULE_ID = "bestiary-journal";
 const EXPORT_FORMAT = 1;
@@ -76,6 +76,7 @@ export function exportCreatureEntry(sectionId, uuid) {
   };
   const slug = (entry.label || uuid).replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase();
   downloadSnapshot(snapshot, `bestiary-entry-${slug}.json`);
+  ui.notifications.info(game.i18n.format("BESTIARY.Transfer.ExportedEntry", { name: entry.label || uuid }));
   return snapshot;
 }
 
@@ -105,9 +106,12 @@ export async function importBestiaryFromFile() {
     return false;
   }
 
-  const sectionCount = payload.sections.length;
   const creatureCount = payload.sections
     .reduce((total, section) => total + (section.creatures?.length ?? 0), 0);
+  const counts = {
+    sections: formatCount("BESTIARY.Count.Collections", payload.sections.length),
+    creatures: formatCount("BESTIARY.Count.Creatures", creatureCount)
+  };
   const data = getBestiaryData();
   const mergePlan = planSnapshotImport(data, payload, "merge");
   const replacePlan = planSnapshotImport(data, payload, "replace");
@@ -118,10 +122,7 @@ export async function importBestiaryFromFile() {
     position: { width: 520 },
     content: `
       <section class="bestiary-import-dialog">
-        <p>${game.i18n.format("BESTIARY.Transfer.ImportSummary", {
-          sections: sectionCount,
-          creatures: creatureCount
-        })}</p>
+        <p>${game.i18n.format("BESTIARY.Transfer.ImportSummary", counts)}</p>
         ${describePlan("BESTIARY.Transfer.PlanMerge", mergePlan)}
         <p class="bestiary-import-note">${localize("BESTIARY.Transfer.ImportNote")}</p>
       </section>`,
@@ -137,6 +138,8 @@ export async function importBestiaryFromFile() {
   if (mode === "replace") {
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: localize("BESTIARY.Transfer.ModeReplace") },
+      yes: { label: localize("BESTIARY.Transfer.ModeReplace") },
+      no: { label: localize("BESTIARY.Cancel") },
       content: `<p>${localize("BESTIARY.Transfer.ReplaceWarning")}</p>${describePlan("BESTIARY.Transfer.PlanReplace", replacePlan)}`,
       rejectClose: false
     });
@@ -149,10 +152,7 @@ export async function importBestiaryFromFile() {
     mode
   }, { unchanged: "BESTIARY.Transfer.NothingChanged" });
   if (!result?.changed) return false;
-  ui.notifications.info(game.i18n.format("BESTIARY.Transfer.Imported", {
-    sections: sectionCount,
-    creatures: creatureCount
-  }));
+  ui.notifications.info(game.i18n.format("BESTIARY.Transfer.Imported", counts));
   return true;
 }
 

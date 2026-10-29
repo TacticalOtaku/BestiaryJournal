@@ -24,7 +24,31 @@
       "SingleAttempt": "One attempt per creature",
       "SingleAttemptHint": "After a failed check, retries are blocked until the GM resets that knowledge.",
       "Debug": "Debug logging",
-      "DebugHint": "Write detailed Bestiary Journal diagnostics to the browser console on this device."
+      "DebugHint": "Write detailed Bestiary Journal diagnostics to the browser console on this device.",
+      "Theme": "Window theme",
+      "ThemeHint": "How the bestiary windows look for you. «Auto» follows Foundry's colour scheme; «As in AIM» uses the theme and accent of AIM: Actor Window when it is active.",
+      "Theme_auto": "Auto",
+      "Theme_night": "Night",
+      "Theme_parchment": "Parchment",
+      "Theme_aim": "As in AIM",
+      "Accent": "Accent colour",
+      "AccentHint": "The colour of selections, buttons and focus in the bestiary windows.",
+      "Accent_brass": "Brass",
+      "Accent_embers": "Embers",
+      "Accent_arcane": "Arcane",
+      "Accent_forest": "Forest",
+      "Accent_frost": "Frost",
+      "Accent_rose": "Rose",
+      "Motion": "Animations",
+      "MotionHint": "On this device. Reduced motion in the system turns them off, Foundry's low performance mode reduces them.",
+      "Motion_full": "All",
+      "Motion_reduced": "Reduced",
+      "Motion_off": "Off",
+      "EncounterReveal": "Meeting in combat",
+      "EncounterRevealHint": "When a creature from the bestiary fights the party, every player who does not know it yet gets «Rumors» about it.",
+      "Density": "Density",
+      "Density_comfortable": "Comfortable",
+      "Density_compact": "Compact"
     },
     "CreateSection": "Create a collection",
     "EditSection": "Edit collection",
@@ -121,7 +145,8 @@
       "PartyBadge": "Known by {known} of {total}",
       "SourceGm": "assigned by the GM",
       "SourceRoll": "earned by a roll",
-      "SourceShare": "shared by a player"
+      "SourceShare": "shared by a player",
+      "SourceEncounter": "met in combat"
     },
     "Research": {
       "Roll": "Roll a check",
@@ -143,7 +168,10 @@
       "ChatBody": "{actor} recalls what they know about {creature}: {skill} — {total} against DC {dc}.",
       "ChatSuccess": "Success: their knowledge deepens.",
       "ChatFailure": "Failure: nothing new comes to mind.",
-      "SkillsAuto": "Automatic right now: {skill}."
+      "SkillsAuto": "Automatic right now: {skill}.",
+      "LastAttemptNoDc": "Last attempt: {total}",
+      "ChatBodyNoDc": "{actor} recalls what they know about {creature}: {skill} — {total}.",
+      "SkillHidden": "The skill depends on what the creature is; it is picked for you."
     },
     "Share": {
       "Button": "Share",
@@ -195,7 +223,6 @@
     },
     "Families": {
       "Title": "Family",
-      "Short": "families",
       "Create": "New family",
       "Edit": "Edit family",
       "Delete": "Delete family",
@@ -208,7 +235,8 @@
       "AllCreatures": "All creatures",
       "MoveTo": "Move to {name}",
       "MoveToNone": "Remove from family",
-      "Empty": "This family is empty — drop creatures here"
+      "Empty": "This family is empty — drop creatures here",
+      "Unidentified": "Unidentified"
     },
     "Entry": {
       "Title": "Entry settings",
@@ -217,7 +245,7 @@
       "Token": "Token",
       "FitContain": "Fit whole",
       "FitCover": "Crop",
-      "FitHint": "\"Fit whole\" shows the artwork uncropped over a blurred backdrop. \"Crop\" fills the tile, centred on the focal point.",
+      "FitHint": "\"Fit whole\" shows the artwork uncropped. \"Crop\" fills the tile, centred on the focal point.",
       "FocusHint": "Click or drag across the artwork to set the focal point",
       "CenterFocus": "Recentre",
       "ClearImage": "Remove image",
@@ -250,9 +278,10 @@
       "ExportSection": "Export collection",
       "ExportEntry": "Export entry",
       "Exported": "Exported {count} collection(s).",
-      "Imported": "Imported {sections} collection(s) and {creatures} creature(s).",
+      "ExportedEntry": "Exported «{name}».",
+      "Imported": "Imported {sections} and {creatures}.",
       "ImportTitle": "Import a bestiary",
-      "ImportSummary": "The file holds {sections} collection(s) and {creatures} creature(s).",
+      "ImportSummary": "The file holds {sections} and {creatures}.",
       "ImportNote": "Structure is imported: collections, families, tier settings and framing. Player knowledge and notes do not travel between worlds.",
       "ModeMerge": "Merge",
       "ModeReplace": "Replace all",
@@ -335,7 +364,7 @@
     "Collections": "Collections",
     "NewCollection": "New collection",
     "Library": "Creature library",
-    "Creatures": "creatures",
+    "Creatures": "Creatures",
     "SearchLibrary": "Search creatures and collections…",
     "SearchCollection": "Search this collection…",
     "ClearSearch": "Clear search",
@@ -370,19 +399,12 @@
     "AlreadyInCollection": "{name} is already in this collection.",
     "AddedToCollection": "{name} was added to {collection}.",
     "DropIntoCollection": "Add to collection “{name}”",
-    "CreatureProfile": "Creature profile",
     "SendToChat": "To chat",
     "SendToChatParty": "To chat (what players know)",
     "OpenBestiaryCard": "Open the bestiary card",
     "CreatureUnavailable": "This card is hidden or its collection is unavailable.",
-    "CoreStats": "Core statistics",
     "SaveShort": "Save",
-    "Proficiencies": "Proficiencies",
-    "Perception": "Perception",
-    "Communication": "Communication",
-    "Defense": "Defense",
     "Defenses": "Defensive traits",
-    "Section": "Section",
     "CreatureLoadError": "The creature data could not be loaded",
     "SpeedWalk": "Walk",
     "SpeedBurrow": "Burrow",
@@ -456,7 +478,67 @@
       "ResearchUnverified": "The research roll could not be verified.",
       "ResearchSkill": "This skill cannot be used to research this creature.",
       "ResearchNotRecorded": "The roll was not counted: the creature is locked, blocked for you or already fully known.",
-      "Unknown": "Something went wrong."
+      "Unknown": "Something went wrong.",
+      "NameRequired": "Give it a name."
+    },
+    "Count": {
+      "Creatures": {
+        "one": "{count} creature",
+        "other": "{count} creatures"
+      },
+      "Families": {
+        "one": "{count} family",
+        "other": "{count} families"
+      },
+      "Collections": {
+        "one": "{count} collection",
+        "other": "{count} collections"
+      }
+    },
+    "Notice": {
+      "Learned": "You learned more about «{name}»: {tier}.",
+      "New": "New since you last looked"
+    },
+    "Progress": {
+      "Known": "known {known} of {total}"
+    },
+    "Notes": {
+      "Title": "Party notes",
+      "Empty": "No shared notes yet",
+      "EmptyHint": "Notes written to the party channel of any creature, and GM notes opened to players, gather here."
+    },
+    "Actor": {
+      "Menu": "Bestiary…",
+      "Open": "Open in the bestiary",
+      "AddTo": "Add to «{collection}»",
+      "GrantParty": "Party knows it: {tier}",
+      "NoCollections": "Create a collection in the bestiary first."
+    },
+    "Board": {
+      "Title": "Party knowledge",
+      "Short": "Knowledge",
+      "Kicker": "Game Master",
+      "Hint": "What each player knows about each creature. Change one cell, or give every creature in the selection the same tier.",
+      "Scope": "Collection",
+      "AllCollections": "Every collection",
+      "BulkTier": "Tier for all of them",
+      "BulkWho": "For",
+      "WholeParty": "The whole party",
+      "Apply": "Apply",
+      "ConfirmBulk": "Set «{tier}» for {creatures}? Locked creatures are skipped.",
+      "NoCreatures": "No creatures in this selection",
+      "NoPlayers": "There are no players in this world"
+    },
+    "Look": {
+      "Title": "Window look",
+      "Open": "Window look"
+    },
+    "Empty": {
+      "FavoritesTitle": "No favourites yet",
+      "FavoritesHint": "Star a creature and it will wait for you here.",
+      "LibraryTitle": "The bestiary is empty",
+      "LibraryHintGM": "Add creatures to a collection: drop actors onto it or use bulk import.",
+      "LibraryHintPlayer": "The GM has not revealed any creatures to you yet."
     }
   }
 }
