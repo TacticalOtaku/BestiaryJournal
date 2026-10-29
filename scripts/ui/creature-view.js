@@ -1,9 +1,7 @@
 import { getCreatureData } from "../foundry/creature-cache.js";
 import {
-  GM_TIER,
   MAX_RESEARCH_TIER,
   MIN_RESEARCH_TIER,
-  isBlockVisible,
   isGmTier,
   itemTierKey
 } from "../core/research-model.js";
@@ -19,8 +17,8 @@ import {
 import { getBestiaryData, getBestiaryKnowledge, getBestiarySocial } from "../foundry/bestiary-store.js";
 import { reportCommandError, runCommand } from "../foundry/command-feedback.js";
 import {
-  buildTierMatrix,
-  getEntryBlockTiers,
+  buildEntryTierMatrix,
+  knowledgeLensFor,
   localizedTierChoices
 } from "../foundry/creature-display.js";
 import { buildImageView } from "../core/image-framing.js";
@@ -162,21 +160,18 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     this.sectionId = context?.section.id ?? this.sectionId ?? null;
     const entry = context?.entry ?? { image: {}, research: {}, blockTiers: {}, itemTiers: {} };
 
-    const tier = effective.isGM
-      ? GM_TIER
-      : getUserTier(knowledge, effective.id, this.actorUuid);
+    const lens = knowledgeLensFor({ data, knowledge }, effective, this.actorUuid);
+    const { tier, show } = lens;
     // A player opening the card has now seen what they know of it.
     if (!real.isGM) markSeen(this.actorUuid, tier).catch(error => log.warn("Could not mark a creature as seen", error));
-    const blockTiers = getEntryBlockTiers(entry);
-    const show = key => isBlockVisible(key, tier, blockTiers);
 
     const creature = decorateCreature(creatureData, show);
     const locked = isCreatureLocked(data, this.actorUuid);
-    const stats = buildStatEntries(creature, tier, blockTiers);
+    const stats = buildStatEntries(creature, lens);
     // While previewing as a player, hidden content has to disappear the way it
     // does for them — otherwise the preview is not a preview.
     const contentSections = buildContentSections(
-      creature, tier, blockTiers, entry, real.isGM && !previewUser,
+      creature, lens, entry, real.isGM && !previewUser,
       { sections: this._expandedSections, items: this._expandedItems }
     );
     const showBlock = buildBlockVisibility(creature, stats, show);
@@ -215,7 +210,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
         : describeTier(tier),
       tierSteps: buildTierSteps(tier),
 
-      research: this._buildResearchPanel(entry, creatureData, tier, locked, show),
+      research: this._buildResearchPanel(entry, creatureData, lens, locked),
       knowledgeRoster: real.isGM ? buildKnowledgeRoster(knowledge, this.actorUuid) : [],
       partyTierOptions: localizedTierChoices(null, { includeNever: false }),
       shareEnabled: !real.isGM && isSharingEnabled() && !locked && tier > MIN_RESEARCH_TIER,
@@ -226,7 +221,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       editingCommentId: this._editingCommentId,
       isEditingComment: !!this._editingCommentId,
 
-      tierMatrix: real.isGM ? buildTierMatrix(blockTiers, entry.blockTiers) : [],
+      tierMatrix: real.isGM ? buildEntryTierMatrix(data, this.actorUuid, this.sectionId, entry) : [],
       hasEntry: contexts.length > 0,
       rail: this._rail,
       isRailKnowledge: this._rail === "knowledge",
@@ -245,12 +240,12 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     ];
   }
 
-  _buildResearchPanel(entry, creature, tier, locked, show) {
+  _buildResearchPanel(entry, creature, lens, locked) {
     if (game.user.isGM) return null;
+    const { tier } = lens;
     const config = resolveResearchConfig(entry, creature);
-    // An automatic DC follows CR and an automatic skill the creature type: shown only once those are known.
-    const knowsDc = config.isDcExplicit || show("cr");
-    const knowsSkill = config.isSkillsExplicit || show("type");
+    const knowsDc = lens.knowsDc(config);
+    const knowsSkill = lens.knowsSkill(config);
     // Kept off the page: the roll uses it when the player cannot pick the skill themselves.
     this._researchSkill = config.skills[0];
     const record = getBestiaryKnowledge().users?.[game.user.id]?.[this.actorUuid] ?? null;

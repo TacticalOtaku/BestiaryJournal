@@ -91,6 +91,7 @@
       "Tab": "Tiers",
       "EntryTitle": "Tiers for this creature",
       "EntryHint": "These values override the world defaults for this entry only.",
+      "OpenedElsewhere": "Opens earlier in “{collection}”: players get that threshold.",
       "Reset": "Reset",
       "ResetDone": "Tier overrides for this creature were cleared.",
       "WorldKicker": "World rules",

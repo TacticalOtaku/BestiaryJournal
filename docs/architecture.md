@@ -9,6 +9,8 @@ scripts/
   main.js            composition root: settings, menus, keybindings, Handlebars helpers, hooks
   core/              pure logic — no game/ui/Hooks access, unit tested in plain Node
     research-model.js    knowledge tiers: blocks, thresholds, visibility of blocks and single items
+    knowledge-lens.js    what one viewer (GM, player, party) knows of one creature; every page asks it
+                         (thresholds across collections: docs/adr/0001)
     bestiary-domain.js   normalisation, selectors, the command reducer, rights for notes and sharing
     display-names.js     splitting display names
     image-framing.js     image framing and focal point

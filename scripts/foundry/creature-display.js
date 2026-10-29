@@ -7,7 +7,8 @@ import {
   getTierDefinition,
   resolveBlockTiers
 } from "../core/research-model.js";
-import { localize } from "./foundry-runtime.js";
+import { createKnowledgeLens, playerEntryContexts, viewerTier } from "../core/knowledge-lens.js";
+import { getPlayerUsers, localize } from "./foundry-runtime.js";
 
 const MODULE_ID = "bestiary-journal";
 
@@ -28,9 +29,30 @@ export async function setWorldBlockTiers(tiers) {
   return true;
 }
 
-/** Effective thresholds for one creature: built-ins → world → entry override. */
-export function getEntryBlockTiers(entry) {
-  return resolveBlockTiers(getWorldBlockTiers(), entry?.blockTiers);
+/** What `viewer` knows about a creature; `data` and `knowledge` are the caller's snapshot of the world. */
+export function knowledgeLensFor({ data, knowledge }, viewer, uuid) {
+  return createKnowledgeLens({
+    tier: viewerTier(knowledge, viewer, uuid, viewer?.isParty ? getPlayerUsers() : []),
+    worldTiers: getWorldBlockTiers(),
+    entries: playerEntryContexts(data, uuid).map(({ entry }) => entry)
+  });
+}
+
+/**
+ * The GM's tier editor for one collection entry. Players get the lowest threshold of every collection they
+ * see (docs/adr/0001), so a block another collection opens earlier names that collection.
+ */
+export function buildEntryTierMatrix(data, uuid, sectionId, entry) {
+  const world = getWorldBlockTiers();
+  const own = resolveBlockTiers(world, entry?.blockTiers);
+  const others = playerEntryContexts(data, uuid)
+    .filter(({ section }) => section.id !== sectionId)
+    .map(({ section, entry: other }) => ({ name: section.name, tiers: resolveBlockTiers(world, other.blockTiers) }));
+  const openedIn = key => others.reduce(
+    (lowest, other) => (other.tiers[key] < (lowest?.tiers[key] ?? own[key]) ? other : lowest),
+    null
+  )?.name ?? "";
+  return buildTierMatrix(own, entry?.blockTiers, null, openedIn);
 }
 
 export function localizedTierChoices(selected, { includeNever = true, includeInherit = false } = {}) {
@@ -63,7 +85,7 @@ export function localizedTierChoices(selected, { includeNever = true, includeInh
  * View model for the tier editor: every block grouped, with its effective
  * threshold and whether the creature overrides the world default.
  */
-export function buildTierMatrix(effectiveTiers, entryOverrides = {}, baseTiers = null) {
+export function buildTierMatrix(effectiveTiers, entryOverrides = {}, baseTiers = null, openedIn = () => "") {
   const base = baseTiers ?? resolveBlockTiers(getWorldBlockTiers(), null);
   return DISPLAY_GROUPS.map(group => {
     const blocks = DISPLAY_BLOCKS
@@ -71,6 +93,7 @@ export function buildTierMatrix(effectiveTiers, entryOverrides = {}, baseTiers =
       .map(block => {
         const tier = clampTier(effectiveTiers?.[block.key], block.tier);
         const definition = getTierDefinition(tier);
+        const openedElsewhere = openedIn(block.key);
         return {
           key: block.key,
           label: localize(block.label) || block.label,
@@ -82,7 +105,10 @@ export function buildTierMatrix(effectiveTiers, entryOverrides = {}, baseTiers =
           isNever: tier >= NEVER_TIER,
           isOverridden: Object.prototype.hasOwnProperty.call(entryOverrides ?? {}, block.key)
             && clampTier(entryOverrides[block.key], block.tier) !== clampTier(base[block.key], block.tier),
-          choices: localizedTierChoices(tier)
+          choices: localizedTierChoices(tier),
+          openedElsewhere: openedElsewhere
+            ? game.i18n.format("BESTIARY.Tier.OpenedElsewhere", { collection: openedElsewhere })
+            : ""
         };
       });
     return {

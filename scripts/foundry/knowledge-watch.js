@@ -1,10 +1,9 @@
 import { canViewCreature, selectEntryContext } from "../core/bestiary-domain.js";
 import { isNewToViewer, tierIncreases } from "../core/knowledge-progress.js";
-import { isBlockVisible } from "../core/research-model.js";
 import { log } from "../core/logger.js";
 import { getBestiaryData, getBestiaryKnowledge } from "./bestiary-store.js";
 import { getCreatureData } from "./creature-cache.js";
-import { getEntryBlockTiers } from "./creature-display.js";
+import { knowledgeLensFor } from "./creature-display.js";
 import { localize } from "./foundry-runtime.js";
 import { describeTier } from "./research.js";
 
@@ -42,14 +41,13 @@ export async function announceKnowledge() {
   const now = ownTiers();
   const rises = tierIncreases(lastTiers, now);
   lastTiers = now;
-  const data = getBestiaryData();
+  const snapshot = { data: getBestiaryData(), knowledge: getBestiaryKnowledge() };
   for (const { uuid, to } of rises) {
-    const context = selectEntryContext(data, uuid, game.user);
-    if (!context) continue;
+    if (!selectEntryContext(snapshot.data, uuid, game.user)) continue;
     let name = "";
     try {
       const creature = await getCreatureData(uuid);
-      if (creature && isBlockVisible("name", to, getEntryBlockTiers(context.entry))) name = creature.name;
+      if (creature && knowledgeLensFor(snapshot, game.user, uuid).knowsName) name = creature.name;
     } catch (error) {
       log.debug(`Could not read ${uuid} for a knowledge notice`, error);
     }
