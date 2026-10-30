@@ -40,6 +40,14 @@ Whoever a page is built for: the GM, one player, the GM previewing as a player, 
 **Party**:
 All players taken together, used for what may be posted publicly. The party knows a creature only as far as its least-informed player does.
 
+**Research roll** («Исследование»):
+A player's skill check to learn more about a creature. The GM's client judges it; a success raises the player's
+knowledge tier by one.
+_Avoid_: identification check, knowledge check
+
+**Research DC**:
+The difficulty of a research roll: set by the GM, or derived from the creature's CR.
+
 **Knowledge lens**:
 What one viewer knows about one creature: the viewer's knowledge tier read against the creature's reveal thresholds. Every page asks the lens what to show.
 _Avoid_: visibility check, show function

@@ -3,8 +3,10 @@ import {
   MAX_RESEARCH_TIER,
   MIN_RESEARCH_TIER,
   isGmTier,
-  itemTierKey
+  itemTierKey,
+  resolveCreatureResearch
 } from "../core/research-model.js";
+import { playerEntryContexts } from "../core/knowledge-lens.js";
 import {
   BESTIARY_COMMANDS,
   canViewCreature,
@@ -35,7 +37,6 @@ import {
   describeTier,
   isResearchRollEnabled,
   researchActors,
-  resolveResearchConfig,
   runResearchCheck,
   skillLabel
 } from "../foundry/research.js";
@@ -192,7 +193,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
         : describeTier(tier),
       tierSteps: buildTierSteps(tier),
 
-      research: this._buildResearchPanel(entry, creatureData, lens, locked, effective, !!previewUser),
+      research: this._buildResearchPanel(data, creatureData, lens, locked, effective, !!previewUser),
       knowledgeRoster: real.isGM ? buildKnowledgeRoster(knowledge, this.actorUuid) : [],
       partyTierOptions: localizedTierChoices(null, { includeNever: false }),
       shareEnabled: !real.isGM && isSharingEnabled() && !locked && tier > MIN_RESEARCH_TIER,
@@ -223,10 +224,11 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   }
 
   /** The research panel as `viewer` sees it; in a GM's preview it only shows, the player rolls themselves. */
-  _buildResearchPanel(entry, creature, lens, locked, viewer, isPreview) {
+  _buildResearchPanel(data, creature, lens, locked, viewer, isPreview) {
     if (viewer.isGM) return null;
     const { tier } = lens;
-    const config = resolveResearchConfig(entry, creature);
+    // The same check the GM judges the roll by, whichever collection the card was opened from.
+    const config = resolveCreatureResearch(playerEntryContexts(data, this.actorUuid).map(context => context.entry), creature);
     const knowsDc = lens.knowsDc(config);
     const knowsSkill = lens.knowsSkill(config);
     // Kept off the page: the roll uses it when the player cannot pick the skill themselves.
@@ -475,7 +477,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     this._researchPending = true;
     target.disabled = true;
     try {
-      await runResearchCheck({ uuid: this.actorUuid, sectionId: this.sectionId, actor, skill, event });
+      await runResearchCheck({ uuid: this.actorUuid, actor, skill, event });
     } catch (error) {
       reportCommandError(error);
     } finally {

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { enrichText, extractItemActivities, localizeConfigLabel } from "../scripts/integrations/dnd5e.js";
+import { enrichText, extractItemActivities, localizeConfigLabel, readResearchRoll } from "../scripts/integrations/dnd5e.js";
 
 globalThis.game = { i18n: { localize: key => key, has: () => false } };
 globalThis.CONFIG = { DND5E: { abilities: { dex: { abbreviation: "DEX" }, con: { abbreviation: "CON" } } } };
@@ -55,4 +55,19 @@ test("languages are named from dnd5e's nested catalogue, not shown as keys", () 
   assert.equal(localizeConfigLabel(languages, "goblin", "goblin"), "Goblin");
   assert.equal(localizeConfigLabel(languages, "druidic"), "Druidic");
   assert.equal(localizeConfigLabel(languages, "abyssal", "abyssal"), "abyssal", "an unknown key keeps its fallback");
+});
+
+test("a research roll is read from the dnd5e flags and the message itself", () => {
+  const message = {
+    author: { id: "p1" },
+    speaker: { actor: "hero" },
+    rolls: [{ total: 17 }],
+    timestamp: 42,
+    getFlag: (scope, key) => (scope === "dnd5e" && key === "roll" ? { type: "skill", skillId: "arc" } : undefined)
+  };
+  assert.deepEqual(readResearchRoll(message), {
+    authorId: "p1", actorId: "hero", isSkillCheck: true, skill: "arc", total: 17, at: 42
+  });
+  assert.equal(readResearchRoll(null), null);
+  assert.equal(readResearchRoll({ ...message, getFlag: () => ({ type: "attack" }) }).isSkillCheck, false);
 });

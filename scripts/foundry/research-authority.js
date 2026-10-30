@@ -7,85 +7,55 @@
  * — then computes the DC and the outcome itself from world data.
  */
 
-import {
-  BESTIARY_COMMANDS,
-  getUserTier,
-  normalizeBestiaryData,
-  normalizeKnowledge,
-  selectEntryContext
-} from "../core/bestiary-domain.js";
-import { MAX_RESEARCH_TIER, resolveResearchConfig } from "../core/research-model.js";
+import { BestiaryCommandError, normalizeBestiaryData, normalizeKnowledge } from "../core/bestiary-domain.js";
+import { judgeResearchRoll } from "../core/research-judge.js";
+import { readCreatureTraits, readResearchRoll, skillLabel } from "../integrations/dnd5e.js";
 import { knowledgeLensFor } from "./creature-display.js";
 import { localize } from "./foundry-runtime.js";
 
 const MODULE_ID = "bestiary-journal";
-const MESSAGE_MAX_AGE_MS = 10 * 60_000;
 const MESSAGE_WAIT_MS = 3_000;
 
-class ResearchRejection extends Error {
-  constructor(key, data = {}) {
-    super(key);
-    this.key = key;
-    this.data = data;
-  }
-}
-
+/**
+ * Reads the roll and the world for the judge (core/research-judge.js), spends the roll before the result is
+ * recorded, and posts the outcome once it is.
+ */
 export async function prepareResearchCommand(command, requester) {
-  if (game.settings.get(MODULE_ID, "researchRollEnabled") === false) {
-    throw new ResearchRejection("BESTIARY.Errors.ResearchDisabled");
-  }
   const uuid = String(command.uuid ?? "");
-  const data = normalizeBestiaryData(game.settings.get(MODULE_ID, "bestiaryData"));
-  const context = selectEntryContext(data, uuid, { id: requester.id, isGM: false }, command.sectionId ?? null);
-  if (!context) throw new ResearchRejection("BESTIARY.CreatureUnavailable");
-
-  const knowledge = normalizeKnowledge(game.settings.get(MODULE_ID, "bestiaryKnowledge"));
-  if (getUserTier(knowledge, requester.id, uuid) >= MAX_RESEARCH_TIER) {
-    throw new ResearchRejection("BESTIARY.Research.Complete");
-  }
-
   const message = await waitForMessage(String(command.messageId ?? ""));
   const research = message?.getFlag(MODULE_ID, "research");
-  const rollFlags = message?.getFlag("dnd5e", "roll");
-  const roll = message?.rolls?.[0];
-  const authorId = message?.author?.id ?? message?.user?.id ?? message?.author;
-  const actor = game.actors?.get(message?.speaker?.actor ?? "");
+  const read = readResearchRoll(message);
+  const actor = game.actors?.get(read?.actorId ?? "");
+  const data = normalizeBestiaryData(game.settings.get(MODULE_ID, "bestiaryData"));
+  const creature = await readCreatureDocument(uuid);
 
-  const valid = message
-    && authorId === requester.id
-    && research?.uuid === uuid
-    && !research.consumed
-    && rollFlags?.type === "skill"
-    && Date.now() - Number(message.timestamp ?? 0) < MESSAGE_MAX_AGE_MS
-    && actor?.testUserPermission?.(requester, "OWNER")
-    && Number.isFinite(Number(roll?.total));
-  if (!valid) throw new ResearchRejection("BESTIARY.Errors.ResearchUnverified");
+  const { command: recorded, config } = judgeResearchRoll({
+    requester,
+    uuid,
+    roll: read && {
+      ...read,
+      creatureUuid: research?.uuid,
+      consumed: !!research?.consumed,
+      ownedByRequester: !!actor?.testUserPermission?.(requester, "OWNER")
+    },
+    data,
+    knowledge: normalizeKnowledge(game.settings.get(MODULE_ID, "bestiaryKnowledge")),
+    creature,
+    settings: {
+      enabled: game.settings.get(MODULE_ID, "researchRollEnabled") !== false,
+      singleAttempt: game.settings.get(MODULE_ID, "researchSingleAttempt") === true
+    },
+    now: Date.now()
+  });
 
-  const creature = await readCreatureTraits(uuid);
-  const config = resolveResearchConfig(context.entry, creature);
-  const skill = String(rollFlags.skillId ?? "");
-  if (!config.skills.includes(skill)) throw new ResearchRejection("BESTIARY.Errors.ResearchSkill");
-
-  const total = Math.trunc(Number(roll.total));
-  const success = total >= config.dc;
   // Marked first: even if anything below fails, this roll is spent.
   await message.setFlag(MODULE_ID, "research", { ...research, consumed: true });
 
   return {
-    command: {
-      type: BESTIARY_COMMANDS.RECORD_RESEARCH,
-      uuid,
-      userId: requester.id,
-      isGM: false,
-      total,
-      dc: config.dc,
-      success,
-      skill,
-      singleAttempt: game.settings.get(MODULE_ID, "researchSingleAttempt") === true
-    },
+    command: recorded,
     finalize: async result => {
-      if (!result?.changed) throw new ResearchRejection("BESTIARY.Errors.ResearchNotRecorded");
-      await postOutcome({ message, actor, requester, uuid, data, creature, skill, total, config, success });
+      if (!result?.changed) throw new BestiaryCommandError("BESTIARY.Errors.ResearchNotRecorded");
+      await postOutcome({ message, actor, requester, uuid, data, creature, skill: recorded.skill, total: recorded.total, config, success: recorded.success });
     }
   };
 }
@@ -102,16 +72,11 @@ async function waitForMessage(messageId) {
   return message ?? null;
 }
 
-async function readCreatureTraits(uuid) {
+async function readCreatureDocument(uuid) {
   try {
-    const actor = await fromUuid(uuid);
-    return {
-      name: actor?.name ?? "",
-      cr: actor?.system?.details?.cr ?? 0,
-      creatureTypeKey: actor?.system?.details?.type?.value ?? ""
-    };
+    return readCreatureTraits(await fromUuid(uuid));
   } catch {
-    return { name: "", cr: 0, creatureTypeKey: "" };
+    return readCreatureTraits(null);
   }
 }
 
@@ -136,7 +101,7 @@ async function postOutcome({ message, actor, requester, uuid, data, creature, sk
   body.textContent = game.i18n.format(showsDc ? "BESTIARY.Research.ChatBody" : "BESTIARY.Research.ChatBodyNoDc", {
     actor: actor.name,
     creature: knowsName ? creature.name : localize("BESTIARY.Tier.UnknownName"),
-    skill: CONFIG.DND5E?.skills?.[skill]?.label ?? skill,
+    skill: skillLabel(skill),
     total,
     dc
   });

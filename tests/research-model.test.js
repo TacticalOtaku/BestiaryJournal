@@ -11,6 +11,7 @@ import {
   itemTierKey,
   requiredTierForItem,
   resolveBlockTiers,
+  resolveCreatureResearch,
   suggestResearchDc,
   suggestResearchSkill
 } from "../scripts/core/research-model.js";
@@ -84,4 +85,28 @@ test("suggested skill follows the creature type", () => {
   assert.equal(suggestResearchSkill("undead"), "rel");
   assert.equal(suggestResearchSkill("dragon"), "arc");
   assert.equal(suggestResearchSkill("unheard-of"), "nat");
+});
+
+test("a creature in several collections is researched at the lowest DC with every allowed skill", () => {
+  const creature = { cr: 4, creatureTypeKey: "beast" };
+  const config = resolveCreatureResearch([
+    { research: { dc: 18, skills: ["arc"] } },
+    { research: { dc: 12, skills: [] } }
+  ], creature);
+  assert.equal(config.dc, 12);
+  assert.equal(config.isDcExplicit, true);
+  assert.deepEqual(config.skills, ["arc", "nat"]);
+  assert.equal(config.isSkillsExplicit, false, "the derived skill would give the type away");
+});
+
+test("an automatic DC can be the lowest, and then it is not the GM's", () => {
+  const config = resolveCreatureResearch([{ research: { dc: 20 } }, { research: {} }], { cr: 1 });
+  assert.equal(config.dc, suggestResearchDc(1));
+  assert.equal(config.isDcExplicit, false);
+});
+
+test("skills count as the GM's only when every collection sets them", () => {
+  const config = resolveCreatureResearch([{ research: { skills: ["arc"] } }, { research: { skills: ["his"] } }], {});
+  assert.deepEqual(config.skills, ["arc", "his"]);
+  assert.equal(config.isSkillsExplicit, true);
 });

@@ -7,10 +7,12 @@
 - A card posted «for the party» in a world without players shows only the silhouette.
 - «Preview as» a player shows that player's collections and research panel (the roll stays theirs) instead of the GM's.
 - A refused action says why: a note in the GM channel, someone else's note, a creature the player cannot open. These used to do nothing without a word.
+- A creature in several collections has one research check: the lowest DC and every allowed skill among the collections the player sees. The collection a roll comes from no longer changes its DC.
 
 ### Fixed
 - The GM's library lists creatures whose actor was deleted, marked like in collections, so its count matches the collection covers.
 - A content block no tier reveals is marked «GM only» on the GM's card again.
+- The research result in chat names the skill in the module's own translation, as the card does.
 
 ## 0.4.0
 
