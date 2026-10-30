@@ -92,7 +92,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
   get title() {
     const section = getBestiaryData().sections.find(item => item.id === this.sectionId);
-    return (section && isSectionVisible(section, game.user.isGM) && section.name) || localize("BESTIARY.Title");
+    return (section && isSectionVisible(section, game.user) && section.name) || localize("BESTIARY.Title");
   }
 
   async _prepareContext() {
@@ -101,15 +101,15 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     const found = data.sections.find(item => item.id === this.sectionId);
     const isGM = game.user.isGM;
     // A collection hidden while a player had it open disappears for them too.
-    const section = found && isSectionVisible(found, isGM) ? found : null;
-    const visibleSections = selectVisibleSections(data, isGM);
+    const section = found && isSectionVisible(found, game.user) ? found : null;
+    const visibleSections = selectVisibleSections(data, game.user);
     const inputs = await rowInputs(visibleSections, { data, knowledge });
     const allSections = this._buildSectionNavigation(visibleSections, inputs);
 
     if (!section) return { creatures: [], groups: [], allSections, isGM, isEmpty: true, missing: true };
 
     const creatures = buildCreatureRows([section], inputs);
-    const families = selectVisibleFamilies(section, isGM);
+    const families = selectVisibleFamilies(section, game.user);
     const groups = buildFamilyGroups(section, families, creatures, isGM);
     const { typeOptions, sizeOptions } = buildFilterOptions(creatures);
 
@@ -296,7 +296,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     const isLocked = card.dataset.locked === "true";
     const data = getBestiaryData();
     const section = data.sections.find(item => item.id === this.sectionId);
-    const families = selectVisibleFamilies(section, true);
+    const families = selectVisibleFamilies(section, game.user);
 
     const items = [
       { name: localize("BESTIARY.ViewCreature"), icon: "fa-eye", callback: () => this._openCreatureByUuid(uuid) },

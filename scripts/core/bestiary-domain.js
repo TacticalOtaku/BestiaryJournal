@@ -5,6 +5,7 @@ import {
   clampKnownTier,
   clampTier
 } from "./research-model.js";
+import { importSnapshot } from "./snapshot-import.js";
 
 /**
  * Pure bestiary rules: normalization, selectors and the command reducer.
@@ -69,9 +70,9 @@ export class BestiaryCommandError extends Error {
   }
 }
 
-export const COMMENT_CHANNELS = Object.freeze(["gm", "private", "party"]);
-export const IMAGE_SOURCES = Object.freeze(["portrait", "token"]);
-export const IMAGE_FITS = Object.freeze(["auto", "contain", "cover"]);
+const COMMENT_CHANNELS = Object.freeze(["gm", "private", "party"]);
+const IMAGE_SOURCES = Object.freeze(["portrait", "token"]);
+const IMAGE_FITS = Object.freeze(["auto", "contain", "cover"]);
 
 // ── Normalization ──────────────────────────────────────────────────────────
 
@@ -113,7 +114,7 @@ function normalizeFamily(value, index = 0) {
   };
 }
 
-export function normalizeCreatureEntry(value) {
+function normalizeCreatureEntry(value) {
   const source = isObject(value) ? value : {};
   const image = isObject(source.image) ? source.image : {};
   const research = isObject(source.research) ? source.research : {};
@@ -224,21 +225,20 @@ export function createBestiaryState(sources = {}) {
 
 // ── Viewer helpers ─────────────────────────────────────────────────────────
 
-export function isGameMaster(viewer) {
-  if (typeof viewer === "boolean") return viewer;
+/** A viewer is always `{ id, isGM }` (a Foundry user will do), so the note rules always know who is asking. */
+function isGameMaster(viewer) {
   return !!viewer?.isGM;
 }
 
 function viewerId(viewer) {
-  if (typeof viewer === "boolean" || !viewer) return "";
-  return String(viewer.id ?? "");
+  return String(viewer?.id ?? "");
 }
 
 export function isSectionVisible(section, viewer) {
   return isGameMaster(viewer) || !section?.hidden;
 }
 
-export function isFamilyVisible(family, viewer) {
+function isFamilyVisible(family, viewer) {
   return isGameMaster(viewer) || !family?.hidden;
 }
 
@@ -267,11 +267,11 @@ export function selectVisibleCreatureEntries(section, viewer) {
     .filter(entry => isCreatureEntryVisible(entry, section, viewer));
 }
 
-export function findSection(data, sectionId) {
+function findSection(data, sectionId) {
   return data?.sections?.find(section => section.id === sectionId) ?? null;
 }
 
-export function findFamily(section, familyId) {
+function findFamily(section, familyId) {
   return section?.families?.find(family => family.id === familyId) ?? null;
 }
 
@@ -741,137 +741,10 @@ function handleMoveCreature(state, command, { now }) {
  * what is missing — see {@link planSnapshotImport} for how sections match.
  */
 function handleImportSnapshot(state, command, { now, generateId }) {
-  const incoming = prepareIncomingSections(command.payload, generateId);
-  if (!incoming.length) return TOUCHED_NONE;
-
-  if (command.mode === "replace") {
-    const kept = state.data.sections.filter(section => section.locked);
-    const keptIds = new Set(kept.map(section => section.id));
-    const keptNames = new Set(kept.map(section => section.name));
-    const replacements = incoming
-      .filter(section => !keptIds.has(section.id) && !keptNames.has(section.name))
-      .map(section => ({ ...section, updatedAt: now() }));
-    state.data.sections = [...kept, ...replacements];
-    return TOUCHED_DATA;
-  }
-
-  const { matches } = matchSnapshotSections(state.data.sections, incoming);
-  for (const section of incoming) {
-    const existing = matches.get(section);
-    if (!existing) {
-      const maxSort = state.data.sections.reduce((max, item) => Math.max(max, item.sort), 0);
-      const id = state.data.sections.some(item => item.id === section.id) ? generateId() : section.id;
-      state.data.sections.push({ ...section, id, sort: maxSort + 100, updatedAt: now() });
-      continue;
-    }
-    if (existing.locked) continue;
-    mergeSectionInto(existing, section, now);
-  }
+  const { sections, imported } = importSnapshot(state.data.sections, command.payload, command.mode, { now, generateId });
+  if (!imported) return TOUCHED_NONE;
+  state.data.sections = sections;
   return TOUCHED_DATA;
-}
-
-/**
- * Normalizes snapshot sections and repairs what a hand-edited or doubled
- * export can contain: missing or repeated ids, and the same creature twice.
- */
-function prepareIncomingSections(payload, generateId) {
-  const source = isObject(payload) ? payload : {};
-  const sections = normalizeBestiaryData({ sections: source.sections }).sections;
-  const seenIds = new Set();
-  return sections.map(section => {
-    const id = section.id && !seenIds.has(section.id) ? section.id : generateId();
-    seenIds.add(id);
-    const familyIds = new Set();
-    const families = section.families.map(family => {
-      const familyId = family.id && !familyIds.has(family.id) ? family.id : generateId();
-      familyIds.add(familyId);
-      return { ...family, id: familyId };
-    });
-    const uuids = new Set();
-    const creatures = section.creatures.filter(entry => {
-      if (!entry.uuid || uuids.has(entry.uuid)) return false;
-      uuids.add(entry.uuid);
-      return true;
-    });
-    return { ...section, id, families, creatures };
-  });
-}
-
-/**
- * Incoming sections match an existing one by id first; only an incoming
- * section without an id match falls back to a same-named collection, and
- * each existing collection absorbs at most one incoming section.
- */
-function matchSnapshotSections(existingSections, incoming) {
-  const matches = new Map();
-  const claimed = new Set();
-  for (const section of incoming) {
-    const byId = existingSections.find(item => item.id === section.id);
-    if (byId && !claimed.has(byId)) {
-      matches.set(section, byId);
-      claimed.add(byId);
-    }
-  }
-  for (const section of incoming) {
-    if (matches.has(section)) continue;
-    const byName = existingSections.find(item => !claimed.has(item) && item.name === section.name);
-    if (byName) {
-      matches.set(section, byName);
-      claimed.add(byName);
-    }
-  }
-  return { matches };
-}
-
-/** What an import would do, so the GM can confirm it before anything changes. */
-export function planSnapshotImport(data, payload, mode = "merge") {
-  const current = normalizeBestiaryData(data).sections;
-  let counter = 0;
-  const incoming = prepareIncomingSections(payload, () => `__preview${++counter}`);
-  const lockedNames = current.filter(section => section.locked).map(section => section.name);
-  if (mode === "replace") {
-    const kept = current.filter(section => section.locked);
-    return {
-      merged: [],
-      created: incoming
-        .filter(section => !kept.some(item => item.id === section.id || item.name === section.name))
-        .map(section => section.name),
-      removed: current.filter(section => !section.locked).map(section => section.name),
-      locked: lockedNames
-    };
-  }
-  const { matches } = matchSnapshotSections(current, incoming);
-  const plan = { merged: [], created: [], removed: [], locked: [] };
-  for (const section of incoming) {
-    const existing = matches.get(section);
-    if (!existing) plan.created.push(section.name);
-    else if (existing.locked) plan.locked.push(existing.name);
-    else plan.merged.push(existing.name);
-  }
-  return plan;
-}
-
-function mergeSectionInto(existing, incoming, now) {
-  const familyIdMap = new Map();
-  for (const family of incoming.families) {
-    const match = existing.families.find(item => item.id === family.id)
-      ?? existing.families.find(item => item.name === family.name);
-    if (match) {
-      familyIdMap.set(family.id, match.id);
-      continue;
-    }
-    familyIdMap.set(family.id, family.id);
-    existing.families.push({ ...family, updatedAt: now() });
-  }
-  for (const entry of incoming.creatures) {
-    if (existing.creatures.some(item => item.uuid === entry.uuid)) continue;
-    existing.creatures.push({
-      ...entry,
-      familyId: entry.familyId ? familyIdMap.get(entry.familyId) ?? null : null,
-      addedAt: entry.addedAt || now()
-    });
-  }
-  existing.updatedAt = now();
 }
 
 // ── Knowledge handlers ──

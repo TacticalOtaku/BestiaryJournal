@@ -53,8 +53,8 @@ test("normalizes pre-0.2 data without families or entry settings", () => {
 test("hidden families hide their creatures from players but not the GM", () => {
   const section = sectionFixture({ families: [{ id: "fam1", name: "Wolves", hidden: true }] });
   const normalized = normalizeBestiaryData({ sections: [section] }).sections[0];
-  assert.equal(selectVisibleCreatureEntries(normalized, false).length, 0);
-  assert.equal(selectVisibleCreatureEntries(normalized, true).length, 1);
+  assert.equal(selectVisibleCreatureEntries(normalized, { id: "p1", isGM: false }).length, 0);
+  assert.equal(selectVisibleCreatureEntries(normalized, { id: "gm", isGM: true }).length, 1);
 });
 
 test("deleting a family releases its creatures instead of removing them", () => {

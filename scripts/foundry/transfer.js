@@ -1,4 +1,5 @@
-import { BESTIARY_COMMANDS, planSnapshotImport } from "../core/bestiary-domain.js";
+import { BESTIARY_COMMANDS } from "../core/bestiary-domain.js";
+import { planSnapshotImport } from "../core/snapshot-import.js";
 import { getBestiaryData, getBestiaryState } from "./bestiary-store.js";
 import { runCommand } from "./command-feedback.js";
 import { formatCount, localize } from "./foundry-runtime.js";

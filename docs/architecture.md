@@ -11,7 +11,9 @@ scripts/
     research-model.js    knowledge tiers: blocks, thresholds, visibility of blocks and single items
     knowledge-lens.js    what one viewer (GM, player, party) knows of one creature; every page asks it
                          (thresholds across collections: docs/adr/0001)
-    bestiary-domain.js   normalisation, selectors, the command reducer (which also decides who may run a command)
+    bestiary-domain.js   normalisation, selectors, the command reducer (which also decides who may run a command);
+                         a viewer is always `{ id, isGM }`
+    snapshot-import.js   importing a bestiary snapshot, and the plan the GM confirms (the import run on a copy)
     display-names.js     splitting display names
     image-framing.js     image framing and focal point
     theme.js             window look rules: theme, accent and motion level with the OS and Foundry caps
