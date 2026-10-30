@@ -6,6 +6,9 @@
 - A creature in several collections shows players the same thing everywhere: each block and action opens at the lowest tier any of their collections sets. The GM's tier editor names the collection that opens a block earlier.
 - A card posted «for the party» in a world without players shows only the silhouette.
 
+### Fixed
+- The GM's library lists creatures whose actor was deleted, marked like in collections, so its count matches the collection covers.
+
 ## 0.4.0
 
 ### Added

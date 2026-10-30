@@ -1,5 +1,5 @@
 import { canViewCreature, selectEntryContext } from "../core/bestiary-domain.js";
-import { isNewToViewer, tierIncreases } from "../core/knowledge-progress.js";
+import { tierIncreases } from "../core/knowledge-progress.js";
 import { log } from "../core/logger.js";
 import { getBestiaryData, getBestiaryKnowledge } from "./bestiary-store.js";
 import { getCreatureData } from "./creature-cache.js";
@@ -56,12 +56,6 @@ export async function announceKnowledge() {
       tier: describeTier(to).label
     }));
   }
-}
-
-/** True while a player has not opened the creature since it appeared or since they last learned more. */
-export function isNewCreature(uuid, tier) {
-  if (game.user.isGM) return false;
-  return isNewToViewer(game.settings.get(MODULE_ID, "seenTiers")?.[uuid], tier);
 }
 
 /** Opening a creature's card clears its «new» mark until the player learns more. */

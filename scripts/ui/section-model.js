@@ -1,46 +1,8 @@
-import { selectVisibleCreatureEntries } from "../core/bestiary-domain.js";
-import { knowledgeLensFor } from "../foundry/creature-display.js";
 import { getCollapsedFamilies } from "../foundry/client-preferences.js";
-import { resolveShownEntries } from "../foundry/creature-cache.js";
-import { getPlayerUsers, localize } from "../foundry/foundry-runtime.js";
-import { isNewCreature } from "../foundry/knowledge-watch.js";
-import { describeTier } from "../foundry/research.js";
-import { buildCreatureCard, sortByKnownName } from "./creature-cards.js";
-import { buildPartyBadge } from "./knowledge-ui.js";
+import { localize } from "../foundry/foundry-runtime.js";
+import { UNGROUPED_ID, UNIDENTIFIED_ID } from "./creature-rows.js";
 
-/** What a collection window shows: its creatures as the viewer knows them, grouped by family. */
-
-export const UNGROUPED_ID = "__ungrouped__";
-/** Where a player sees creatures whose name they do not know: their family would hint at what they are. */
-export const UNIDENTIFIED_ID = "__unidentified__";
-
-export async function resolveSectionCreatures(section, { data, knowledge }, isGM) {
-  const players = isGM ? getPlayerUsers() : [];
-  const { entries, resolved } = await resolveShownEntries(selectVisibleCreatureEntries(section, isGM), isGM);
-
-  const creatures = entries.map(entry => {
-    const lens = knowledgeLensFor({ data, knowledge }, game.user, entry.uuid);
-    const card = buildCreatureCard({
-      uuid: entry.uuid,
-      entry,
-      creature: resolved.get(entry.uuid),
-      lens,
-      searchExtra: [section.name]
-    });
-    return {
-      ...card,
-      entry,
-      // Also the data-family-id on the card: the real family must not reach the page while the name is hidden.
-      familyId: !isGM && !card.knowsName ? UNIDENTIFIED_ID : entry.familyId ?? UNGROUPED_ID,
-      isHidden: !!entry.hidden,
-      isLocked: !!entry.locked || !!section.locked,
-      viewerTier: lens.tier,
-      isNew: isNewCreature(entry.uuid, lens.tier),
-      tierBadge: isGM ? buildPartyBadge(knowledge, entry.uuid, players) : describeTier(lens.tier)
-    };
-  });
-  return sortByKnownName(creatures);
-}
+/** What a collection window shows around its rows: family groups and the filter choices. */
 
 /** The family groups of a collection; a player sees only groups with creatures in them. */
 export function buildFamilyGroups(section, families, creatures, isGM) {

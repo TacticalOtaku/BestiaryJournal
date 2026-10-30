@@ -157,13 +157,14 @@
           </div>
           <div class="library-creature-grid is-search-grid">
             {{#each displayedCreatures}}
-              <article class="library-creature-card bestiary-spot {{#if this.isFavorite}}is-favorite{{/if}}" data-uuid="{{this.uuid}}" data-search-text="{{this.searchText}}" data-action="openCreature" draggable="true" tabindex="0">
+              <article class="library-creature-card bestiary-spot {{#if this.isFavorite}}is-favorite{{/if}} {{#if this.isMissing}}is-missing{{/if}}" data-uuid="{{this.uuid}}" data-search-text="{{this.searchText}}" data-action="openCreature" draggable="true" tabindex="0">
                 <div class="library-creature-image">
                 <div class="{{this.image.frameClass}}">
                   <img src="{{this.image.src}}" alt="{{this.name}}" style="{{this.image.imageStyle}}" loading="lazy" />
                 </div>
                 {{#if this.knowsCr}}<span class="creature-cr-chip">{{localize "BESTIARY.CRShort"}} {{this.crFormatted}}</span>{{/if}}
                 {{#if this.isNew}}<span class="bestiary-new-dot" data-tooltip="{{localize 'BESTIARY.Notice.New'}}" aria-label="{{localize 'BESTIARY.Notice.New'}}"></span>{{/if}}
+                {{#if this.isMissing}}<div class="creature-card-flags"><span class="suite-badge is-danger" data-tooltip="{{localize 'BESTIARY.MissingActor'}}" aria-label="{{localize 'BESTIARY.MissingActor'}}"><i class="fa-solid fa-triangle-exclamation"></i></span></div>{{/if}}
               </div>
                 <div class="library-creature-copy">
                 <h3 class="{{#unless this.knowsName}}is-unknown{{/unless}}" title="{{this.name}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h3>
@@ -195,7 +196,7 @@
             </div>
             <div class="recent-creature-strip bestiary-scrollable">
               {{#each recentCreatures}}
-                <article class="recent-creature-card bestiary-spot" data-uuid="{{this.uuid}}" data-action="openCreature" draggable="true" tabindex="0">
+                <article class="recent-creature-card bestiary-spot {{#if this.isMissing}}is-missing{{/if}}" data-uuid="{{this.uuid}}" data-action="openCreature" draggable="true" tabindex="0">
                   {{#if this.isNew}}<span class="bestiary-new-dot" data-tooltip="{{localize 'BESTIARY.Notice.New'}}" aria-label="{{localize 'BESTIARY.Notice.New'}}"></span>{{/if}}
                   <div class="{{this.image.frameClass}}">
                     <img src="{{this.image.src}}" alt="{{this.name}}" style="{{this.image.imageStyle}}" loading="lazy" />
@@ -222,13 +223,14 @@
         <section class="library-creature-results">
         <div class="library-creature-grid {{#unless isGrid}}is-list{{/unless}}">
           {{#each displayedCreatures}}
-            <article class="library-creature-card bestiary-spot {{#if this.isFavorite}}is-favorite{{/if}}" data-uuid="{{this.uuid}}" data-search-text="{{this.searchText}}" data-action="openCreature" draggable="true" tabindex="0">
+            <article class="library-creature-card bestiary-spot {{#if this.isFavorite}}is-favorite{{/if}} {{#if this.isMissing}}is-missing{{/if}}" data-uuid="{{this.uuid}}" data-search-text="{{this.searchText}}" data-action="openCreature" draggable="true" tabindex="0">
               <div class="library-creature-image">
                 <div class="{{this.image.frameClass}}">
                   <img src="{{this.image.src}}" alt="{{this.name}}" style="{{this.image.imageStyle}}" loading="lazy" />
                 </div>
                 {{#if this.knowsCr}}<span class="creature-cr-chip">{{localize "BESTIARY.CRShort"}} {{this.crFormatted}}</span>{{/if}}
                 {{#if this.isNew}}<span class="bestiary-new-dot" data-tooltip="{{localize 'BESTIARY.Notice.New'}}" aria-label="{{localize 'BESTIARY.Notice.New'}}"></span>{{/if}}
+                {{#if this.isMissing}}<div class="creature-card-flags"><span class="suite-badge is-danger" data-tooltip="{{localize 'BESTIARY.MissingActor'}}" aria-label="{{localize 'BESTIARY.MissingActor'}}"><i class="fa-solid fa-triangle-exclamation"></i></span></div>{{/if}}
               </div>
               <div class="library-creature-copy">
                 <h3 class="{{#unless this.knowsName}}is-unknown{{/unless}}" title="{{this.name}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h3>

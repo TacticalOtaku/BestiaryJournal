@@ -29,7 +29,8 @@ scripts/
     research.js, migrations.js, transfer.js, creature-cache.js, creature-display.js,
     client-preferences.js, command-feedback.js, knowledge-watch.js, encounter.js
   ui/                ApplicationV2 windows and view helpers: view-model preparation and DOM only
-    bestiary-app.js      the library; section-view.js a collection (its view model in section-model.js);
+    creature-rows.js     the creature rows of the library and of a collection, their count and progress
+    bestiary-app.js      the library; section-view.js a collection (family groups and filters in section-model.js);
     creature-view.js     a creature's card (its statblock in creature-statblock.js);
     knowledge-board.js   the GM's party knowledge table; api.js the public API (API.md)
 ```

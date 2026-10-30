@@ -325,26 +325,6 @@ export function getCreatureCollections(data, uuid, viewer) {
     }));
 }
 
-/** Flattens every visible entry of every section into one row per creature. */
-export function mergeCreatureEntries(sections, viewer) {
-  const entries = new Map();
-  for (const section of sections ?? []) {
-    for (const entry of selectVisibleCreatureEntries(section, viewer)) {
-      const current = entries.get(entry.uuid) ?? {
-        uuid: entry.uuid,
-        addedAt: 0,
-        label: entry.label,
-        collections: [],
-        entry
-      };
-      current.addedAt = Math.max(current.addedAt, entry.addedAt ?? 0);
-      current.collections.push(section.name);
-      entries.set(entry.uuid, current);
-    }
-  }
-  return [...entries.values()];
-}
-
 // ── Knowledge selectors ────────────────────────────────────────────────────
 
 export function getKnowledgeRecord(knowledge, userId, uuid) {
