@@ -10,6 +10,7 @@ import {
   canViewCreature,
   getCreatureCollections,
   getEntryContexts,
+  getKnowledgeRecord,
   getUserTier,
   isCreatureLocked,
   selectEntryContext
@@ -21,7 +22,6 @@ import {
   knowledgeLensFor,
   localizedTierChoices
 } from "../foundry/creature-display.js";
-import { buildImageView } from "../core/image-framing.js";
 import { postCreatureToChat } from "./creature-cards.js";
 import { buildCommentThreads, editComment, postComment, removeComment, toggleCommentPin } from "./comments.js";
 import {
@@ -53,14 +53,7 @@ import {
   resolveUuid
 } from "../foundry/foundry-runtime.js";
 import { BestiaryEntryEditor } from "./entry-editor.js";
-import {
-  buildBlockVisibility,
-  buildContentSections,
-  buildDamageDefenses,
-  buildStatEntries,
-  buildTierSteps,
-  decorateCreature
-} from "./creature-statblock.js";
+import { buildStatblock, buildTierSteps } from "./creature-statblock.js";
 import { animateDisclosure, playApplicationEntrance } from "./ui-effects.js";
 import { markSeen } from "../foundry/knowledge-watch.js";
 import { log } from "../core/logger.js";
@@ -161,44 +154,33 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const entry = context?.entry ?? { image: {}, research: {}, blockTiers: {}, itemTiers: {} };
 
     const lens = knowledgeLensFor({ data, knowledge }, effective, this.actorUuid);
-    const { tier, show } = lens;
+    const { tier } = lens;
     // A player opening the card has now seen what they know of it.
     if (!real.isGM) markSeen(this.actorUuid, tier).catch(error => log.warn("Could not mark a creature as seen", error));
 
-    const creature = decorateCreature(creatureData, show);
+    const statblock = buildStatblock(creatureData, lens, entry, {
+      // While previewing as a player, hidden content has to disappear the way it
+      // does for them — otherwise the preview is not a preview.
+      isGM: real.isGM && !previewUser,
+      expanded: { sections: this._expandedSections, items: this._expandedItems }
+    });
+    const { creature } = statblock;
     const locked = isCreatureLocked(data, this.actorUuid);
-    const stats = buildStatEntries(creature, lens);
-    // While previewing as a player, hidden content has to disappear the way it
-    // does for them — otherwise the preview is not a preview.
-    const contentSections = buildContentSections(
-      creature, lens, entry, real.isGM && !previewUser,
-      { sections: this._expandedSections, items: this._expandedItems }
-    );
-    const showBlock = buildBlockVisibility(creature, stats, show);
     const comments = await buildCommentThreads(social, this.actorUuid, real, { locked });
 
     this._title = creature.displayName;
 
     return {
       error: false,
-      creature,
-      image: buildImageView(entry, creature, { silhouette: !show("portrait") }),
-      ...stats,
-      contentSections,
-      showBlock,
-      showAbilities: show("abilities") && stats.abilityEntries.length > 0,
-      damageDefenses: buildDamageDefenses(creature, showBlock),
-      showDefenses: showBlock.resistances || showBlock.immunities || showBlock.vulnerabilities
-        || showBlock.damageModifications || showBlock.conditionImmunities,
-      showVitals: showBlock.ac || showBlock.hp || showBlock.cr || showBlock.xp,
-      hasContent: contentSections.length > 0,
-      isBlank: !showBlock.ac && !showBlock.hp && !show("abilities") && contentSections.length === 0,
+      ...statblock,
 
-      collections: getCreatureCollections(data, this.actorUuid, real)
-        .map(collection => (real.isGM || creature.knowsName ? collection : { ...collection, familyName: "" })),
+      collections: getCreatureCollections(data, this.actorUuid, effective)
+        .map(collection => (effective.isGM || creature.knowsName ? collection : { ...collection, familyName: "" })),
       locked,
       lockLabel: localize(locked ? "BESTIARY.Lock.Unlock" : "BESTIARY.Lock.Lock"),
       isGM: real.isGM,
+      // A GM previewing as a player sees that player's knowledge panel instead of the party roster.
+      showRoster: real.isGM && !previewUser,
       isPreviewing: !!previewUser,
       previewUserName: previewUser?.name ?? "",
       previewOptions: this._buildPreviewOptions(),
@@ -210,7 +192,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
         : describeTier(tier),
       tierSteps: buildTierSteps(tier),
 
-      research: this._buildResearchPanel(entry, creatureData, lens, locked),
+      research: this._buildResearchPanel(entry, creatureData, lens, locked, effective, !!previewUser),
       knowledgeRoster: real.isGM ? buildKnowledgeRoster(knowledge, this.actorUuid) : [],
       partyTierOptions: localizedTierChoices(null, { includeNever: false }),
       shareEnabled: !real.isGM && isSharingEnabled() && !locked && tier > MIN_RESEARCH_TIER,
@@ -240,17 +222,19 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     ];
   }
 
-  _buildResearchPanel(entry, creature, lens, locked) {
-    if (game.user.isGM) return null;
+  /** The research panel as `viewer` sees it; in a GM's preview it only shows, the player rolls themselves. */
+  _buildResearchPanel(entry, creature, lens, locked, viewer, isPreview) {
+    if (viewer.isGM) return null;
     const { tier } = lens;
     const config = resolveResearchConfig(entry, creature);
     const knowsDc = lens.knowsDc(config);
     const knowsSkill = lens.knowsSkill(config);
     // Kept off the page: the roll uses it when the player cannot pick the skill themselves.
     this._researchSkill = config.skills[0];
-    const record = getBestiaryKnowledge().users?.[game.user.id]?.[this.actorUuid] ?? null;
-    const actors = researchActors();
-    const canRoll = isResearchRollEnabled()
+    const record = getKnowledgeRecord(getBestiaryKnowledge(), viewer.id, this.actorUuid);
+    const actors = researchActors(game.users.get(viewer.id));
+    const canRoll = !isPreview
+      && isResearchRollEnabled()
       && !locked
       && tier < MAX_RESEARCH_TIER
       && !record?.blocked
@@ -267,6 +251,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       skillHidden: !knowsSkill,
       actors: actors.map(actor => ({ id: actor.id, name: actor.name, img: actor.img })),
       noActors: actors.length === 0,
+      isPreview,
       lastRoll: record?.lastRoll
         ? game.i18n.format(knowsDc ? "BESTIARY.Research.LastAttempt" : "BESTIARY.Research.LastAttemptNoDc", {
             total: record.lastRoll.total,

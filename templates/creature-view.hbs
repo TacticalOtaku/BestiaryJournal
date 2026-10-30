@@ -248,7 +248,7 @@
 
           <div class="rail-body bestiary-scrollable">
             {{#if isRailKnowledge}}
-              {{#if isGM}}
+              {{#if showRoster}}
                 <section class="rail-card">
                   <header class="party-assignment-heading"><h3>{{localize "BESTIARY.Knowledge.PartyTitle"}}</h3><p>{{localize "BESTIARY.Knowledge.PartyHint"}}</p></header>
                   <div class="party-quick-set">
@@ -313,6 +313,7 @@
                         <button type="button" class="suite-primary-button" data-action="runResearch" {{#unless research.canRoll}}disabled{{/unless}}>
                           <i class="fa-solid fa-dice-d20"></i>{{localize "BESTIARY.Research.Roll"}}
                         </button>
+                        {{#if research.isPreview}}<p class="rail-note"><i class="fa-solid fa-eye"></i>{{localize "BESTIARY.Research.PlayerRolls"}}</p>{{/if}}
                         {{#if research.noActors}}<p class="rail-note is-danger"><i class="fa-solid fa-user-slash"></i>{{localize "BESTIARY.Research.NoActor"}}</p>{{/if}}
                         {{#if research.lastRoll}}<p class="rail-note">{{research.lastRoll}}</p>{{/if}}
                         {{#if research.blocked}}<p class="rail-note is-danger"><i class="fa-solid fa-ban"></i>{{localize "BESTIARY.Research.Blocked"}}</p>{{/if}}

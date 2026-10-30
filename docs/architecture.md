@@ -31,7 +31,7 @@ scripts/
   ui/                ApplicationV2 windows and view helpers: view-model preparation and DOM only
     creature-rows.js     the creature rows of the library and of a collection, their count and progress
     bestiary-app.js      the library; section-view.js a collection (family groups and filters in section-model.js);
-    creature-view.js     a creature's card (its statblock in creature-statblock.js);
+    creature-view.js     a creature's card (its statblock, cut down to what the viewer knows, in creature-statblock.js);
     knowledge-board.js   the GM's party knowledge table; api.js the public API (API.md)
 ```
 
