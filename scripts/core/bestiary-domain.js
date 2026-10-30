@@ -60,6 +60,15 @@ export const PLAYER_COMMANDS = Object.freeze(new Set([
   BESTIARY_COMMANDS.DELETE_COMMENT
 ]));
 
+/** A command the authority refused, with a localisation key the requester shows in their own language. */
+export class BestiaryCommandError extends Error {
+  constructor(key, data = {}) {
+    super(key);
+    this.key = key;
+    this.data = data;
+  }
+}
+
 export const COMMENT_CHANNELS = Object.freeze(["gm", "private", "party"]);
 export const IMAGE_SOURCES = Object.freeze(["portrait", "token"]);
 export const IMAGE_FITS = Object.freeze(["auto", "contain", "cover"]);
@@ -358,10 +367,20 @@ export function selectComments(social, uuid, viewer) {
 
 // ── Command reducer ────────────────────────────────────────────────────────
 
+/**
+ * Applies one command as the user the store stamped on it (`userId`, `isGM`), and decides whether that user may
+ * run it at all: a refusal throws a BestiaryCommandError, while a command that finds nothing left to change (a
+ * note already deleted, a locked creature) changes nothing quietly. `sharingFacts()` describes the requester for
+ * the sharing rules and is read only when a player shares.
+ */
 export function applyBestiaryCommand(currentState, command, dependencies = {}) {
   const state = cloneState(currentState);
   const handler = COMMAND_HANDLERS[command?.type];
   if (!handler) throw new Error(`Unknown bestiary command: ${command?.type ?? "<empty>"}`);
+  if (!command.isGM && !PLAYER_COMMANDS.has(command.type)) throw new BestiaryCommandError("BESTIARY.Errors.GmOnly");
+  if (!command.isGM && command.type === BESTIARY_COMMANDS.SHARE_KNOWLEDGE) {
+    assertMayShare(dependencies.sharingFacts?.() ?? { allowed: true, mode: "always" });
+  }
 
   const context = {
     now: dependencies.now ?? Date.now,
@@ -375,6 +394,17 @@ export function applyBestiaryCommand(currentState, command, dependencies = {}) {
     if (changed[key]) state[key].revision += 1;
   }
   return { state, changed, changedAny: STORE_KEYS.some(key => changed[key]) };
+}
+
+function assertMayShare(facts) {
+  if (!facts.allowed) throw new BestiaryCommandError("BESTIARY.Errors.SharingDisabled");
+  const reason = sharingBlockReason(facts);
+  if (reason) throw new BestiaryCommandError(SHARING_BLOCK_KEYS[reason]);
+}
+
+/** Only a creature this user can actually open may be researched, shared or noted. */
+function assertMayView(data, uuid, userId, isGM) {
+  if (!canViewCreature(data, uuid, { id: userId, isGM })) throw new BestiaryCommandError("BESTIARY.Errors.NoAccess");
 }
 
 const TOUCHED_DATA = ["data"];
@@ -641,7 +671,6 @@ export function summarizeResearchTargets(targets) {
 }
 
 function handleBulkUpdateResearch(state, command, { now }) {
-  if (!command.isGM) throw new Error("Bulk research settings are reserved for the Game Master");
   const targets = selectResearchTargets(state.data, command);
   const patch = command.patch ?? {};
   const hasDc = Object.hasOwn(patch, "dc");
@@ -903,8 +932,7 @@ function handleRecordResearch(state, command, { now }) {
   const uuid = String(command.uuid ?? "");
   if (!userId || !uuid) return TOUCHED_NONE;
   if (isCreatureLocked(state.data, uuid)) return TOUCHED_NONE;
-  // Only a creature this user can actually open may be researched.
-  if (!canViewCreature(state.data, uuid, { id: userId, isGM: false })) return TOUCHED_NONE;
+  assertMayView(state.data, uuid, userId, false);
 
   const existing = getKnowledgeRecord(state.knowledge, userId, uuid);
   if (existing?.blocked) return TOUCHED_NONE;
@@ -943,7 +971,7 @@ function handleShareKnowledge(state, command, { now, isPlayerUser }) {
     .filter(id => id && id !== fromUserId && isPlayerUser(id));
   if (!fromUserId || !uuid || !targets.length) return TOUCHED_NONE;
   if (isCreatureLocked(state.data, uuid)) return TOUCHED_NONE;
-  if (!canViewCreature(state.data, uuid, { id: fromUserId, isGM: !!command.isGM })) return TOUCHED_NONE;
+  assertMayView(state.data, uuid, fromUserId, !!command.isGM);
 
   const senderTier = getUserTier(state.knowledge, fromUserId, uuid);
   if (senderTier <= MIN_RESEARCH_TIER) return TOUCHED_NONE;
@@ -978,10 +1006,10 @@ function handleAddComment(state, command, { now, generateId }) {
   if (isCreatureLocked(state.data, uuid)) return TOUCHED_NONE;
   // Notes belong to bestiary entries the author can open, nothing else.
   if (!getEntryContexts(state.data, uuid).length) return TOUCHED_NONE;
-  if (!canViewCreature(state.data, uuid, { id: authorId, isGM: !!command.isGM })) return TOUCHED_NONE;
+  assertMayView(state.data, uuid, authorId, !!command.isGM);
 
   const channel = COMMENT_CHANNELS.includes(command.channel) ? command.channel : "private";
-  if (channel === "gm" && !command.isGM) return TOUCHED_NONE;
+  if (channel === "gm" && !command.isGM) throw new BestiaryCommandError("BESTIARY.Errors.GmChannel");
 
   state.social.comments.push(normalizeComment({
     id: generateId(),
@@ -998,7 +1026,9 @@ function handleAddComment(state, command, { now, generateId }) {
 function handleUpdateComment(state, command, { now }) {
   const comment = state.social.comments.find(item => item.id === command.commentId);
   if (!comment || isCreatureLocked(state.data, comment.uuid)) return TOUCHED_NONE;
-  if (!canEditComment(comment, { id: command.userId, isGM: command.isGM })) return TOUCHED_NONE;
+  if (!canEditComment(comment, { id: command.userId, isGM: command.isGM })) {
+    throw new BestiaryCommandError("BESTIARY.Errors.NotYourNote");
+  }
 
   const patch = command.patch ?? {};
   let changed = false;
@@ -1020,15 +1050,16 @@ function handleUpdateComment(state, command, { now }) {
 function handleDeleteComment(state, command) {
   const comment = state.social.comments.find(item => item.id === command.commentId);
   if (!comment || isCreatureLocked(state.data, comment.uuid)) return TOUCHED_NONE;
-  if (!canEditComment(comment, { id: command.userId, isGM: command.isGM })) return TOUCHED_NONE;
+  if (!canEditComment(comment, { id: command.userId, isGM: command.isGM })) {
+    throw new BestiaryCommandError("BESTIARY.Errors.NotYourNote");
+  }
   state.social.comments = state.social.comments.filter(item => item.id !== command.commentId);
   return TOUCHED_SOCIAL;
 }
 
 function handleToggleCommentPin(state, command) {
   const comment = state.social.comments.find(item => item.id === command.commentId);
-  if (!comment || !command.isGM) return TOUCHED_NONE;
-  if (isCreatureLocked(state.data, comment.uuid)) return TOUCHED_NONE;
+  if (!comment || isCreatureLocked(state.data, comment.uuid)) return TOUCHED_NONE;
   comment.pinned = !comment.pinned;
   return TOUCHED_SOCIAL;
 }
@@ -1067,6 +1098,10 @@ function toArray(value) {
 // ── Sharing window ───────────────────────────────────────────────────────────
 
 export const SHARING_WINDOWS = Object.freeze(["always", "outOfCombat", "afterRest"]);
+export const SHARING_BLOCK_KEYS = Object.freeze({
+  inCombat: "BESTIARY.Share.InCombat",
+  needsRest: "BESTIARY.Share.NeedsRest"
+});
 
 /**
  * Why a player may not share right now, or null. Telling the party about a

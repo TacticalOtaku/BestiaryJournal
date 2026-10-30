@@ -481,6 +481,9 @@
       "ResearchSkill": "This skill cannot be used to research this creature.",
       "ResearchNotRecorded": "The roll was not counted: the creature is locked, blocked for you or already fully known.",
       "Unknown": "Something went wrong.",
+      "NoAccess": "This creature is not available to you.",
+      "GmChannel": "Only the GM can write in the GM channel.",
+      "NotYourNote": "This note is not yours.",
       "NameRequired": "Give it a name."
     },
     "Count": {

@@ -11,7 +11,7 @@ scripts/
     research-model.js    knowledge tiers: blocks, thresholds, visibility of blocks and single items
     knowledge-lens.js    what one viewer (GM, player, party) knows of one creature; every page asks it
                          (thresholds across collections: docs/adr/0001)
-    bestiary-domain.js   normalisation, selectors, the command reducer, rights for notes and sharing
+    bestiary-domain.js   normalisation, selectors, the command reducer (which also decides who may run a command)
     display-names.js     splitting display names
     image-framing.js     image framing and focal point
     theme.js             window look rules: theme, accent and motion level with the OS and Foundry caps
@@ -47,6 +47,12 @@ World state lives in three world settings so a note does not rewrite the whole s
 Changes are serialised through the authoritative active GM (`isAuthorityGm`). Player commands travel as a
 server-persisted user flag that the GM clears after handling, so replaying a request changes nothing. The socket
 message only names a request; it never carries authority by itself.
+
+Whether a user may run a command is decided in one place, the reducer (`applyBestiaryCommand`): GM-only commands,
+the sharing rules (from facts the store passes in) and the rights over creatures and notes. A refusal throws a
+`BestiaryCommandError` with a localisation key that reaches the requester; a command that finds nothing left to
+change (a note already deleted, a locked creature) changes nothing quietly. The store is transport only, and the
+authority's own commands take the same path as relayed ones.
 
 Research rolls are judged by the GM (`foundry/research-authority.js`): the chat message, the character's owner, the
 skill, freshness and single use are checked there; the player never reports a result.

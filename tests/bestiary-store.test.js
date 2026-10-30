@@ -127,3 +127,10 @@ test("a roll made by someone else's character is rejected", async () => {
   assert.equal(result.error, "BESTIARY.Errors.ResearchUnverified");
   assert.deepEqual(world.values.bestiaryKnowledge, {});
 });
+
+test("the reducer's refusal reaches the player in their own words", async () => {
+  const world = setupWorld();
+  const result = await world.send("r-gm-channel", { ...comment, channel: "gm" });
+  assert.equal(result.error, "BESTIARY.Errors.GmChannel");
+  assert.equal(world.values.bestiarySocial.comments, undefined);
+});

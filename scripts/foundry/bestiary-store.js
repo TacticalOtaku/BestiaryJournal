@@ -1,6 +1,6 @@
 import {
   BESTIARY_COMMANDS,
-  PLAYER_COMMANDS,
+  BestiaryCommandError,
   STORE_KEYS,
   applyBestiaryCommand,
   canViewCreature,
@@ -10,7 +10,7 @@ import {
   normalizeSocial
 } from "../core/bestiary-domain.js";
 import { prepareResearchCommand } from "./research-authority.js";
-import { sharingBlockKey } from "./sharing-window.js";
+import { sharingFacts } from "./sharing-window.js";
 import { log } from "../core/logger.js";
 
 const MODULE_ID = "bestiary-journal";
@@ -34,14 +34,7 @@ const COMMAND_PREPARERS = Object.freeze({
   [BESTIARY_COMMANDS.RECORD_RESEARCH]: prepareResearchCommand
 });
 
-/** A rejection the requester can show in their own language. */
-export class BestiaryCommandError extends Error {
-  constructor(key, data = {}) {
-    super(key);
-    this.key = key;
-    this.data = data;
-  }
-}
+export { BestiaryCommandError };
 
 let writeQueue = Promise.resolve();
 let remoteRequestQueue = Promise.resolve();
@@ -85,14 +78,12 @@ export function hasActiveAuthority() {
 /**
  * Every mutation funnels through the authoritative GM: they own the world
  * settings, so players (and secondary GMs) hand the command over by socket.
+ * Whether the user may run it is the reducer's call, on the authority.
  */
 export async function dispatchBestiaryCommand(command) {
-  if (!game.user?.isGM && !PLAYER_COMMANDS.has(command?.type)) {
-    throw new BestiaryCommandError("BESTIARY.Errors.GmOnly");
-  }
   const authority = getAuthorityGm();
   if (game.user?.isGM && (!authority || authority.id === game.user.id)) {
-    return enqueueCommand(stampCommand(command, game.user));
+    return applyAsAuthority(command, game.user);
   }
   if (!authority) throw new BestiaryCommandError("BESTIARY.NoActiveGm");
 
@@ -159,20 +150,7 @@ export async function handleBestiaryStoreSocket(message) {
   let result = null;
   let failure = null;
   try {
-    if (!requester.isGM && !PLAYER_COMMANDS.has(command.type)) {
-      throw new BestiaryCommandError("BESTIARY.Errors.GmOnly");
-    }
-    if (!requester.isGM && command.type === BESTIARY_COMMANDS.SHARE_KNOWLEDGE) {
-      if (!isSharingAllowed()) throw new BestiaryCommandError("BESTIARY.Errors.SharingDisabled");
-      const blocked = sharingBlockKey(requester);
-      if (blocked) throw new BestiaryCommandError(blocked);
-    }
-    const stamped = stampCommand(command, requester);
-    const prepared = COMMAND_PREPARERS[command.type]
-      ? await COMMAND_PREPARERS[command.type](stamped, requester)
-      : { command: stamped };
-    result = await enqueueCommand(prepared.command);
-    await prepared.finalize?.(result);
+    result = await applyAsAuthority(command, requester);
   } catch (error) {
     failure = error;
   }
@@ -216,6 +194,17 @@ function pruneHandledRequests() {
   }
 }
 
+/** The one path every command takes on the authority, its own commands included. */
+async function applyAsAuthority(command, requester) {
+  const stamped = stampCommand(command, requester);
+  const prepared = COMMAND_PREPARERS[command?.type]
+    ? await COMMAND_PREPARERS[command.type](stamped, requester)
+    : { command: stamped };
+  const result = await enqueueCommand(prepared.command, requester);
+  await prepared.finalize?.(result);
+  return result;
+}
+
 /**
  * The authority — not the sender — decides who the command acts as, so a
  * player can never write knowledge or comments in someone else's name.
@@ -229,12 +218,13 @@ function isPlayerUser(userId) {
   return !!user && !user.isGM;
 }
 
-async function enqueueCommand(command) {
+async function enqueueCommand(command, requester) {
   const operation = writeQueue.then(async () => {
     const current = createBestiaryState(getBestiaryState());
     const result = applyBestiaryCommand(current, command, {
       generateId: () => foundry.utils.randomID(16),
-      isPlayerUser
+      isPlayerUser,
+      sharingFacts: () => sharingFacts(requester)
     });
     if (!result.changedAny) return { changed: false };
 
@@ -269,14 +259,6 @@ function affectedUuids(command, before, after) {
     return comment ? [comment.uuid] : null;
   }
   return null;
-}
-
-function isSharingAllowed() {
-  try {
-    return game.settings.get(MODULE_ID, "allowPlayerSharing") !== false;
-  } catch {
-    return true;
-  }
 }
 
 function getAuthorityGm() {

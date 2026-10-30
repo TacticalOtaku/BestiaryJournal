@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   BESTIARY_COMMANDS,
+  PLAYER_COMMANDS,
   applyBestiaryCommand,
   canViewCreature,
   createBestiaryState,
@@ -239,11 +240,10 @@ test("comment channels reach exactly the intended readers", () => {
 
 test("a player cannot post into the GM channel", () => {
   const state = stateWith([sectionFixture()]);
-  const result = applyBestiaryCommand(state, {
+  assert.throws(() => applyBestiaryCommand(state, {
     type: BESTIARY_COMMANDS.ADD_COMMENT,
     uuid: "Actor.wolf", userId: "p1", channel: "gm", text: "sneaky", isGM: false
-  }, deps);
-  assert.equal(result.changedAny, false);
+  }, deps), { key: "BESTIARY.Errors.GmChannel" });
 });
 
 test("only the author or a GM may edit a comment", () => {
@@ -254,11 +254,10 @@ test("only the author or a GM may edit a comment", () => {
   }, deps).state;
   const commentId = state.social.comments[0].id;
 
-  const stranger = applyBestiaryCommand(state, {
+  assert.throws(() => applyBestiaryCommand(state, {
     type: BESTIARY_COMMANDS.UPDATE_COMMENT,
     commentId, userId: "p2", isGM: false, patch: { text: "hijacked" }
-  }, deps);
-  assert.equal(stranger.changedAny, false);
+  }, deps), { key: "BESTIARY.Errors.NotYourNote" });
 
   const author = applyBestiaryCommand(state, {
     type: BESTIARY_COMMANDS.UPDATE_COMMENT,
@@ -349,4 +348,77 @@ test("sharing waits for the end of a fight and, after a rest only when the world
   assert.equal(sharingBlockReason({ mode: "afterRest", inCombat: false, restedAt: 5, foughtAt: 9 }), "needsRest");
   assert.equal(sharingBlockReason({ mode: "afterRest", inCombat: false, restedAt: 10, foughtAt: 9 }), null);
   assert.equal(sharingBlockReason({ mode: "afterRest", inCombat: true, restedAt: 10, foughtAt: 9 }), "inCombat");
+});
+
+// ── Who may run a command ──
+
+const player = { userId: "p1", isGM: false };
+const share = { type: BESTIARY_COMMANDS.SHARE_KNOWLEDGE, uuid: "Actor.wolf", toUserIds: ["p2"], tier: 1 };
+const knowing = () => stateWith([sectionFixture()], {
+  knowledge: { users: { p1: { "Actor.wolf": { tier: 2 } } } }
+});
+const sharingAs = facts => ({ ...deps, isPlayerUser: () => true, sharingFacts: () => facts });
+
+test("a player running any GM command is refused, whatever the command", () => {
+  const state = stateWith([sectionFixture()]);
+  for (const type of Object.values(BESTIARY_COMMANDS).filter(type => !PLAYER_COMMANDS.has(type))) {
+    assert.throws(() => applyBestiaryCommand(state, { type, ...player }, deps), { key: "BESTIARY.Errors.GmOnly" }, type);
+  }
+});
+
+test("a player shares only while the world and the moment allow it", () => {
+  const command = { ...share, ...player };
+  assert.throws(() => applyBestiaryCommand(knowing(), command, sharingAs({ allowed: false, mode: "always" })),
+    { key: "BESTIARY.Errors.SharingDisabled" });
+  assert.throws(() => applyBestiaryCommand(knowing(), command, sharingAs({ allowed: true, mode: "outOfCombat", inCombat: true })),
+    { key: "BESTIARY.Share.InCombat" });
+  assert.throws(() => applyBestiaryCommand(knowing(), command, sharingAs({ allowed: true, mode: "afterRest", restedAt: 1, foughtAt: 2 })),
+    { key: "BESTIARY.Share.NeedsRest" });
+  const shared = applyBestiaryCommand(knowing(), command, sharingAs({ allowed: true, mode: "afterRest", restedAt: 3, foughtAt: 2 }));
+  assert.equal(getUserTier(shared.state.knowledge, "p2", "Actor.wolf"), 1);
+});
+
+test("the sharing rules bind players, not the GM", () => {
+  const gmShare = { ...share, userId: "gm", isGM: true };
+  let asked = false;
+  applyBestiaryCommand(knowing(), gmShare, { ...deps, sharingFacts: () => { asked = true; return { allowed: false }; } });
+  assert.equal(asked, false);
+});
+
+test("a player cannot delete someone else's note or pin one", () => {
+  let state = stateWith([sectionFixture()]);
+  state = applyBestiaryCommand(state, {
+    type: BESTIARY_COMMANDS.ADD_COMMENT, uuid: "Actor.wolf", userId: "p2", isGM: false, channel: "party", text: "theirs"
+  }, deps).state;
+  const commentId = state.social.comments[0].id;
+  assert.throws(() => applyBestiaryCommand(state, { type: BESTIARY_COMMANDS.DELETE_COMMENT, commentId, ...player }, deps),
+    { key: "BESTIARY.Errors.NotYourNote" });
+  assert.throws(() => applyBestiaryCommand(state, { type: BESTIARY_COMMANDS.TOGGLE_COMMENT_PIN, commentId, ...player }, deps),
+    { key: "BESTIARY.Errors.GmOnly" });
+});
+
+test("a player cannot research, share or note a creature they cannot open", () => {
+  const hidden = () => stateWith([sectionFixture({ creatures: [{ uuid: "Actor.wolf", hidden: true }] })], {
+    knowledge: { users: { p1: { "Actor.wolf": { tier: 2 } } } }
+  });
+  const commands = [
+    { type: BESTIARY_COMMANDS.RECORD_RESEARCH, uuid: "Actor.wolf", total: 20, dc: 10, success: true },
+    share,
+    { type: BESTIARY_COMMANDS.ADD_COMMENT, uuid: "Actor.wolf", channel: "party", text: "seen it" }
+  ];
+  for (const command of commands) {
+    assert.throws(() => applyBestiaryCommand(hidden(), { ...command, ...player }, sharingAs({ allowed: true, mode: "always" })),
+      { key: "BESTIARY.Errors.NoAccess" }, command.type);
+  }
+});
+
+test("a command that finds nothing left to change stays quiet", () => {
+  const gone = applyBestiaryCommand(stateWith([sectionFixture()]), {
+    type: BESTIARY_COMMANDS.DELETE_COMMENT, commentId: "deleted-meanwhile", ...player
+  }, deps);
+  assert.equal(gone.changedAny, false);
+  const locked = applyBestiaryCommand(stateWith([sectionFixture({ locked: true })]), {
+    type: BESTIARY_COMMANDS.ADD_COMMENT, uuid: "Actor.wolf", channel: "party", text: "too late", ...player
+  }, deps);
+  assert.equal(locked.changedAny, false);
 });

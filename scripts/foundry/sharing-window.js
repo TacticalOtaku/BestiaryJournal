@@ -1,11 +1,7 @@
-import { sharingBlockReason } from "../core/bestiary-domain.js";
+import { SHARING_BLOCK_KEYS, sharingBlockReason } from "../core/bestiary-domain.js";
 import { log } from "../core/logger.js";
 
 const MODULE_ID = "bestiary-journal";
-const REASON_KEYS = Object.freeze({
-  inCombat: "BESTIARY.Share.InCombat",
-  needsRest: "BESTIARY.Share.NeedsRest"
-});
 
 /** A started fight in which one of the user's characters takes part. */
 function isUserInCombat(user) {
@@ -13,16 +9,22 @@ function isUserInCombat(user) {
     && combat.combatants.some(combatant => combatant.players.some(player => player.id === user.id)));
 }
 
-/** Localisation key explaining why `user` may not share right now, or null. */
-export function sharingBlockKey(user = game.user) {
+/** What the sharing rules need to know about `user`; the reducer decides with them. */
+export function sharingFacts(user) {
   const clock = game.settings.get(MODULE_ID, "sharingClock")?.users?.[user.id] ?? {};
-  const reason = sharingBlockReason({
+  return {
+    allowed: game.settings.get(MODULE_ID, "allowPlayerSharing") !== false,
     mode: game.settings.get(MODULE_ID, "sharingWindow"),
     inCombat: isUserInCombat(user),
     restedAt: clock.restedAt,
     foughtAt: clock.foughtAt
-  });
-  return reason ? REASON_KEYS[reason] : null;
+  };
+}
+
+/** Localisation key explaining why `user` may not share right now, or null; the dialog asks before it opens. */
+export function sharingBlockKey(user = game.user) {
+  const reason = sharingBlockReason(sharingFacts(user));
+  return reason ? SHARING_BLOCK_KEYS[reason] : null;
 }
 
 let clockQueue = Promise.resolve();
