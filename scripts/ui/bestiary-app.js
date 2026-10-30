@@ -1,7 +1,5 @@
 import {
   BESTIARY_COMMANDS,
-  mergeCreatureEntries,
-  selectVisibleCreatureEntries,
   selectVisibleFamilies,
   selectVisibleSections
 } from "../core/bestiary-domain.js";
@@ -9,22 +7,14 @@ import { getBestiaryData, getBestiaryKnowledge, getBestiarySocial } from "../fou
 import { buildNotesFeed, selectPartyNotes } from "./comments.js";
 import { runCommand } from "../foundry/command-feedback.js";
 import {
-  getFavoriteCreatureUuids,
   getLibraryViewMode,
   setLibraryViewMode,
   toggleFavoriteCreature
 } from "../foundry/client-preferences.js";
-import { buildCreatureCard, sortByKnownName } from "./creature-cards.js";
-import { PARTY_VIEWER, viewerTier } from "../core/knowledge-lens.js";
-import { knowledgeLensFor } from "../foundry/creature-display.js";
-import { tierProgress } from "../core/knowledge-progress.js";
+import { buildCreatureRows, rowInputs, summarizeRows } from "./creature-rows.js";
 import { ACCENTS, DENSITIES, MOTION_LEVELS, THEMES } from "../core/theme.js";
-import { isNewCreature } from "../foundry/knowledge-watch.js";
-import { getCreatureDataMany, resolveShownEntries } from "../foundry/creature-cache.js";
-import { buildPartyBadge } from "./knowledge-ui.js";
 import { MIN_RESEARCH_TIER } from "../core/research-model.js";
-import { describeTier } from "../foundry/research.js";
-import { getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtime.js";
+import { localize, resolveUuid } from "../foundry/foundry-runtime.js";
 import { BestiaryTileEditor } from "./tile-editor.js";
 import { BestiarySectionView } from "./section-view.js";
 import { BestiaryTierSettings } from "./tier-settings.js";
@@ -83,8 +73,9 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const knowledge = getBestiaryKnowledge();
     const isGM = game.user.isGM;
     const visibleSections = selectVisibleSections(data, isGM);
-    const sections = await this._buildSectionCards(visibleSections, isGM, knowledge);
-    const creatures = await this._resolveLibraryCreatures(visibleSections, { data, knowledge }, isGM);
+    const inputs = await rowInputs(visibleSections, { data, knowledge });
+    const sections = this._buildSectionCards(visibleSections, inputs);
+    const creatures = buildCreatureRows(visibleSections, inputs);
     const byDate = [...creatures].sort((a, b) => b.addedAt - a.addedAt);
     const favoriteCreatures = byDate.filter(creature => creature.isFavorite);
     const displayed = {
@@ -144,26 +135,17 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return { icon: "fa-solid fa-dragon", title: "BESTIARY.Empty.LibraryTitle", hint: "BESTIARY.Empty.LibraryHintGM", action };
   }
 
-  _buildSectionCards(visibleSections, isGM, knowledge) {
-    const players = getPlayerUsers();
-    const viewer = isGM ? PARTY_VIEWER : game.user;
-    return Promise.all(visibleSections.map(async section => {
-      const { entries, resolved } = await resolveShownEntries(selectVisibleCreatureEntries(section, isGM), isGM);
+  _buildSectionCards(visibleSections, inputs) {
+    return visibleSections.map(section => {
+      const rows = buildCreatureRows([section], inputs);
       // A player sees their own progress; the GM sees the party's, at the tier every player has reached.
-      // A deleted actor the GM still sees is nothing to learn, so it stays out of the count.
-      const tiers = isGM && !players.length ? [] : entries.filter(entry => resolved.get(entry.uuid))
-        .map(entry => viewerTier(knowledge, viewer, entry.uuid, players));
-      const progress = tierProgress(tiers);
-      const families = selectVisibleFamilies(section, isGM);
-      const updatedAt = Math.max(
-        section.updatedAt ?? 0,
-        ...entries.map(entry => entry.addedAt ?? 0)
-      );
+      const { count, progress } = summarizeRows(rows);
+      const updatedAt = Math.max(section.updatedAt ?? 0, ...rows.map(row => row.addedAt));
       return {
         ...section,
-        creatureCount: entries.length,
-        familyCount: families.length,
-        progress: progress.total ? { ...progress, label: game.i18n.format("BESTIARY.Progress.Known", progress) } : null,
+        creatureCount: count,
+        familyCount: selectVisibleFamilies(section, inputs.viewer.isGM).length,
+        progress: progress ? { ...progress, label: game.i18n.format("BESTIARY.Progress.Known", progress) } : null,
         isHidden: !!section.hidden,
         isLocked: !!section.locked,
         searchText: section.name.toLocaleLowerCase(),
@@ -171,38 +153,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
           ? new Date(updatedAt).toLocaleDateString(game.i18n.lang)
           : ""
       };
-    }));
-  }
-
-  async _resolveLibraryCreatures(visibleSections, snapshot, isGM) {
-    const { knowledge } = snapshot;
-    const favorites = getFavoriteCreatureUuids();
-    const players = isGM ? getPlayerUsers() : [];
-    const merged = mergeCreatureEntries(visibleSections, isGM);
-    const resolved = await getCreatureDataMany(merged.map(item => item.uuid));
-    const creatures = [];
-
-    for (const item of merged) {
-      const creature = resolved.get(item.uuid);
-      if (!creature) continue;
-      const lens = knowledgeLensFor(snapshot, game.user, item.uuid);
-      creatures.push({
-        ...buildCreatureCard({
-          uuid: item.uuid,
-          entry: item.entry,
-          creature,
-          lens,
-          searchExtra: item.collections
-        }),
-        addedAt: item.addedAt,
-        collectionLabel: item.collections.join(", "),
-        isFavorite: favorites.has(item.uuid),
-        viewerTier: lens.tier,
-        isNew: isNewCreature(item.uuid, lens.tier),
-        tierBadge: isGM ? buildPartyBadge(knowledge, item.uuid, players) : describeTier(lens.tier)
-      });
-    }
-    return sortByKnownName(creatures);
+    });
   }
 
   // ── Rendering ──

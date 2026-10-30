@@ -117,7 +117,7 @@
                       <div class="creature-card-flags">
                         {{#if this.isHidden}}<span class="suite-badge is-warning"><i class="fa-solid fa-eye-slash"></i></span>{{/if}}
                         {{#if this.isLocked}}<span class="suite-badge is-locked"><i class="fa-solid fa-lock"></i></span>{{/if}}
-                        {{#if this.isMissing}}<span class="suite-badge is-danger"><i class="fa-solid fa-triangle-exclamation"></i></span>{{/if}}
+                        {{#if this.isMissing}}<span class="suite-badge is-danger" data-tooltip="{{localize 'BESTIARY.MissingActor'}}" aria-label="{{localize 'BESTIARY.MissingActor'}}"><i class="fa-solid fa-triangle-exclamation"></i></span>{{/if}}
                       </div>
                     </div>
                     <div class="collection-creature-copy">

@@ -8,12 +8,10 @@ import {
   createBestiaryState,
   isCreatureLocked,
   getUserTier,
-  mergeCreatureEntries,
   normalizeBestiaryData,
   selectComments,
   selectEntryContext,
   selectVisibleCreatureEntries,
-  selectVisibleSections,
   sharingBlockReason
 } from "../scripts/core/bestiary-domain.js";
 
@@ -287,7 +285,6 @@ test("a creature in several collections is read through the first one on display
   ]);
   const viewer = { id: "p1", isGM: false };
   assert.equal(selectEntryContext(state.data, "Actor.wolf", viewer).section.id, "sec2");
-  assert.equal(mergeCreatureEntries(selectVisibleSections(state.data, viewer), viewer)[0].entry.blockTiers.name, 3);
 });
 
 test("hidden entries stay out of a player's reach", () => {

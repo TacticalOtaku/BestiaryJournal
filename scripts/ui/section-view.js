@@ -1,7 +1,6 @@
 import {
   BESTIARY_COMMANDS,
   isSectionVisible,
-  selectVisibleCreatureEntries,
   selectVisibleFamilies,
   selectVisibleSections
 } from "../core/bestiary-domain.js";
@@ -13,18 +12,17 @@ import {
   toggleCollapsedFamily
 } from "../foundry/client-preferences.js";
 import { postCreatureToChat } from "./creature-cards.js";
-import { PARTY_VIEWER, viewerTier } from "../core/knowledge-lens.js";
-import { tierProgress } from "../core/knowledge-progress.js";
+import { PARTY_VIEWER } from "../core/knowledge-lens.js";
 import { BestiaryKnowledgeBoard } from "./knowledge-board.js";
-import { resolveShownEntries } from "../foundry/creature-cache.js";
-import { formatCount, getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtime.js";
+import { formatCount, localize, resolveUuid } from "../foundry/foundry-runtime.js";
 import { BestiaryTileEditor } from "./tile-editor.js";
 import { BestiaryEntryEditor } from "./entry-editor.js";
 import { BestiaryBulkImport } from "./bulk-import.js";
 import { BestiaryBulkResearch } from "./bulk-research.js";
 import { exportBestiary, exportCreatureEntry } from "../foundry/transfer.js";
 import { playApplicationEntrance, showContextMenu } from "./ui-effects.js";
-import { buildFamilyGroups, buildFilterOptions, resolveSectionCreatures, UNGROUPED_ID } from "./section-model.js";
+import { buildFamilyGroups, buildFilterOptions } from "./section-model.js";
+import { UNGROUPED_ID, buildCreatureRows, rowInputs, summarizeRows } from "./creature-rows.js";
 import { activeFilterCount, compareCollectionCards, matchesCollectionFilter } from "../core/collection-filter.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -104,11 +102,13 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     const isGM = game.user.isGM;
     // A collection hidden while a player had it open disappears for them too.
     const section = found && isSectionVisible(found, isGM) ? found : null;
-    const allSections = await this._buildSectionNavigation(data, isGM);
+    const visibleSections = selectVisibleSections(data, isGM);
+    const inputs = await rowInputs(visibleSections, { data, knowledge });
+    const allSections = this._buildSectionNavigation(visibleSections, inputs);
 
     if (!section) return { creatures: [], groups: [], allSections, isGM, isEmpty: true, missing: true };
 
-    const creatures = await resolveSectionCreatures(section, { data, knowledge }, isGM);
+    const creatures = buildCreatureRows([section], inputs);
     const families = selectVisibleFamilies(section, isGM);
     const groups = buildFamilyGroups(section, families, creatures, isGM);
     const { typeOptions, sizeOptions } = buildFilterOptions(creatures);
@@ -128,7 +128,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       sectionImage: section.image,
       sectionLocked: !!section.locked,
       resultCount: creatures.length,
-      progressLabel: this._progressLabel(creatures, isGM, knowledge),
+      progressLabel: this._progressLabel(creatures),
       viewMode: this._viewMode,
       isGrid: this._viewMode === "grid",
       filtersOpen: this._filtersOpen,
@@ -137,20 +137,17 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
   }
 
   /** «изучено 3 из 8»: the player's own, or for the GM the party's (the tier every player has reached). */
-  _progressLabel(creatures, isGM, knowledge) {
-    const players = getPlayerUsers();
-    if (isGM && !players.length) return "";
-    const progress = tierProgress(creatures.filter(creature => !creature.isMissing)
-      .map(creature => (isGM ? viewerTier(knowledge, PARTY_VIEWER, creature.uuid, players) : creature.viewerTier)));
-    return progress.total ? game.i18n.format("BESTIARY.Progress.Known", progress) : "";
+  _progressLabel(creatures) {
+    const { progress } = summarizeRows(creatures);
+    return progress ? game.i18n.format("BESTIARY.Progress.Known", progress) : "";
   }
 
-  _buildSectionNavigation(data, isGM) {
-    return Promise.all(selectVisibleSections(data, isGM).map(async section => ({
+  _buildSectionNavigation(visibleSections, inputs) {
+    return visibleSections.map(section => ({
       ...section,
-      creatureCount: (await resolveShownEntries(selectVisibleCreatureEntries(section, isGM), isGM)).entries.length,
+      creatureCount: buildCreatureRows([section], inputs).length,
       isActive: section.id === this.sectionId
-    })));
+    }));
   }
 
   // ── Rendering ──

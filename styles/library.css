@@ -98,6 +98,7 @@
 .library-creature-card { display: grid; grid-template-rows: auto auto auto; overflow: hidden; border: 1px solid var(--suite-border); border-radius: var(--suite-radius); background: var(--suite-surface); box-shadow: var(--suite-shadow-card); cursor: pointer; transition: transform var(--suite-normal) var(--suite-ease), border-color var(--suite-fast); }
 .library-creature-card:hover { transform: translateY(-3px); border-color: var(--suite-border-strong); }
 .library-creature-image { position: relative; aspect-ratio: 4 / 3; }
+.library-creature-card.is-missing, .recent-creature-card.is-missing { border-style: dashed; border-color: var(--suite-danger); }
 .library-creature-image .bestiary-frame { position: absolute; inset: 0; }
 .library-creature-copy { padding: 11px 13px 4px; }
 .library-creature-copy h3 { font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
