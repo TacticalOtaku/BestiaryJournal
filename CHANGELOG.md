@@ -6,6 +6,7 @@
 - A creature in several collections shows players the same thing everywhere: each block and action opens at the lowest tier any of their collections sets. The GM's tier editor names the collection that opens a block earlier.
 - A card posted «for the party» in a world without players shows only the silhouette.
 - «Preview as» a player shows that player's collections and research panel (the roll stays theirs) instead of the GM's.
+- A refused action says why: a note in the GM channel, someone else's note, a creature the player cannot open. These used to do nothing without a word.
 
 ### Fixed
 - The GM's library lists creatures whose actor was deleted, marked like in collections, so its count matches the collection covers.
