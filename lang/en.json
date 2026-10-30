@@ -172,6 +172,7 @@
       "SkillsAuto": "Automatic right now: {skill}.",
       "LastAttemptNoDc": "Last attempt: {total}",
       "ChatBodyNoDc": "{actor} recalls what they know about {creature}: {skill} — {total}.",
+      "PlayerRolls": "The player rolls this themselves.",
       "SkillHidden": "The skill depends on what the creature is; it is picked for you."
     },
     "Share": {

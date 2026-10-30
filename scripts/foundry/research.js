@@ -31,11 +31,11 @@ export function isResearchRollEnabled() {
   return game.settings.get(MODULE_ID, "researchRollEnabled") !== false;
 }
 
-/** Characters the current user may roll with. */
-export function researchActors() {
+/** Characters `user` may roll with. */
+export function researchActors(user = game.user) {
   const owned = game.actors?.filter?.(actor =>
-    actor.type === "character" && actor.testUserPermission(game.user, "OWNER")) ?? [];
-  const assigned = game.user?.character;
+    actor.type === "character" && actor.testUserPermission(user, "OWNER")) ?? [];
+  const assigned = user?.character;
   if (assigned && !owned.some(actor => actor.id === assigned.id)) owned.unshift(assigned);
   return owned;
 }

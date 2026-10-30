@@ -172,6 +172,7 @@
       "SkillsAuto": "Сейчас автоматически: {skill}.",
       "LastAttemptNoDc": "Последняя попытка: {total}",
       "ChatBodyNoDc": "{actor} вспоминает всё о существе «{creature}»: {skill} — {total}.",
+      "PlayerRolls": "Бросает сам игрок.",
       "SkillHidden": "Навык зависит от того, что это за существо, — он подберётся сам."
     },
     "Share": {
