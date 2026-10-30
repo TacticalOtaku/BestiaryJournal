@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.1
 
 ### Changed
 - A creature in several collections shows players the same thing everywhere: each block and action opens at the lowest tier any of their collections sets. The GM's tier editor names the collection that opens a block earlier.
@@ -13,6 +13,13 @@
 - The GM's library lists creatures whose actor was deleted, marked like in collections, so its count matches the collection covers.
 - A content block no tier reveals is marked «GM only» on the GM's card again.
 - The research result in chat names the skill in the module's own translation, as the card does.
+
+### Development
+- What a viewer knows of a creature is one module, the knowledge lens (`core/knowledge-lens.js`); every page asks it. Reveal thresholds and the research check of a creature in several collections resolve to the most lenient one the player can see (`docs/adr/0001`, `docs/adr/0002`).
+- The library and collection rows come from one module (`ui/creature-rows.js`), and the creature card passes on only the fields of blocks the viewer knows (a whitelist in `ui/creature-statblock.js`).
+- The reducer decides who may run a command; the store is transport only. A research roll is judged by a pure function (`core/research-judge.js`), and dnd5e is read only through `integrations/dnd5e.js`.
+- Snapshot import has its own module (`core/snapshot-import.js`); the plan the GM confirms is the import run on a copy.
+- `GLOSSARY.md` and `docs/adr/` record the domain terms and the decisions behind them.
 
 ## 0.4.0
 

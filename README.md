@@ -1,7 +1,7 @@
 ﻿# 📖 Bestiary Journal — Модуль бестиария для Foundry VTT
 
 ![Foundry VTT](https://img.shields.io/badge/Foundry_VTT-v14.367-green?style=flat-square)
-![Version](https://img.shields.io/badge/version-0.4.0-orange?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.4.1-orange?style=flat-square)
 ![D&D 5e](https://img.shields.io/badge/D%26D_5e-v5.3.3-red?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
 
