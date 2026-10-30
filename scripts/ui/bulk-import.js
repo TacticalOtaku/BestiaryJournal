@@ -69,7 +69,7 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
       sectionName: section?.name ?? "",
       families: [
         { id: "", name: localize("BESTIARY.Families.None"), selected: !this.familyId },
-        ...selectVisibleFamilies(section, true).map(family => ({
+        ...selectVisibleFamilies(section, game.user).map(family => ({
           id: family.id,
           name: family.name,
           selected: family.id === this.familyId

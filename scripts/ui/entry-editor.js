@@ -71,7 +71,7 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
       sectionName: section?.name ?? "",
       families: [
         { id: "", name: game.i18n.localize("BESTIARY.Families.None"), selected: !this._draft.familyId },
-        ...selectVisibleFamilies(section, true).map(family => ({
+        ...selectVisibleFamilies(section, game.user).map(family => ({
           id: family.id,
           name: family.name,
           selected: family.id === this._draft.familyId

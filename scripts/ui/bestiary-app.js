@@ -72,7 +72,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const data = getBestiaryData();
     const knowledge = getBestiaryKnowledge();
     const isGM = game.user.isGM;
-    const visibleSections = selectVisibleSections(data, isGM);
+    const visibleSections = selectVisibleSections(data, game.user);
     const inputs = await rowInputs(visibleSections, { data, knowledge });
     const sections = this._buildSectionCards(visibleSections, inputs);
     const creatures = buildCreatureRows(visibleSections, inputs);
@@ -144,7 +144,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       return {
         ...section,
         creatureCount: count,
-        familyCount: selectVisibleFamilies(section, inputs.viewer.isGM).length,
+        familyCount: selectVisibleFamilies(section, inputs.viewer).length,
         progress: progress ? { ...progress, label: game.i18n.format("BESTIARY.Progress.Known", progress) } : null,
         isHidden: !!section.hidden,
         isLocked: !!section.locked,
