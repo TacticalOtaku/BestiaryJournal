@@ -1,23 +1,16 @@
 import {
   MAX_RESEARCH_TIER,
   RESEARCH_SKILLS,
-  getTierDefinition,
-  resolveResearchConfig
+  getTierDefinition
 } from "../core/research-model.js";
 import { BESTIARY_COMMANDS } from "../core/bestiary-domain.js";
 import { BestiaryCommandError, dispatchBestiaryCommand, hasActiveAuthority } from "./bestiary-store.js";
-import { getDnd5eConfig, localize } from "./foundry-runtime.js";
+import { localize } from "./foundry-runtime.js";
+import { skillLabel } from "../integrations/dnd5e.js";
 
 const MODULE_ID = "bestiary-journal";
 
-export { resolveResearchConfig };
-
-export function skillLabel(skill) {
-  const config = getDnd5eConfig().skills?.[skill];
-  const moduleKey = `BESTIARY.Data.Skills.${skill}`;
-  if (game.i18n.has?.(moduleKey)) return localize(moduleKey);
-  return config?.label ?? skill;
-}
+export { skillLabel };
 
 export function researchSkillOptions(selected = []) {
   return RESEARCH_SKILLS.map(skill => ({
@@ -47,7 +40,7 @@ export function researchActors(user = game.user) {
  *
  * @returns {Promise<boolean>} whether a roll was submitted
  */
-export async function runResearchCheck({ uuid, sectionId, actor, skill, event }) {
+export async function runResearchCheck({ uuid, actor, skill, event }) {
   if (!actor) {
     ui.notifications.warn(localize("BESTIARY.Research.NoActor"));
     return false;
@@ -56,7 +49,7 @@ export async function runResearchCheck({ uuid, sectionId, actor, skill, event })
   if (!hasActiveAuthority()) throw new BestiaryCommandError("BESTIARY.NoActiveGm");
 
   const rolls = await actor.rollSkill({ skill, event }, {}, {
-    data: { flags: { [MODULE_ID]: { research: { uuid, sectionId: sectionId ?? null } } } }
+    data: { flags: { [MODULE_ID]: { research: { uuid } } } }
   });
   const message = rolls?.[0]?.parent;
   if (!rolls?.length) return false; // The player closed the roll dialog.
@@ -68,7 +61,6 @@ export async function runResearchCheck({ uuid, sectionId, actor, skill, event })
   await dispatchBestiaryCommand({
     type: BESTIARY_COMMANDS.RECORD_RESEARCH,
     uuid,
-    sectionId: sectionId ?? null,
     messageId: message.id
   });
   return true;

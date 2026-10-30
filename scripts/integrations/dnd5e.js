@@ -639,6 +639,39 @@ export function localizeDndLabel(category, config, key, fallback = "") {
   return localizeConfigLabel(config, key, fallback);
 }
 
+/** A skill's name, with the module's own translation when dnd5e has none for this language. */
+export function skillLabel(skill) {
+  return localizeDndLabel("Skills", getDnd5eConfig().skills, skill, skill);
+}
+
+// ── Research ──
+
+/** Index fields that `readCreatureTraits` needs from a compendium record. */
+export const CREATURE_TRAIT_FIELDS = Object.freeze(["system.details.cr", "system.details.type.value"]);
+
+/** What research needs to know about a creature: an actor, or a compendium index record with CREATURE_TRAIT_FIELDS. */
+export function readCreatureTraits(source) {
+  return {
+    name: source?.name ?? "",
+    cr: source?.system?.details?.cr ?? 0,
+    creatureTypeKey: source?.system?.details?.type?.value ?? ""
+  };
+}
+
+/** What a chat message says about the roll in it, as far as judging a research roll goes; null without a message. */
+export function readResearchRoll(message) {
+  if (!message) return null;
+  const roll = message.getFlag?.("dnd5e", "roll");
+  return {
+    authorId: message.author?.id ?? message.user?.id ?? message.author ?? null,
+    actorId: message.speaker?.actor ?? "",
+    isSkillCheck: roll?.type === "skill",
+    skill: String(roll?.skillId ?? ""),
+    total: Number(message.rolls?.[0]?.total),
+    at: Number(message.timestamp ?? 0)
+  };
+}
+
 export function formatMod(mod) { return mod >= 0 ? `+${mod}` : `${mod}`; }
 
 export function formatCR(cr) {

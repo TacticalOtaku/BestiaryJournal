@@ -1,7 +1,7 @@
 import { BESTIARY_COMMANDS, selectVisibleFamilies } from "../core/bestiary-domain.js";
 import { getBestiaryData } from "../foundry/bestiary-store.js";
 import { runCommand } from "../foundry/command-feedback.js";
-import { formatCR } from "../integrations/dnd5e.js";
+import { CREATURE_TRAIT_FIELDS, formatCR, readCreatureTraits } from "../integrations/dnd5e.js";
 import { localize } from "../foundry/foundry-runtime.js";
 import { playApplicationEntrance } from "./ui-effects.js";
 import { log } from "../core/logger.js";
@@ -126,8 +126,7 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
         uuid: actor.uuid,
         name: actor.name,
         img: actor.img,
-        cr: actor.system?.details?.cr ?? 0,
-        typeKey: actor.system?.details?.type?.value ?? "",
+        ...creatureTraits(actor),
         folder: actor.folder?.name ?? ""
       }));
   }
@@ -136,7 +135,7 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
     const pack = game.packs?.get(packId);
     if (!pack) return [];
     const index = await pack.getIndex({
-      fields: ["img", "system.details.cr", "system.details.type.value", "type"]
+      fields: ["img", ...CREATURE_TRAIT_FIELDS, "type"]
     });
     return [...index]
       .filter(record => (record.type ?? "npc") === "npc")
@@ -144,8 +143,7 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
         uuid: `Compendium.${packId}.Actor.${record._id}`,
         name: record.name,
         img: record.img || "icons/svg/mystery-man.svg",
-        cr: record.system?.details?.cr ?? 0,
-        typeKey: record.system?.details?.type?.value ?? "",
+        ...creatureTraits(record),
         folder: pack.metadata.label
       }));
   }
@@ -312,4 +310,10 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
     }
     return copied;
   }
+}
+
+/** CR and type of an actor or a compendium index record, read through the dnd5e integration. */
+function creatureTraits(source) {
+  const { cr, creatureTypeKey } = readCreatureTraits(source);
+  return { cr, typeKey: creatureTypeKey };
 }

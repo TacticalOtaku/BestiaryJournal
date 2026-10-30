@@ -207,3 +207,19 @@ export function resolveResearchConfig(entry, creature) {
     isSkillsExplicit: explicit.length > 0
   };
 }
+
+/**
+ * The research check of a creature that sits in several collections: the lowest DC and every allowed skill among
+ * the entries the player can see (docs/adr/0002). The skills count as set by the GM only when every entry sets
+ * them, since a skill derived from the type would give the type away.
+ */
+export function resolveCreatureResearch(entries, creature) {
+  const configs = (entries.length ? entries : [null]).map(entry => resolveResearchConfig(entry, creature));
+  const easiest = configs.reduce((lowest, config) => (config.dc < lowest.dc ? config : lowest));
+  return {
+    dc: easiest.dc,
+    isDcExplicit: easiest.isDcExplicit,
+    skills: [...new Set(configs.flatMap(config => config.skills))],
+    isSkillsExplicit: configs.every(config => config.isSkillsExplicit)
+  };
+}

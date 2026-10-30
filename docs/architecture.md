@@ -54,8 +54,10 @@ the sharing rules (from facts the store passes in) and the rights over creatures
 change (a note already deleted, a locked creature) changes nothing quietly. The store is transport only, and the
 authority's own commands take the same path as relayed ones.
 
-Research rolls are judged by the GM (`foundry/research-authority.js`): the chat message, the character's owner, the
-skill, freshness and single use are checked there; the player never reports a result.
+Research rolls are judged by the GM: `foundry/research-authority.js` reads the chat message (through
+`integrations/dnd5e.js`) and the world, and the pure `core/research-judge.js` decides — the message's author, the
+character's owner, the skill, freshness and single use, then the DC; the player never reports a result. The DC and
+skills of a creature in several collections resolve like reveal thresholds (`docs/adr/0002`).
 
 ## Window look
 
