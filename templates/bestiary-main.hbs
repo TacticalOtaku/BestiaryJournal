@@ -118,10 +118,11 @@
           <div class="collection-grid">
             {{#each sections}}
               <article class="collection-card {{#if this.isHidden}}is-hidden{{/if}} {{#if this.isLocked}}is-locked{{/if}}"
-                       data-section-id="{{this.id}}" data-hidden="{{this.isHidden}}" data-locked="{{this.isLocked}}"
+                       data-art-interaction data-section-id="{{this.id}}" data-hidden="{{this.isHidden}}" data-locked="{{this.isLocked}}"
                        data-search-text="{{this.searchText}}" data-action="openSection" tabindex="0">
-                {{#if this.image}}<img src="{{this.image}}" alt="{{this.name}}" loading="lazy" />
-                <div class="collection-scrim"></div>{{else}}<span class="collection-card-placeholder" aria-hidden="true"><i class="fa-solid fa-book-skull"></i></span>{{/if}}
+                {{#if this.image}}
+                  <div class="collection-cover bestiary-art"><img src="{{this.image}}" alt="{{this.name}}" loading="lazy" /></div>
+                {{else}}<span class="collection-card-placeholder collection-cover" aria-hidden="true"><i class="fa-solid fa-book-skull"></i></span>{{/if}}
                 <div class="collection-card-copy">
                   <h3 title="{{this.name}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h3>
                   <p>

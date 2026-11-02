@@ -215,6 +215,10 @@
       "CancelEdit": "Cancel"
     },
     "Lock": {
+      "LockEntry": "Lock this entry",
+      "UnlockEntry": "Unlock this entry",
+      "CollectionLocked": "This collection is locked; unlock it in the library.",
+      "InheritedLock": "The creature remains locked by another collection or entry.",
       "Lock": "Lock",
       "Unlock": "Unlock",
       "Locked": "Sheet locked",

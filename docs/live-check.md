@@ -39,3 +39,17 @@ Two users: a GM and a player, each in their own browser. Watch the console of bo
 - **API.** The calls in `API.md` from a macro, as GM and as a player (a player's write rejects).
 
 Restore the test world afterwards: tiers, notes and chat messages made for the check.
+
+## Collection artwork and portraits
+
+- Use square, wide and portrait covers: the complete foreground stays visible, with a frozen blurred backdrop
+  filling the remaining area. Captions sit below the collection art. Check normal and compact density, both themes,
+  short/long names, and a narrow window; the create button should stay a compact action below the covers.
+- Select/upload a GIF or animated WebP through the existing image picker. Its poster stays still until hover or
+  keyboard focus. Leaving the tile/portrait stops visible playback; focus must keep it active after pointer exit.
+  Include a GIF with a finite loop count after a long idle period, and repeated pointer entry with a cached image.
+  Other image formats work when supported by the browser. Existing explicit creature crop/focal settings remain valid.
+- Change motion to Reduced/Off while hovering, toggle the OS reduced-motion preference and hide the browser tab:
+  playback stops. Scroll artwork outside the visible area and back. Reopen/rerender/close repeatedly without stale
+  canvases or listeners. Check a failed URL, a lazy-loaded image, a cached image and an external image without CORS.
+- As a player at Unknown, inspect the portrait: only the silhouette asset may be loaded or used to build a backdrop.

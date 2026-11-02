@@ -21,6 +21,7 @@ import { BestiaryTierSettings } from "./tier-settings.js";
 import { BestiaryKnowledgeBoard } from "./knowledge-board.js";
 import { exportBestiary, importBestiaryFromFile } from "../foundry/transfer.js";
 import { playApplicationEntrance, showContextMenu } from "./ui-effects.js";
+import { bindArtwork } from "./artwork.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const MODULE_ID = "bestiary-journal";
@@ -166,10 +167,17 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onRender(context, options) {
     super._onRender(context, options);
+    this._disposeArtwork?.();
     this._activateSearch();
     this._activateContextMenus();
     this._activateCreatureCards();
     playApplicationEntrance(this, ".bestiary-shell");
+    this._disposeArtwork = bindArtwork(this.element);
+  }
+
+  _onClose(options) {
+    this._disposeArtwork?.();
+    super._onClose(options);
   }
 
   async refreshFromExternalUpdate(payload = {}) {

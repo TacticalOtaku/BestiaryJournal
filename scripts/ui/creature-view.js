@@ -56,6 +56,7 @@ import {
 import { BestiaryEntryEditor } from "./entry-editor.js";
 import { buildStatblock, buildTierSteps } from "./creature-statblock.js";
 import { animateDisclosure, playApplicationEntrance } from "./ui-effects.js";
+import { bindArtwork } from "./artwork.js";
 import { markSeen } from "../foundry/knowledge-watch.js";
 import { log } from "../core/logger.js";
 
@@ -79,7 +80,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       sendToChat: function () { this._onSendToChat(); },
       setRail: function (event, target) { this._onSetRail(event, target); },
       setCommentChannel: function (event, target) { this._onSetCommentChannel(event, target); },
-      submitComment: function () { this._onSubmitComment(); },
+      submitComment: function () { return this._onSubmitComment(); },
       cancelEdit: function () { this._onCancelEdit(); },
       editComment: function (event, target) { this._onEditComment(event, target); },
       deleteComment: function (event, target) { this._onDeleteComment(event, target); },
@@ -112,6 +113,8 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     this._rail = ["knowledge", "comments", "config"].includes(options.rail) ? options.rail : "knowledge";
     this._commentChannel = null;
     this._commentDraft = "";
+    this._commentDraftRevision = 0;
+    this._commentPending = false;
     this._editingCommentId = null;
   }
 
@@ -167,6 +170,14 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     });
     const { creature } = statblock;
     const locked = isCreatureLocked(data, this.actorUuid);
+    const entryLocked = !!entry.locked;
+    const lockDisabled = !context || (!!context.section.locked && !entryLocked);
+    const lockReason = context?.section.locked
+      ? localize("BESTIARY.Lock.CollectionLocked")
+      : contexts.some(item => item.section.locked || (item.entry !== entry && item.entry.locked))
+        ? localize("BESTIARY.Lock.InheritedLock")
+        : "";
+    const entryLockLabel = localize(entryLocked ? "BESTIARY.Lock.UnlockEntry" : "BESTIARY.Lock.LockEntry");
     const comments = await buildCommentThreads(social, this.actorUuid, real, { locked });
 
     this._title = creature.displayName;
@@ -178,7 +189,10 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       collections: getCreatureCollections(data, this.actorUuid, effective)
         .map(collection => (effective.isGM || creature.knowsName ? collection : { ...collection, familyName: "" })),
       locked,
-      lockLabel: localize(locked ? "BESTIARY.Lock.Unlock" : "BESTIARY.Lock.Lock"),
+      entryLocked,
+      lockDisabled,
+      lockReason,
+      lockLabel: lockReason ? `${entryLockLabel} — ${lockReason}` : entryLockLabel,
       isGM: real.isGM,
       // A GM previewing as a player sees that player's knowledge panel instead of the party roster.
       showRoster: real.isGM && !previewUser,
@@ -201,6 +215,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       comments,
       commentChannel: this._activeCommentChannel(real, comments.channels),
       commentDraft: this._commentDraft,
+      commentPending: this._commentPending,
       editingCommentId: this._editingCommentId,
       isEditingComment: !!this._editingCommentId,
 
@@ -277,16 +292,20 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
 
   _onRender(context, options) {
     super._onRender(context, options);
+    this._disposeArtwork?.();
     BestiaryCreatureView._instances.add(this);
     this._syncWindowTitle();
     if (context.error) return;
     this._activateCommentEditor();
+    this._syncCommentSubmitState();
     this._activateGmControls();
     this._activateItemKeyboard();
     playApplicationEntrance(this, ".creature-detail-view");
+    this._disposeArtwork = bindArtwork(this.element);
   }
 
   _onClose(options) {
+    this._disposeArtwork?.();
     super._onClose(options);
     BestiaryCreatureView._instances.delete(this);
   }
@@ -313,7 +332,10 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const input = this.element.querySelector(".comment-composer-input");
     if (!input) return;
     input.value = this._commentDraft;
-    input.addEventListener("input", event => { this._commentDraft = event.currentTarget.value; });
+    input.addEventListener("input", event => {
+      this._commentDraft = event.currentTarget.value;
+      this._commentDraftRevision++;
+    });
     input.addEventListener("keydown", event => {
       if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
@@ -383,6 +405,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   }
 
   async _onSubmitComment() {
+    if (this._commentPending) return;
     const text = (this._commentDraft ?? "").trim();
     if (!text) return;
     const channel = this.element.querySelector(".comment-channel-tabs .is-active")?.dataset.channel
@@ -394,29 +417,49 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       this._onCancelEdit();
       return;
     }
-    let result;
+    const draft = this._commentDraft;
+    const revision = this._commentDraftRevision;
+    const editingId = this._editingCommentId;
+    const draftChannel = this._commentChannel;
+    this._commentPending = true;
+    this._syncCommentSubmitState();
     try {
-      result = this._editingCommentId
-        ? await editComment(this._editingCommentId, { text })
+      const result = editingId
+        ? await editComment(editingId, { text })
         : await postComment({ uuid: this.actorUuid, channel, text, shared });
+      // Keep the draft when nothing was saved (a lock, a deleted comment).
+      if (!result?.changed) {
+        ui.notifications.warn(localize("BESTIARY.Comments.NotSaved"));
+        return;
+      }
+      // Acknowledgement belongs to the submitted draft, not whatever the user
+      // has typed, selected for editing, or moved to another channel since.
+      if (revision === this._commentDraftRevision && draft === this._commentDraft
+        && editingId === this._editingCommentId && draftChannel === this._commentChannel) {
+        this._editingCommentId = null;
+        this._commentDraft = "";
+      }
+      await this._refreshPreservingScroll();
     } catch (error) {
       reportCommandError(error);
-      return;
+    } finally {
+      this._commentPending = false;
+      this._syncCommentSubmitState();
     }
-    // Keep the draft when nothing was saved (a lock, a deleted comment).
-    if (!result?.changed) {
-      ui.notifications.warn(localize("BESTIARY.Comments.NotSaved"));
-      return;
-    }
-    this._editingCommentId = null;
-    this._commentDraft = "";
-    await this._refreshPreservingScroll();
+  }
+
+  _syncCommentSubmitState() {
+    const button = this.element?.querySelector('[data-action="submitComment"]');
+    if (!button) return;
+    button.disabled = this._commentPending;
+    button.setAttribute("aria-busy", String(this._commentPending));
   }
 
   _onEditComment(event, target) {
     const row = target.closest("[data-comment-id]");
     if (!row) return;
     this._editingCommentId = row.dataset.commentId;
+    this._commentDraftRevision++;
     this._commentDraft = row.querySelector(".comment-raw-text")?.textContent ?? "";
     this._editingOriginal = this._commentDraft.trim();
     if (row.dataset.channel) this._commentChannel = row.dataset.channel;
@@ -425,6 +468,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   }
 
   _onCancelEdit({ render = true } = {}) {
+    this._commentDraftRevision++;
     this._editingCommentId = null;
     this._commentDraft = "";
     if (render) this.render();
@@ -553,8 +597,10 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
 
   async _onToggleLock() {
     if (!game.user.isGM || !this.sectionId) return;
-    const entry = getEntryContexts(getBestiaryData(), this.actorUuid)
-      .find(item => item.section.id === this.sectionId)?.entry;
+    const context = getEntryContexts(getBestiaryData(), this.actorUuid)
+      .find(item => item.section.id === this.sectionId);
+    const entry = context?.entry;
+    if (!entry || (context.section.locked && !entry.locked)) return;
     await runCommand({
       type: BESTIARY_COMMANDS.SET_CREATURE_LOCK,
       sectionId: this.sectionId,
@@ -601,6 +647,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const body = itemElement?.querySelector(".creature-item-body");
     const icon = itemElement?.querySelector(".creature-item-chevron");
     itemElement?.classList.toggle("is-expanded", expanded);
+    itemElement?.setAttribute("aria-expanded", String(expanded));
     animateDisclosure(body, expanded);
     icon?.classList.toggle("fa-chevron-up", expanded);
     icon?.classList.toggle("fa-chevron-down", !expanded);

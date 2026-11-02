@@ -60,6 +60,9 @@ function registerWorldStores() {
   game.settings.register(MODULE_ID, "dataVersion", {
     name: "Bestiary Data Version", scope: "world", config: false, type: Number, default: 0
   });
+  game.settings.register(MODULE_ID, "migrationBackup", {
+    name: "Bestiary Migration Recovery", scope: "world", config: false, type: Object, default: {}
+  });
 
   // Legacy stores, kept so the one-time migration can read them.
   game.settings.register(MODULE_ID, "creatureDetailLevels", {

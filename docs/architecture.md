@@ -44,7 +44,12 @@ plain Node; if it needs something from the runtime, pass it in as an argument.
 
 World state lives in three world settings so a note does not rewrite the whole structure: `bestiaryData`
 (structure), `bestiaryKnowledge` (player knowledge) and `bestiarySocial` (notes). Each carries a
-`revision`; `dataVersion` drives `foundry/migrations.js`, which keeps the original data when a migration fails.
+`revision`; `dataVersion` drives `foundry/migrations.js`. Before migration writes, `migrationBackup` holds the raw
+structure, knowledge and version. A failed write restores those originals, including a write whose acknowledgement
+failed after saving. If storage also refuses rollback, the recovery copy is retained and a retry refuses to
+overwrite it with partial data. A GM must inspect that copy and any subsequent world changes before recovery:
+restore structure and knowledge first, then the original version, and clear the backup only after verifying them.
+Successful migration clears the recovery copy; a cleanup failure does not undo the completed migration.
 
 Changes are serialised through the authoritative active GM (`isAuthorityGm`). Player commands travel as a
 server-persisted user flag that the GM clears after handling, so replaying a request changes nothing. The socket

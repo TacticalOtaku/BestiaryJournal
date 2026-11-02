@@ -18,28 +18,70 @@ const LEGACY_LEVEL_TIERS = { minimal: 1, standard: 2, expanded: 3, custom: 2 };
 
 /**
  * Upgrades a pre-0.2 world in place. Runs once, on the authoritative GM only.
- * Nothing here throws: a failed migration must not keep the module from
- * loading, it just leaves the old data alone.
+ * Keep a recovery copy before writing. A failed migration restores the raw
+ * originals; if storage also refuses rollback, retain the copy for recovery.
  */
 export async function runMigrations() {
   const current = Number(game.settings.get(MODULE_ID, "dataVersion") ?? 0);
   if (current >= DATA_VERSION) return false;
 
+  const originals = Object.fromEntries(["bestiaryData", "bestiaryKnowledge", "dataVersion"]
+    .map(key => [key, structuredClone(game.settings.get(MODULE_ID, key))]));
+  const previous = game.settings.get(MODULE_ID, "migrationBackup");
+  if (previous?.originals && current < previous.targetVersion
+    && JSON.stringify(previous.originals) !== JSON.stringify(originals)) {
+    log.error("Migration recovery is required; restore the originals in bestiary-journal.migrationBackup before retrying");
+    return false;
+  }
+
   try {
-    const data = normalizeBestiaryData(game.settings.get(MODULE_ID, "bestiaryData"));
-    const knowledge = normalizeKnowledge(game.settings.get(MODULE_ID, "bestiaryKnowledge"));
+    await game.settings.set(MODULE_ID, "migrationBackup", { targetVersion: DATA_VERSION, originals });
+  } catch (error) {
+    log.error("Could not save migration recovery data; world stores were not changed", error);
+    return false;
+  }
+
+  const attempted = [];
+  try {
+    const data = normalizeBestiaryData(structuredClone(originals.bestiaryData));
+    const knowledge = normalizeKnowledge(structuredClone(originals.bestiaryKnowledge));
 
     migrateCustomDisplay(data);
     migrateDetailLevels(knowledge);
 
-    await game.settings.set(MODULE_ID, "bestiaryData", data);
-    await game.settings.set(MODULE_ID, "bestiaryKnowledge", knowledge);
-    await game.settings.set(MODULE_ID, "dataVersion", DATA_VERSION);
-    log.info(`Migrated world data to version ${DATA_VERSION}`);
-    return true;
+    for (const [key, value] of [["bestiaryData", data], ["bestiaryKnowledge", knowledge], ["dataVersion", DATA_VERSION]]) {
+      // A rejected acknowledgement does not prove that the server did not save.
+      attempted.push(key);
+      await game.settings.set(MODULE_ID, key, value);
+    }
   } catch (error) {
-    log.error("Migration failed; leaving existing data untouched", error);
+    const failedRestores = [];
+    for (const key of attempted.reverse()) {
+      try {
+        await game.settings.set(MODULE_ID, key, originals[key]);
+      } catch {
+        failedRestores.push(key);
+      }
+    }
+    if (failedRestores.length) {
+      log.error(`Migration failed; could not restore ${failedRestores.join(", ")}. Originals remain in bestiary-journal.migrationBackup`, error);
+    } else {
+      await clearMigrationBackup();
+      log.error("Migration failed; original world data restored", error);
+    }
     return false;
+  }
+
+  await clearMigrationBackup();
+  log.info(`Migrated world data to version ${DATA_VERSION}`);
+  return true;
+}
+
+async function clearMigrationBackup() {
+  try {
+    await game.settings.set(MODULE_ID, "migrationBackup", {});
+  } catch (error) {
+    log.warn("Could not clear the migration recovery copy; world data was saved", error);
   }
 }
 
