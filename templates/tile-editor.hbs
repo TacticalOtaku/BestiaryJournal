@@ -5,11 +5,9 @@
       <button type="button" class="btn-pick-image" data-action="pickImage">
         <i class="fa-solid fa-image"></i>{{localize imageLabel}}
       </button>
-      {{#if image}}
-        <button type="button" class="btn-clear-image" data-action="clearImage" data-tooltip="{{localize 'BESTIARY.Entry.ClearImage'}}">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      {{/if}}
+      <button type="button" class="btn-clear-image" data-action="clearImage" {{#unless image}}hidden{{/unless}} data-tooltip="{{localize 'BESTIARY.Entry.ClearImage'}}" aria-label="{{localize 'BESTIARY.Entry.ClearImage'}}">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
     </div>
   </div>
 

@@ -79,7 +79,7 @@ function setupWorld() {
     return message;
   }
 
-  return { values, flags, send, addRoll };
+  return { values, flags, send, addRoll, emitted };
 }
 
 const comment = { type: "addComment", uuid: UUID, text: "Smells of smoke", channel: "party" };
@@ -118,6 +118,25 @@ test("a research roll is judged by the GM and counts once", async () => {
   const replay = await world.send("r-roll-again", research);
   assert.equal(replay.error, "BESTIARY.Errors.ResearchUnverified");
   assert.equal(world.values.bestiaryKnowledge.users.p1[UUID].tier, 1);
+});
+
+test("overlapping requests with different IDs cannot spend the same research roll twice", async () => {
+  const world = setupWorld();
+  const roll = world.addRoll("m-overlap");
+  const research = { type: "recordResearch", uuid: UUID, messageId: "m-overlap" };
+
+  await Promise.all([
+    world.send("r-overlap-first", research),
+    world.send("r-overlap-second", research)
+  ]);
+
+  const record = world.values.bestiaryKnowledge.users.p1[UUID];
+  assert.equal(record.tier, 1, "one successful roll earns exactly one tier");
+  assert.equal(record.attempts, 1, "one roll counts as exactly one attempt");
+  assert.equal(roll.flags.research.consumed, true);
+  const responses = world.emitted.filter(message => message.action === "bestiaryCommandResult");
+  assert.deepEqual(responses.map(message => message.error), [null, "BESTIARY.Errors.ResearchUnverified"]);
+  assert.equal((await world.send("r-after-overlap", comment)).error, null, "the queue still accepts later commands");
 });
 
 test("a roll made by someone else's character is rejected", async () => {

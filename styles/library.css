@@ -56,25 +56,25 @@
 .library-section-title p { margin: 3px 0 0; color: var(--suite-subtle); font-size: .82rem; }
 .library-section-title button { border: 0; background: none; color: var(--suite-accent); display: inline-flex; align-items: center; gap: 7px; font-size: .84rem; }
 
-.collection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 15px; }
-.collection-card { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-lg); background: var(--suite-surface); box-shadow: var(--suite-shadow-card); cursor: pointer; transition: transform var(--suite-normal) var(--suite-ease), box-shadow var(--suite-normal); }
+.collection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 20px; }
+.collection-card { position: relative; display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-lg); background: var(--suite-surface); box-shadow: var(--suite-shadow-card); cursor: pointer; transition: transform var(--suite-normal) var(--suite-ease), box-shadow var(--suite-normal); }
 .collection-card:hover { transform: translateY(-3px); box-shadow: var(--suite-shadow); }
-.collection-card > img { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; object-fit: cover; transition: transform 620ms var(--suite-ease); }
-.collection-card:hover > img { transform: scale(1.05); }
-.collection-scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgb(12 9 7 / 88%) 0%, rgb(12 9 7 / 38%) 42%, transparent 72%); }
-.collection-card-copy { position: absolute; inset: auto 0 0 0; padding: 14px 15px; color: #fff; }
-.collection-card-copy h3 { font-family: var(--suite-font-display); font-size: 1.02rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.collection-card-copy p { margin: 3px 0 0; display: flex; gap: 5px; flex-wrap: wrap; font-size: .77rem; opacity: .82; }
+.collection-cover { position: relative; width: 100%; aspect-ratio: 16 / 10; flex: 0 0 auto; }
+.collection-card-copy { position: relative; padding: 16px 18px; border-top: 1px solid var(--suite-border); color: var(--suite-text); }
+.collection-card-copy h3 { font-family: var(--suite-font-display); font-size: 1.12rem; overflow-wrap: anywhere; }
+.collection-card-copy p { margin: 5px 0 0; display: flex; gap: 5px; flex-wrap: wrap; font-size: .8rem; color: var(--suite-muted); }
 .collection-card-flags { position: absolute; top: 10px; left: 10px; display: flex; gap: 6px; }
-.collection-card.is-hidden > img { filter: grayscale(.6) brightness(.72); }
+.collection-card.is-hidden .collection-cover { filter: grayscale(.6) brightness(.72); }
 .collection-card.is-locked { border-color: color-mix(in srgb, var(--tier-unknown) 45%, transparent); }
 .collection-menu-button { position: absolute; top: 9px; right: 9px; width: 30px; height: 30px; border: 0; border-radius: 8px; background: rgb(18 14 10 / 55%); color: #fff; opacity: 0; transition: opacity var(--suite-fast); }
-.collection-card:hover .collection-menu-button { opacity: 1; }
-.collection-card-new { height: auto; aspect-ratio: 4 / 3; padding: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; border: 1px dashed var(--suite-border-strong); background: transparent; color: var(--suite-muted); text-align: center; overflow: hidden; }
+.collection-card:hover .collection-menu-button,
+.collection-card:focus-within .collection-menu-button,
+.collection-menu-button:focus-visible { opacity: 1; }
+.collection-card-new { grid-column: 1 / -1; height: auto; padding: 12px 18px; display: flex; flex-direction: row; align-items: center; justify-content: center; flex-wrap: wrap; gap: 9px; border: 1px dashed var(--suite-border-strong); background: transparent; color: var(--suite-muted); text-align: center; overflow: hidden; }
 .collection-card-new:hover { color: var(--suite-accent); border-color: var(--suite-accent); background: var(--suite-accent-soft); }
 .collection-card-new span { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--suite-hover); }
 .collection-card-new small { font-size: .76rem; opacity: .78; }
-.collection-card-placeholder { position: absolute; inset: 0; display: grid; place-items: center; padding-bottom: 4.4rem; background: var(--suite-sunken); color: var(--suite-subtle); font-size: 2.4rem; }
+.collection-card-placeholder { display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, var(--suite-accent-soft), transparent 72%), var(--suite-sunken); color: var(--suite-subtle); font-size: 3.2rem; }
 /* Without art there is nothing to darken for legibility: the title takes the theme's own colours. */
 .collection-card:has(> .collection-card-placeholder) .collection-card-copy { color: var(--suite-text); }
 .collection-card:has(> .collection-card-placeholder) .collection-card-copy p { color: var(--suite-muted); opacity: 1; }

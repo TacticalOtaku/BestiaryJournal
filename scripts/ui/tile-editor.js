@@ -85,6 +85,8 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
       ?.classList.toggle("is-empty", !this._selectedImage);
     const input = this.element.querySelector('input[name="image"]');
     if (input) input.value = this._selectedImage;
+    const clear = this.element.querySelector('[data-action="clearImage"]');
+    if (clear) clear.hidden = !this._selectedImage;
   }
 
   async _onFormSubmit(event, form, formData) {

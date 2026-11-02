@@ -9,6 +9,7 @@
 
 import { BestiaryCommandError, normalizeBestiaryData, normalizeKnowledge } from "../core/bestiary-domain.js";
 import { judgeResearchRoll } from "../core/research-judge.js";
+import { PARTY_VIEWER } from "../core/knowledge-lens.js";
 import { readCreatureTraits, readResearchRoll, skillLabel } from "../integrations/dnd5e.js";
 import { knowledgeLensFor } from "./creature-display.js";
 import { localize } from "./foundry-runtime.js";
@@ -83,14 +84,22 @@ async function readCreatureDocument(uuid) {
 /**
  * The outcome follows the roll's own privacy: a whispered roll gets a
  * whispered result, a blind roll is reported to the GMs only. The creature is
- * named only when the roller now knows its name.
+ * named only when every recipient knows its name; public results use the party.
  */
 async function postOutcome({ message, actor, requester, uuid, data, creature, skill, total, config, success }) {
-  // Read after the roll was recorded, so the outcome names what the roller knows now.
+  const gmIds = game.users.filter(user => user.isGM).map(user => user.id);
+  let whisper = [];
+  if (message.blind) whisper = gmIds;
+  else if (message.whisper?.length) whisper = [...new Set([...message.whisper, requester.id, ...gmIds])];
+
+  // Read after persistence, so newly earned knowledge counts for its recipients.
   const knowledge = normalizeKnowledge(game.settings.get(MODULE_ID, "bestiaryKnowledge"));
-  const lens = knowledgeLensFor({ data, knowledge }, { id: requester.id, isGM: false }, uuid);
-  const knowsName = lens.knowsName && !!creature.name;
-  const showsDc = lens.knowsDc(config);
+  const viewers = whisper.length
+    ? whisper.map(id => game.users.get(id) ?? { id, isGM: false })
+    : [PARTY_VIEWER];
+  const lenses = viewers.map(viewer => knowledgeLensFor({ data, knowledge }, viewer, uuid));
+  const knowsName = lenses.every(lens => lens.knowsName) && !!creature.name;
+  const showsDc = lenses.every(lens => lens.knowsDc(config));
   const { dc } = config;
 
   const card = document.createElement("div");
@@ -110,15 +119,11 @@ async function postOutcome({ message, actor, requester, uuid, data, creature, sk
   outcome.textContent = localize(success ? "BESTIARY.Research.ChatSuccess" : "BESTIARY.Research.ChatFailure");
   card.append(title, body, outcome);
 
-  const gmIds = game.users.filter(user => user.isGM).map(user => user.id);
-  let whisper = [];
-  if (message.blind) whisper = gmIds;
-  else if (message.whisper?.length) whisper = [...new Set([...message.whisper, requester.id, ...gmIds])];
-
   await ChatMessage.create({
     speaker: message.speaker,
     content: card.outerHTML,
     whisper,
+    blind: !!message.blind,
     flags: { [MODULE_ID]: { researchOutcome: true } }
   });
 }

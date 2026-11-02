@@ -196,13 +196,19 @@ function pruneHandledRequests() {
 
 /** The one path every command takes on the authority, its own commands included. */
 async function applyAsAuthority(command, requester) {
-  const stamped = stampCommand(command, requester);
-  const prepared = COMMAND_PREPARERS[command?.type]
-    ? await COMMAND_PREPARERS[command.type](stamped, requester)
-    : { command: stamped };
-  const result = await enqueueCommand(prepared.command, requester);
-  await prepared.finalize?.(result);
-  return result;
+  // Verification and consumption belong to the same queue as persistence:
+  // different requests may otherwise both verify the same unspent roll.
+  const operation = writeQueue.then(async () => {
+    const stamped = stampCommand(command, requester);
+    const prepared = COMMAND_PREPARERS[command?.type]
+      ? await COMMAND_PREPARERS[command.type](stamped, requester)
+      : { command: stamped };
+    const result = await persistCommand(prepared.command, requester);
+    await prepared.finalize?.(result);
+    return result;
+  });
+  writeQueue = operation.catch(() => {});
+  return operation;
 }
 
 /**
@@ -218,32 +224,29 @@ function isPlayerUser(userId) {
   return !!user && !user.isGM;
 }
 
-async function enqueueCommand(command, requester) {
-  const operation = writeQueue.then(async () => {
-    const current = createBestiaryState(getBestiaryState());
-    const result = applyBestiaryCommand(current, command, {
-      generateId: () => foundry.utils.randomID(16),
-      isPlayerUser,
-      sharingFacts: () => sharingFacts(requester)
-    });
-    if (!result.changedAny) return { changed: false };
-
-    for (const key of STORE_KEYS) {
-      if (!result.changed[key]) continue;
-      await game.settings.set(MODULE_ID, SETTING_BY_STORE[key], result.state[key]);
-    }
-    const payload = {
-      action: "refreshBestiary",
-      changed: result.changed,
-      uuids: affectedUuids(command, current, result.state),
-      revision: result.state.data.revision
-    };
-    game.socket?.emit(SOCKET_NAME, payload);
-    Hooks.callAll("bestiaryJournalRefresh", payload);
-    return { changed: true, stores: result.changed };
+/** Already inside the authority queue; never enqueue recursively here. */
+async function persistCommand(command, requester) {
+  const current = createBestiaryState(getBestiaryState());
+  const result = applyBestiaryCommand(current, command, {
+    generateId: () => foundry.utils.randomID(16),
+    isPlayerUser,
+    sharingFacts: () => sharingFacts(requester)
   });
-  writeQueue = operation.catch(() => {});
-  return operation;
+  if (!result.changedAny) return { changed: false };
+
+  for (const key of STORE_KEYS) {
+    if (!result.changed[key]) continue;
+    await game.settings.set(MODULE_ID, SETTING_BY_STORE[key], result.state[key]);
+  }
+  const payload = {
+    action: "refreshBestiary",
+    changed: result.changed,
+    uuids: affectedUuids(command, current, result.state),
+    revision: result.state.data.revision
+  };
+  game.socket?.emit(SOCKET_NAME, payload);
+  Hooks.callAll("bestiaryJournalRefresh", payload);
+  return { changed: true, stores: result.changed };
 }
 
 /**

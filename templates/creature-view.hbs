@@ -11,7 +11,7 @@
       <header class="creature-topbar">
         <div class="creature-topbar-left">
           <span class="tier-chip is-{{tierBadge.key}} is-large"><i class="fa-solid {{tierBadge.icon}}"></i>{{tierBadge.label}}</span>
-          {{#if locked}}<span class="suite-badge is-locked is-inline"><i class="fa-solid fa-lock"></i>{{localize "BESTIARY.Lock.Locked"}}</span>{{/if}}
+          {{#if locked}}<span class="suite-badge is-locked is-inline"><i class="fa-solid fa-lock"></i>{{#if isGM}}{{#if lockReason}}{{lockReason}}{{else}}{{localize "BESTIARY.Lock.Locked"}}{{/if}}{{else}}{{localize "BESTIARY.Lock.Locked"}}{{/if}}</span>{{/if}}
           {{#each collections}}
             <span class="creature-collection-tag"><i class="fa-regular fa-folder"></i>{{this.sectionName}}{{#if this.familyName}} · {{this.familyName}}{{/if}}</span>
           {{/each}}
@@ -27,7 +27,7 @@
             </label>
             {{#if hasEntry}}
               <button type="button" class="suite-icon-button" data-action="openEntryEditor" data-tooltip="{{localize 'BESTIARY.Entry.Title'}}"><i class="fa-solid fa-sliders"></i></button>
-              <button type="button" class="suite-icon-button {{#if locked}}is-active{{/if}}" data-action="toggleLock" data-tooltip="{{lockLabel}}"><i class="fa-solid {{#if locked}}fa-lock{{else}}fa-lock-open{{/if}}"></i></button>
+              <button type="button" class="suite-icon-button {{#if entryLocked}}is-active{{/if}}" data-action="toggleLock" data-tooltip="{{lockLabel}}" aria-label="{{lockLabel}}" {{#if lockDisabled}}disabled{{/if}}><i class="fa-solid {{#if entryLocked}}fa-lock{{else}}fa-lock-open{{/if}}"></i></button>
             {{/if}}
             <button type="button" class="suite-icon-button" data-action="openSheet" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
           {{/if}}
@@ -48,7 +48,7 @@
       {{/if}}
 
       <header class="creature-profile-card">
-        <div class="creature-portrait {{image.frameClass}}">
+        <div class="creature-portrait bestiary-art {{image.frameClass}}" tabindex="0" data-art-interaction>
           <img src="{{image.src}}" alt="{{creature.displayName}}" style="{{image.imageStyle}}" />
         </div>
 
@@ -384,7 +384,7 @@
                               <span>{{localize "BESTIARY.Comments.PostShared"}}</span>
                             </label>
                           {{/if}}
-                          <button type="button" class="suite-primary-button" data-action="submitComment">
+                          <button type="button" class="suite-primary-button" data-action="submitComment" aria-busy="{{#if @root.commentPending}}true{{else}}false{{/if}}" {{#if @root.commentPending}}disabled{{/if}}>
                             <i class="fa-solid fa-paper-plane"></i>{{#if ../editingCommentId}}{{localize "BESTIARY.Comments.SaveEdit"}}{{else}}{{localize "BESTIARY.Comments.Post"}}{{/if}}
                           </button>
                         </div>
