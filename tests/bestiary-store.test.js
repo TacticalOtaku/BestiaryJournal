@@ -6,14 +6,23 @@ import { handleBestiaryStoreSocket } from "../scripts/foundry/bestiary-store.js"
 const UUID = "Actor.goblin";
 
 /** Just enough Foundry for the authoritative GM to relay a player's command. */
-function setupWorld() {
+function setupWorld({ includeCustomSkills = false, researchSkills = null, customSkills = {} } = {}) {
   const values = {
-    bestiaryData: { sections: [{ id: "s1", name: "Caves", creatures: [{ uuid: UUID }] }] },
+    bestiaryData: {
+      sections: [
+        {
+          id: "s1",
+          name: "Caves",
+          creatures: [{ uuid: UUID, ...(researchSkills ? { research: { skills: researchSkills } } : {}) }]
+        }
+      ]
+    },
     bestiaryKnowledge: {},
     bestiarySocial: {},
     tierBlockConfig: {},
     researchRollEnabled: true,
-    researchSingleAttempt: false
+    researchSingleAttempt: false,
+    includeCustomSkills
   };
   const flags = {};
   const user = (id, isGM) => ({
@@ -46,7 +55,7 @@ function setupWorld() {
   };
   globalThis.foundry = { utils: { randomID: () => `id${++counter}` } };
   globalThis.Hooks = { callAll() {} };
-  globalThis.CONFIG = { DND5E: { skills: {} } };
+  globalThis.CONFIG = { DND5E: { skills: customSkills } };
   globalThis.fromUuid = async () => ({ name: "Goblin", system: { details: { cr: 0.25, type: { value: "humanoid" } } } });
   globalThis.ChatMessage = { create: async () => ({}) };
   globalThis.document = {
@@ -60,11 +69,11 @@ function setupWorld() {
     return emitted.at(-1);
   }
 
-  function addRoll(id, { consumed = false, total = 18 } = {}) {
+  function addRoll(id, { consumed = false, total = 18, skillId = "his" } = {}) {
     const message = {
       id,
       flags: { research: { uuid: UUID, consumed } },
-      getFlag: (scope, key) => (scope === "dnd5e" ? { type: "skill", skillId: "his" } : message.flags[key]),
+      getFlag: (scope, key) => (scope === "dnd5e" ? { type: "skill", skillId } : message.flags[key]),
       setFlag: async (scope, key, value) => {
         message.flags[key] = value;
       },
@@ -152,4 +161,30 @@ test("the reducer's refusal reaches the player in their own words", async () => 
   const result = await world.send("r-gm-channel", { ...comment, channel: "gm" });
   assert.equal(result.error, "BESTIARY.Errors.GmChannel");
   assert.equal(world.values.bestiarySocial.comments, undefined);
+});
+
+test("a custom skill research roll is judged according to the includeCustomSkills world setting", async () => {
+  const customSkills = { mec: { label: "Механика" } };
+  const research = { type: "recordResearch", uuid: UUID, sectionId: "s1", messageId: "m-custom" };
+
+  const disabled = setupWorld({ includeCustomSkills: false, researchSkills: ["mec"], customSkills });
+  const disabledRoll = disabled.addRoll("m-custom", { skillId: "mec" });
+  const rejected = await disabled.send("r-custom-off", research);
+  assert.ok(rejected.error);
+  assert.equal(disabledRoll.flags.research.consumed, false);
+  assert.equal(disabled.values.bestiaryKnowledge.users, undefined);
+
+  // With custom skills disabled, the automatic skill remains accepted as fallback.
+  disabled.addRoll("m-auto", { skillId: "his" });
+  assert.equal(
+    (await disabled.send("r-auto-fallback", { ...research, messageId: "m-auto" })).error,
+    null
+  );
+  assert.equal(disabled.values.bestiaryKnowledge.users.p1[UUID].tier, 1);
+
+  const enabled = setupWorld({ includeCustomSkills: true, researchSkills: ["mec"], customSkills });
+  const enabledRoll = enabled.addRoll("m-custom", { skillId: "mec" });
+  assert.equal((await enabled.send("r-custom-on", research)).error, null);
+  assert.equal(enabled.values.bestiaryKnowledge.users.p1[UUID].tier, 1);
+  assert.equal(enabledRoll.flags.research.consumed, true);
 });

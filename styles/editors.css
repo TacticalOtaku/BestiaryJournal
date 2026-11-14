@@ -48,7 +48,8 @@
 .entry-editor-fields { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .entry-dc-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .entry-skill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 6px; }
-.entry-skill-option { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm); background: var(--suite-surface); font-size: .8rem; }
+.entry-skill-option { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm); background: var(--suite-surface); font-size: .8rem; min-width: 0; }
+.entry-skill-option span { min-width: 0; overflow-wrap: anywhere; }
 .entry-skill-option:has(input:checked) { border-color: var(--suite-accent); background: var(--suite-accent-soft); }
 
 /* Bulk import */
@@ -122,7 +123,8 @@
 :where(.bestiary-app) .bulk-research-divider { height: 1px; background: var(--suite-border); margin: 2px 0; }
 :where(.bestiary-app) .bulk-research-skills { margin: 0; padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; border: 1px solid var(--suite-border); border-radius: var(--suite-radius-sm); }
 :where(.bestiary-app) .bulk-research-skills legend { font-size: .78rem; color: var(--suite-muted); padding: 0 5px; }
-:where(.bestiary-app) .bulk-research-skills label { display: flex; gap: 8px; align-items: center; font-size: .86rem; }
+:where(.bestiary-app) .bulk-research-skills label { display: flex; gap: 8px; align-items: center; font-size: .86rem; min-width: 0; }
+:where(.bestiary-app) .bulk-research-skills label span { min-width: 0; overflow-wrap: anywhere; }
 :where(.bestiary-app) .bulk-research-footer { border-top: 1px solid var(--suite-border); padding-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 :where(.bestiary-app) .bulk-research-footer p { margin: 0; color: var(--suite-muted); font-size: .8rem; line-height: 1.5; }
 :where(.bestiary-app) .bulk-research-footer button { flex: 0 0 auto; min-width: 160px; }

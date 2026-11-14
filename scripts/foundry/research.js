@@ -1,24 +1,16 @@
 import {
   MAX_RESEARCH_TIER,
-  RESEARCH_SKILLS,
   getTierDefinition
 } from "../core/research-model.js";
 import { BESTIARY_COMMANDS } from "../core/bestiary-domain.js";
 import { BestiaryCommandError, dispatchBestiaryCommand, hasActiveAuthority } from "./bestiary-store.js";
 import { localize } from "./foundry-runtime.js";
 import { skillLabel } from "../integrations/dnd5e.js";
+import { researchSkillOptions } from "./research-skills.js";
 
 const MODULE_ID = "bestiary-journal";
 
-export { skillLabel };
-
-export function researchSkillOptions(selected = []) {
-  return RESEARCH_SKILLS.map(skill => ({
-    value: skill,
-    label: skillLabel(skill),
-    selected: selected.includes(skill)
-  }));
-}
+export { researchSkillOptions, skillLabel };
 
 export function isResearchRollEnabled() {
   return game.settings.get(MODULE_ID, "researchRollEnabled") !== false;

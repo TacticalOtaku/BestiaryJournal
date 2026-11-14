@@ -40,6 +40,7 @@ import {
   runResearchCheck,
   skillLabel
 } from "../foundry/research.js";
+import { allowedResearchSkills } from "../foundry/research-skills.js";
 import {
   getPreferredCommentChannel,
   getPreviewUserId,
@@ -243,7 +244,11 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     if (viewer.isGM) return null;
     const { tier } = lens;
     // The same check the GM judges the roll by, whichever collection the card was opened from.
-    const config = resolveCreatureResearch(playerEntryContexts(data, this.actorUuid).map(context => context.entry), creature);
+    const config = resolveCreatureResearch(
+      playerEntryContexts(data, this.actorUuid).map(context => context.entry),
+      creature,
+      { allowedSkills: allowedResearchSkills() }
+    );
     const knowsDc = lens.knowsDc(config);
     const knowsSkill = lens.knowsSkill(config);
     // Kept off the page: the roll uses it when the player cannot pick the skill themselves.

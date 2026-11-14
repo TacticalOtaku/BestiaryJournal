@@ -1,6 +1,6 @@
 import { BESTIARY_COMMANDS, BestiaryCommandError, getUserTier } from "./bestiary-domain.js";
 import { playerEntryContexts } from "./knowledge-lens.js";
-import { MAX_RESEARCH_TIER, resolveCreatureResearch } from "./research-model.js";
+import { MAX_RESEARCH_TIER, RESEARCH_SKILLS, resolveCreatureResearch } from "./research-model.js";
 
 export const RESEARCH_ROLL_MAX_AGE_MS = 10 * 60_000;
 
@@ -28,7 +28,9 @@ export function judgeResearchRoll({ requester, uuid, roll, data, knowledge, crea
     && Number.isFinite(roll.total);
   if (!verified) throw new BestiaryCommandError("BESTIARY.Errors.ResearchUnverified");
 
-  const config = resolveCreatureResearch(entries, creature);
+  const config = resolveCreatureResearch(entries, creature, {
+    allowedSkills: settings.allowedSkills ?? RESEARCH_SKILLS
+  });
   if (!config.skills.includes(roll.skill)) throw new BestiaryCommandError("BESTIARY.Errors.ResearchSkill");
 
   const total = Math.trunc(roll.total);

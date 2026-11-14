@@ -13,6 +13,7 @@ import { PARTY_VIEWER } from "../core/knowledge-lens.js";
 import { readCreatureTraits, readResearchRoll, skillLabel } from "../integrations/dnd5e.js";
 import { knowledgeLensFor } from "./creature-display.js";
 import { localize } from "./foundry-runtime.js";
+import { allowedResearchSkills } from "./research-skills.js";
 
 const MODULE_ID = "bestiary-journal";
 const MESSAGE_WAIT_MS = 3_000;
@@ -44,7 +45,8 @@ export async function prepareResearchCommand(command, requester) {
     creature,
     settings: {
       enabled: game.settings.get(MODULE_ID, "researchRollEnabled") !== false,
-      singleAttempt: game.settings.get(MODULE_ID, "researchSingleAttempt") === true
+      singleAttempt: game.settings.get(MODULE_ID, "researchSingleAttempt") === true,
+      allowedSkills: allowedResearchSkills()
     },
     now: Date.now()
   });

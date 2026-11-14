@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { judgeResearchRoll, RESEARCH_ROLL_MAX_AGE_MS } from "../scripts/core/research-judge.js";
+import { RESEARCH_SKILLS } from "../scripts/core/research-model.js";
 import { BESTIARY_COMMANDS } from "../scripts/core/bestiary-domain.js";
 
 const UUID = "Actor.goblin";
@@ -66,4 +67,19 @@ test("a roll that is not the player's own fresh, unused skill check about this c
     { ...goodRoll, ownedByRequester: false },
     { ...goodRoll, total: Number.NaN }
   ]) refuses({ roll }, "BESTIARY.Errors.ResearchUnverified");
+});
+
+test("custom skill rolls succeed only when custom skills are enabled in allowedSkills", () => {
+  const data = { sections: [section("lab", { dc: 14, skills: ["mec"] })] };
+  const roll = { ...goodRoll, skill: "mec", total: 16 };
+
+  refuses({ data, roll, settings: { enabled: true, singleAttempt: false } }, "BESTIARY.Errors.ResearchSkill");
+
+  const { command } = judge({
+    data,
+    roll,
+    settings: { enabled: true, singleAttempt: false, allowedSkills: [...RESEARCH_SKILLS, "mec"] }
+  });
+  assert.equal(command.success, true);
+  assert.equal(command.skill, "mec");
 });

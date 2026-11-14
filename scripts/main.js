@@ -114,6 +114,12 @@ function registerWorldOptions() {
     hint: "BESTIARY.Settings.SingleAttemptHint",
     scope: "world", config: true, type: Boolean, default: false
   });
+  game.settings.register(MODULE_ID, "includeCustomSkills", {
+    name: "BESTIARY.Settings.IncludeCustomSkills",
+    hint: "BESTIARY.Settings.IncludeCustomSkillsHint",
+    scope: "world", config: true, type: Boolean, default: false,
+    onChange: refreshCards
+  });
 }
 
 /**

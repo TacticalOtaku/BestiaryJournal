@@ -644,6 +644,17 @@ export function skillLabel(skill) {
   return localizeDndLabel("Skills", getDnd5eConfig().skills, skill, skill);
 }
 
+/** All enabled skill keys registered in `CONFIG.DND5E.skills`. */
+export function getDnd5eSkillIds() {
+  const skills = getDnd5eConfig().skills;
+  if (!skills) return [];
+  const entries = skills instanceof Map ? [...skills.entries()] : Object.entries(skills);
+  return entries
+    .filter(([key, entry]) => typeof key === "string" && key.trim() !== ""
+      && entry !== null && entry !== undefined && entry !== false)
+    .map(([key]) => key);
+}
+
 // ── Research ──
 
 /** Index fields that `readCreatureTraits` needs from a compendium record. */

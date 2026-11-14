@@ -5,13 +5,30 @@ import { prepareResearchCommand } from "../scripts/foundry/research-authority.js
 
 const UUID = "Actor.goblin";
 
-function setupOutcome({ whisper = [], blind = false, partyTier = 0 } = {}) {
+function setupOutcome({
+  whisper = [],
+  blind = false,
+  partyTier = 0,
+  includeCustomSkills = false,
+  skillId = "his",
+  researchSkills = null,
+  customSkills = {}
+} = {}) {
   const values = {
-    bestiaryData: { sections: [{ id: "s1", creatures: [{ uuid: UUID }] }] },
+    bestiaryData: {
+      sections: [
+        {
+          id: "s1",
+          name: "Caves",
+          creatures: [{ uuid: UUID, ...(researchSkills ? { research: { skills: researchSkills } } : {}) }]
+        }
+      ]
+    },
     bestiaryKnowledge: {},
     tierBlockConfig: { name: 1, cr: 1 },
     researchRollEnabled: true,
-    researchSingleAttempt: false
+    researchSingleAttempt: false,
+    includeCustomSkills
   };
   const users = [
     { id: "gm", name: "GM", isGM: true },
@@ -20,7 +37,7 @@ function setupOutcome({ whisper = [], blind = false, partyTier = 0 } = {}) {
   ];
   const message = {
     getFlag: (scope) => scope === "dnd5e"
-      ? { type: "skill", skillId: "his" }
+      ? { type: "skill", skillId }
       : { uuid: UUID, consumed: false },
     setFlag: async () => {},
     rolls: [{ total: 30 }],
@@ -42,7 +59,7 @@ function setupOutcome({ whisper = [], blind = false, partyTier = 0 } = {}) {
       format: (key, data) => `${data.actor}: ${data.creature}; ${data.skill} ${data.total}${key === "BESTIARY.Research.ChatBody" ? `; DC ${data.dc}` : ""}`
     }
   };
-  globalThis.CONFIG = { DND5E: { skills: {} } };
+  globalThis.CONFIG = { DND5E: { skills: customSkills } };
   globalThis.fromUuid = async () => ({ name: "Secret Goblin", system: { details: { cr: 2, type: { value: "humanoid" } } } });
   globalThis.ChatMessage = { create: async data => outcomes.push(data) };
   globalThis.document = {
@@ -95,4 +112,16 @@ test("a blind result remains blind and reaches only GMs", async () => {
   assert.equal(outcome.blind, true);
   assert.match(outcome.content, /Secret Goblin/);
   assert.match(outcome.content, /DC 11/);
+});
+
+test("a custom skill outcome formats the custom skill label from CONFIG.DND5E.skills", async () => {
+  const outcome = await setupOutcome({
+    partyTier: 1,
+    includeCustomSkills: true,
+    skillId: "mec",
+    researchSkills: ["mec"],
+    customSkills: { mec: { label: "Механика" } }
+  })();
+  assert.match(outcome.content, /Механика 30/);
+  assert.match(outcome.content, /Secret Goblin/);
 });

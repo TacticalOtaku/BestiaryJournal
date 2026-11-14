@@ -174,7 +174,32 @@ const TYPE_SKILL = {
   humanoid: "his"
 };
 
+export const STANDARD_DND5E_SKILLS = Object.freeze([
+  "acr", "ani", "arc", "ath", "dec", "his", "ins", "itm", "inv",
+  "med", "nat", "prc", "prf", "per", "rel", "slt", "ste", "sur"
+]);
+
 export const RESEARCH_SKILLS = Object.freeze(["nat", "arc", "rel", "his", "inv", "sur", "med", "prc"]);
+
+const STANDARD_SKILL_SET = new Set(STANDARD_DND5E_SKILLS);
+const RESEARCH_SKILL_SET = new Set(RESEARCH_SKILLS);
+
+export function isStandardDnd5eSkill(skillId) {
+  return STANDARD_SKILL_SET.has(skillId);
+}
+
+/** Built-in research skills followed by deduplicated non-standard custom skills. */
+export function resolveAvailableResearchSkills(customSkills = []) {
+  const result = [...RESEARCH_SKILLS];
+  const seen = new Set(RESEARCH_SKILL_SET);
+  for (const raw of customSkills ?? []) {
+    const skill = typeof raw === "string" ? raw.trim() : "";
+    if (!skill || seen.has(skill) || isStandardDnd5eSkill(skill)) continue;
+    seen.add(skill);
+    result.push(skill);
+  }
+  return result;
+}
 
 export function suggestResearchSkill(creatureTypeKey) {
   return TYPE_SKILL[creatureTypeKey] ?? "nat";
@@ -192,10 +217,11 @@ export function suggestResearchDc(cr) {
  * or the CR-scaled DC and type-appropriate skill when the GM left them unset.
  * Pure, so the authoritative GM and every client compute the same numbers.
  */
-export function resolveResearchConfig(entry, creature) {
+export function resolveResearchConfig(entry, creature, { allowedSkills = RESEARCH_SKILLS } = {}) {
+  const allowed = allowedSkills instanceof Set ? allowedSkills : new Set(allowedSkills ?? RESEARCH_SKILLS);
   const configured = entry?.research ?? {};
   const explicit = Array.isArray(configured.skills)
-    ? configured.skills.filter(skill => RESEARCH_SKILLS.includes(skill))
+    ? configured.skills.filter(skill => allowed.has(skill))
     : [];
   const skills = explicit.length ? explicit : [suggestResearchSkill(creature?.creatureTypeKey)];
   const hasDc = configured.dc !== null && configured.dc !== undefined && configured.dc !== ""
@@ -213,8 +239,8 @@ export function resolveResearchConfig(entry, creature) {
  * the entries the player can see (docs/adr/0002). The skills count as set by the GM only when every entry sets
  * them, since a skill derived from the type would give the type away.
  */
-export function resolveCreatureResearch(entries, creature) {
-  const configs = (entries.length ? entries : [null]).map(entry => resolveResearchConfig(entry, creature));
+export function resolveCreatureResearch(entries, creature, options = {}) {
+  const configs = (entries.length ? entries : [null]).map(entry => resolveResearchConfig(entry, creature, options));
   const easiest = configs.reduce((lowest, config) => (config.dc < lowest.dc ? config : lowest));
   return {
     dc: easiest.dc,

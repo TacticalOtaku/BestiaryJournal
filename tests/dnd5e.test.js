@@ -1,7 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { enrichText, extractItemActivities, localizeConfigLabel, readResearchRoll } from "../scripts/integrations/dnd5e.js";
+import {
+  enrichText,
+  extractItemActivities,
+  getDnd5eSkillIds,
+  localizeConfigLabel,
+  readResearchRoll,
+  skillLabel
+} from "../scripts/integrations/dnd5e.js";
 
 globalThis.game = { i18n: { localize: key => key, has: () => false } };
 globalThis.CONFIG = { DND5E: { abilities: { dex: { abbreviation: "DEX" }, con: { abbreviation: "CON" } } } };
@@ -70,4 +77,27 @@ test("a research roll is read from the dnd5e flags and the message itself", () =
   });
   assert.equal(readResearchRoll(null), null);
   assert.equal(readResearchRoll({ ...message, getFlag: () => ({ type: "attack" }) }).isSkillCheck, false);
+});
+
+test("getDnd5eSkillIds and skillLabel read custom skills from CONFIG.DND5E.skills", () => {
+  const previous = globalThis.CONFIG.DND5E.skills;
+  try {
+    globalThis.CONFIG.DND5E.skills = {
+      nat: { label: "Nature" },
+      mec: { label: "Механика", ability: "int" },
+      sci: { name: "Наука", ability: "int" },
+      disabled: null
+    };
+    assert.deepEqual(getDnd5eSkillIds(), ["nat", "mec", "sci"]);
+    assert.equal(skillLabel("mec"), "Механика");
+    assert.equal(skillLabel("sci"), "Наука");
+
+    globalThis.CONFIG.DND5E.skills = new Map([
+      ["mec", { label: "Механика" }],
+      ["off", false]
+    ]);
+    assert.deepEqual(getDnd5eSkillIds(), ["mec"]);
+  } finally {
+    globalThis.CONFIG.DND5E.skills = previous;
+  }
 });

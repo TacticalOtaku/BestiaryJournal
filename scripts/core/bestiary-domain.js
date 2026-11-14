@@ -386,7 +386,8 @@ export function applyBestiaryCommand(currentState, command, dependencies = {}) {
     now: dependencies.now ?? Date.now,
     generateId: dependencies.generateId ?? (() => Math.random().toString(36).slice(2, 18)),
     // Lets the authority reject ids that are not players of this world.
-    isPlayerUser: dependencies.isPlayerUser ?? (() => true)
+    isPlayerUser: dependencies.isPlayerUser ?? (() => true),
+    allowedSkills: dependencies.allowedSkills ?? RESEARCH_SKILLS
   };
   const touched = handler(state, command, context) || [];
   const changed = Object.fromEntries(STORE_KEYS.map(key => [key, touched.includes(key)]));
@@ -656,12 +657,19 @@ export function selectResearchTargets(data, { scope, sectionId, familyId }) {
  * ("set"), none at all ("auto"), or different ones ("mixed"). Lets the batch
  * editor open on what is already in force.
  */
-export function summarizeResearchTargets(targets) {
+export function summarizeResearchTargets(targets, { allowedSkills = null } = {}) {
   const open = targets.filter(target => !target.locked);
   if (!open.length) return { dc: { mode: "keep" }, skills: { mode: "keep" } };
+  const allowed = allowedSkills
+    ? (allowedSkills instanceof Set ? allowedSkills : new Set(allowedSkills))
+    : null;
   const only = values => (values.size === 1 ? [...values][0] : undefined);
   const dc = only(new Set(open.map(({ entry }) => entry.research?.dc ?? null)));
-  const skills = only(new Set(open.map(({ entry }) => JSON.stringify([...(entry.research?.skills ?? [])].sort()))));
+  const skills = only(new Set(open.map(({ entry }) => {
+    const raw = entry.research?.skills ?? [];
+    const active = allowed ? raw.filter(skill => allowed.has(skill)) : raw;
+    return JSON.stringify([...active].sort());
+  })));
   return {
     dc: dc === undefined ? { mode: "mixed" } : dc === null ? { mode: "auto" } : { mode: "set", value: dc },
     skills: skills === undefined ? { mode: "mixed" }
@@ -670,7 +678,7 @@ export function summarizeResearchTargets(targets) {
   };
 }
 
-function handleBulkUpdateResearch(state, command, { now }) {
+function handleBulkUpdateResearch(state, command, { now, allowedSkills }) {
   const targets = selectResearchTargets(state.data, command);
   const patch = command.patch ?? {};
   const hasDc = Object.hasOwn(patch, "dc");
@@ -678,7 +686,8 @@ function handleBulkUpdateResearch(state, command, { now }) {
   if (hasDc && patch.dc !== null && (!Number.isInteger(patch.dc) || patch.dc < 0 || patch.dc > 100)) {
     throw new Error("Research DC must be an integer between 0 and 100, or null for automatic");
   }
-  if (hasSkills && (!Array.isArray(patch.skills) || patch.skills.some(skill => !RESEARCH_SKILLS.includes(skill)))) {
+  const allowed = allowedSkills instanceof Set ? allowedSkills : new Set(allowedSkills ?? RESEARCH_SKILLS);
+  if (hasSkills && (!Array.isArray(patch.skills) || patch.skills.some(skill => !allowed.has(skill)))) {
     throw new Error("Invalid research skills");
   }
   if (!hasDc && !hasSkills) return TOUCHED_NONE;

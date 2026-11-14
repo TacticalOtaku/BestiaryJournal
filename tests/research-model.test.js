@@ -4,12 +4,14 @@ import assert from "node:assert/strict";
 import {
   GM_TIER,
   NEVER_TIER,
+  RESEARCH_SKILLS,
   clampTier,
   defaultBlockTiers,
   isBlockVisible,
   isItemVisible,
   itemTierKey,
   requiredTierForItem,
+  resolveAvailableResearchSkills,
   resolveBlockTiers,
   resolveCreatureResearch,
   suggestResearchDc,
@@ -109,4 +111,21 @@ test("skills count as the GM's only when every collection sets them", () => {
   const config = resolveCreatureResearch([{ research: { skills: ["arc"] } }, { research: { skills: ["his"] } }], {});
   assert.deepEqual(config.skills, ["arc", "his"]);
   assert.equal(config.isSkillsExplicit, true);
+});
+
+test("resolveAvailableResearchSkills adds unique non-standard custom skills after built-ins", () => {
+  const skills = resolveAvailableResearchSkills(["ste", "mec", "", "sci", "nat", "mec", null]);
+  assert.deepEqual(skills, [...RESEARCH_SKILLS, "mec", "sci"]);
+});
+
+test("custom entry skills apply only when included in allowedSkills", () => {
+  const entry = { research: { skills: ["mec", "sci"] } };
+  const creature = { creatureTypeKey: "construct" };
+  const disabled = resolveCreatureResearch([entry], creature);
+  assert.deepEqual(disabled.skills, ["arc"]);
+  assert.equal(disabled.isSkillsExplicit, false);
+
+  const enabled = resolveCreatureResearch([entry], creature, { allowedSkills: [...RESEARCH_SKILLS, "mec", "sci"] });
+  assert.deepEqual(enabled.skills, ["mec", "sci"]);
+  assert.equal(enabled.isSkillsExplicit, true);
 });

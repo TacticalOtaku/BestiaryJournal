@@ -10,6 +10,7 @@ import {
   normalizeSocial
 } from "../core/bestiary-domain.js";
 import { prepareResearchCommand } from "./research-authority.js";
+import { allowedResearchSkills } from "./research-skills.js";
 import { sharingFacts } from "./sharing-window.js";
 import { log } from "../core/logger.js";
 
@@ -230,7 +231,8 @@ async function persistCommand(command, requester) {
   const result = applyBestiaryCommand(current, command, {
     generateId: () => foundry.utils.randomID(16),
     isPlayerUser,
-    sharingFacts: () => sharingFacts(requester)
+    sharingFacts: () => sharingFacts(requester),
+    allowedSkills: allowedResearchSkills()
   });
   if (!result.changedAny) return { changed: false };
 

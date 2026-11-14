@@ -23,6 +23,8 @@
       "ResearchRollHint": "Players can raise a tier by rolling a skill check straight from the creature card.",
       "SingleAttempt": "One attempt per creature",
       "SingleAttemptHint": "After a failed check, retries are blocked until the GM resets that knowledge.",
+      "IncludeCustomSkills": "Include custom skills",
+      "IncludeCustomSkillsHint": "Add all non-standard skills registered in D&D 5e (for example via SystemCustomizer) to the skills available for research checks.",
       "Debug": "Debug logging",
       "DebugHint": "Write detailed Bestiary Journal diagnostics to the browser console on this device.",
       "Theme": "Window theme",

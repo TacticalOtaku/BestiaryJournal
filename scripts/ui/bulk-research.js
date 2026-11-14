@@ -2,6 +2,7 @@ import { BESTIARY_COMMANDS, selectResearchTargets, summarizeResearchTargets } fr
 import { describeCommandError, dispatchBestiaryCommand, getBestiaryData } from "../foundry/bestiary-store.js";
 import { localize } from "../foundry/foundry-runtime.js";
 import { researchSkillOptions } from "../foundry/research.js";
+import { allowedResearchSkills } from "../foundry/research-skills.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -69,7 +70,9 @@ export class BestiaryBulkResearch extends HandlebarsApplicationMixin(Application
 
   /** Opens on the settings already in force, so the GM can see what was applied before. */
   _showCurrentSettings(form = this.element) {
-    const { dc, skills } = summarizeResearchTargets(this._targets(form));
+    const { dc, skills } = summarizeResearchTargets(this._targets(form), {
+      allowedSkills: allowedResearchSkills()
+    });
     for (const [name, current] of [["dcMode", dc], ["skillsMode", skills]]) {
       const select = form.querySelector(`[name="${name}"]`);
       select.value = ["set", "auto"].includes(current.mode) ? current.mode : "keep";

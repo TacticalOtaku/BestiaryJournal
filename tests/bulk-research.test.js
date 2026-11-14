@@ -19,9 +19,9 @@ function fixture() {
     { id: "c", creatures: [{ uuid: "Actor.four" }] }
   ] } });
 }
-const run = (state, options) => applyBestiaryCommand(state, {
+const run = (state, options, deps) => applyBestiaryCommand(state, {
   type: "bulkUpdateResearch", isGM: true, ...options
-});
+}, deps);
 
 test("bulk research updates only the chosen family and preserves unrelated settings", () => {
   const state = fixture();
@@ -73,4 +73,20 @@ test("the batch editor summary reports shared, automatic and mixed settings of u
   assert.deepEqual(summary({ scope: "section", sectionId: "a" }), { dc: { mode: "mixed" }, skills: { mode: "mixed" } });
   assert.deepEqual(summary({ scope: "section", sectionId: "c" }), { dc: { mode: "auto" }, skills: { mode: "auto" } });
   assert.deepEqual(summary({ scope: "section", sectionId: "b" }), { dc: { mode: "keep" }, skills: { mode: "keep" } });
+});
+
+test("bulk research supports custom skills when allowedSkills includes them and filters summary", () => {
+  const result = run(
+    fixture(),
+    { scope: "section", sectionId: "c", patch: { skills: ["mec", "sci"] } },
+    { allowedSkills: ["nat", "mec", "sci"] }
+  );
+  assert.deepEqual(result.state.data.sections[2].creatures[0].research, { dc: null, skills: ["mec", "sci"] });
+
+  const targets = selectResearchTargets(result.state.data, { scope: "section", sectionId: "c" });
+  assert.deepEqual(summarizeResearchTargets(targets, { allowedSkills: ["nat"] }).skills, { mode: "auto" });
+  assert.deepEqual(summarizeResearchTargets(targets, { allowedSkills: ["nat", "mec", "sci"] }).skills, {
+    mode: "set",
+    values: ["mec", "sci"]
+  });
 });
