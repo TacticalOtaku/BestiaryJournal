@@ -1,15 +1,11 @@
-import {
-  BESTIARY_COMMANDS,
-  selectVisibleFamilies,
-  selectVisibleSections
-} from "../core/bestiary-domain.js";
+import { BESTIARY_COMMANDS, selectVisibleFamilies, selectVisibleSections } from "../core/bestiary-domain.js";
 import { getBestiaryData, getBestiaryKnowledge, getBestiarySocial } from "../foundry/bestiary-store.js";
 import { buildNotesFeed, selectPartyNotes } from "./comments.js";
 import { runCommand } from "../foundry/command-feedback.js";
 import {
   getLibraryViewMode,
   setLibraryViewMode,
-  toggleFavoriteCreature
+  toggleFavoriteCreature,
 } from "../foundry/client-preferences.js";
 import { buildCreatureRows, rowInputs, summarizeRows } from "./creature-rows.js";
 import { ACCENTS, DENSITIES, MOTION_LEVELS, THEMES } from "../core/theme.js";
@@ -31,7 +27,6 @@ const RECENT_LIMIT = 24;
 const CARD_DRAG_TYPE = "application/x-bestiary-card";
 
 export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
-
   static DEFAULT_OPTIONS = {
     id: "bestiary-main",
     classes: ["bestiary-journal", "bestiary-app", "bestiary-main"],
@@ -39,27 +34,59 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     window: { title: "BESTIARY.Title", icon: "fa-solid fa-book-open", resizable: true, minimizable: true },
     position: { width: 1240, height: 800 },
     actions: {
-      createSection: function () { this._onCreateSection(); },
-      openSection: function (event, target) { this._onOpenSection(event, target); },
-      editSection: function (event, target) { this._onEditSection(event, target); },
-      setLibraryView: function (event, target) { this._onSetLibraryView(event, target); },
-      openCreature: function (event, target) { this._onOpenCreature(event, target); },
-      openCreatureNotes: function (event, target) { game.bestiaryJournal?.openCreature(target.dataset.uuid, { rail: "comments" }); },
-      openSheet: function (event, target) { this._onOpenSheet(event, target); },
-      toggleFavorite: function (event, target) { this._onToggleFavorite(event, target); },
-      toggleCreatureLayout: function (event, target) { this._onToggleCreatureLayout(event, target); },
-      clearSearch: function () { this._clearSearch(); },
-      exportAll: function () { exportBestiary({}); },
-      importSnapshot: function () { importBestiaryFromFile(); },
-      openTierSettings: function () { new BestiaryTierSettings().render({ force: true }); },
-      openKnowledgeBoard: function () { BestiaryKnowledgeBoard.open(); },
-      toggleLookDrawer: function () { this._onToggleLookDrawer(); },
-      setLook: function (event, target) { this._onSetLook(target); }
-    }
+      createSection: function () {
+        this._onCreateSection();
+      },
+      openSection: function (event, target) {
+        this._onOpenSection(event, target);
+      },
+      editSection: function (event, target) {
+        this._onEditSection(event, target);
+      },
+      setLibraryView: function (event, target) {
+        this._onSetLibraryView(event, target);
+      },
+      openCreature: function (event, target) {
+        this._onOpenCreature(event, target);
+      },
+      openCreatureNotes: function (event, target) {
+        game.bestiaryJournal?.openCreature(target.dataset.uuid, { rail: "comments" });
+      },
+      openSheet: function (event, target) {
+        this._onOpenSheet(event, target);
+      },
+      toggleFavorite: function (event, target) {
+        this._onToggleFavorite(event, target);
+      },
+      toggleCreatureLayout: function (event, target) {
+        this._onToggleCreatureLayout(event, target);
+      },
+      clearSearch: function () {
+        this._clearSearch();
+      },
+      exportAll: function () {
+        exportBestiary({});
+      },
+      importSnapshot: function () {
+        importBestiaryFromFile();
+      },
+      openTierSettings: function () {
+        new BestiaryTierSettings().render({ force: true });
+      },
+      openKnowledgeBoard: function () {
+        BestiaryKnowledgeBoard.open();
+      },
+      toggleLookDrawer: function () {
+        this._onToggleLookDrawer();
+      },
+      setLook: function (event, target) {
+        this._onSetLook(target);
+      },
+    },
   };
 
   static PARTS = {
-    main: { template: "modules/bestiary-journal/templates/bestiary-main.hbs" }
+    main: { template: "modules/bestiary-journal/templates/bestiary-main.hbs" },
   };
 
   constructor(options = {}) {
@@ -78,17 +105,17 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const sections = this._buildSectionCards(visibleSections, inputs);
     const creatures = buildCreatureRows(visibleSections, inputs);
     const byDate = [...creatures].sort((a, b) => b.addedAt - a.addedAt);
-    const favoriteCreatures = byDate.filter(creature => creature.isFavorite);
+    const favoriteCreatures = byDate.filter((creature) => creature.isFavorite);
     const displayed = {
       overview: creatures,
       all: creatures,
       recent: byDate.slice(0, RECENT_LIMIT),
       favorites: favoriteCreatures,
-      notes: []
+      notes: [],
     }[this._activeView];
     // Notes are named as the viewer knows each creature; only open creatures take part.
     const viewer = { id: game.user.id, isGM };
-    const names = new Map(creatures.map(creature => [creature.uuid, creature.name]));
+    const names = new Map(creatures.map((creature) => [creature.uuid, creature.name]));
     const social = getBestiarySocial();
     const notes = this._activeView === "notes" ? await buildNotesFeed(social, viewer, names) : [];
 
@@ -101,7 +128,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       notes,
       notesCount: selectPartyNotes(social, viewer, names).length,
       collectionCount: sections.length,
-      knownCount: creatures.filter(creature => creature.viewerTier > MIN_RESEARCH_TIER).length,
+      knownCount: creatures.filter((creature) => creature.viewerTier > MIN_RESEARCH_TIER).length,
       activeView: this._activeView,
       isOverview: this._activeView === "overview",
       isAll: this._activeView === "all",
@@ -110,49 +137,70 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isNotes: this._activeView === "notes",
       look: this._buildLook(),
       lookOpen: !!this._lookOpen,
-      viewTitle: localize({
-        all: "BESTIARY.AllCreatures",
-        recent: "BESTIARY.Recent",
-        favorites: "BESTIARY.Favorites",
-        notes: "BESTIARY.Notes.Title"
-      }[this._activeView] ?? "BESTIARY.Title"),
+      viewTitle: localize(
+        {
+          all: "BESTIARY.AllCreatures",
+          recent: "BESTIARY.Recent",
+          favorites: "BESTIARY.Favorites",
+          notes: "BESTIARY.Notes.Title",
+        }[this._activeView] ?? "BESTIARY.Title",
+      ),
       creatureLayout: this._creatureLayout,
       isGrid: this._creatureLayout === "grid",
       isGM,
       noSections: sections.length === 0,
-      emptyState: displayed.length ? null : this._emptyState(isGM, sections.length)
+      emptyState: displayed.length ? null : this._emptyState(isGM, sections.length),
     };
   }
 
   /** What an empty list says, and the one step that fills it. */
   _emptyState(isGM, sectionCount) {
     if (this._activeView === "favorites") {
-      return { icon: "fa-regular fa-star", title: "BESTIARY.Empty.FavoritesTitle", hint: "BESTIARY.Empty.FavoritesHint" };
+      return {
+        icon: "fa-regular fa-star",
+        title: "BESTIARY.Empty.FavoritesTitle",
+        hint: "BESTIARY.Empty.FavoritesHint",
+      };
     }
-    if (!isGM) return { icon: "fa-solid fa-dragon", title: "BESTIARY.Empty.LibraryTitle", hint: "BESTIARY.Empty.LibraryHintPlayer" };
+    if (!isGM)
+      return {
+        icon: "fa-solid fa-dragon",
+        title: "BESTIARY.Empty.LibraryTitle",
+        hint: "BESTIARY.Empty.LibraryHintPlayer",
+      };
     const action = sectionCount
-      ? { name: "setLibraryView", view: "overview", icon: "fa-solid fa-layer-group", label: "BESTIARY.AllCollections" }
+      ? {
+          name: "setLibraryView",
+          view: "overview",
+          icon: "fa-solid fa-layer-group",
+          label: "BESTIARY.AllCollections",
+        }
       : { name: "createSection", icon: "fa-solid fa-plus", label: "BESTIARY.NewCollection" };
-    return { icon: "fa-solid fa-dragon", title: "BESTIARY.Empty.LibraryTitle", hint: "BESTIARY.Empty.LibraryHintGM", action };
+    return {
+      icon: "fa-solid fa-dragon",
+      title: "BESTIARY.Empty.LibraryTitle",
+      hint: "BESTIARY.Empty.LibraryHintGM",
+      action,
+    };
   }
 
   _buildSectionCards(visibleSections, inputs) {
-    return visibleSections.map(section => {
+    return visibleSections.map((section) => {
       const rows = buildCreatureRows([section], inputs);
       // A player sees their own progress; the GM sees the party's, at the tier every player has reached.
       const { count, progress } = summarizeRows(rows);
-      const updatedAt = Math.max(section.updatedAt ?? 0, ...rows.map(row => row.addedAt));
+      const updatedAt = Math.max(section.updatedAt ?? 0, ...rows.map((row) => row.addedAt));
       return {
         ...section,
         creatureCount: count,
         familyCount: selectVisibleFamilies(section, inputs.viewer).length,
-        progress: progress ? { ...progress, label: game.i18n.format("BESTIARY.Progress.Known", progress) } : null,
+        progress: progress
+          ? { ...progress, label: game.i18n.format("BESTIARY.Progress.Known", progress) }
+          : null,
         isHidden: !!section.hidden,
         isLocked: !!section.locked,
         searchText: section.name.toLocaleLowerCase(),
-        updatedLabel: updatedAt
-          ? new Date(updatedAt).toLocaleDateString(game.i18n.lang)
-          : ""
+        updatedLabel: updatedAt ? new Date(updatedAt).toLocaleDateString(game.i18n.lang) : "",
       };
     });
   }
@@ -162,7 +210,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _onFirstRender(context, options) {
     super._onFirstRender(context, options);
     // The outer element survives re-renders, so bind element-level keys once.
-    this.element.addEventListener("keydown", event => this._onShellKeydown(event));
+    this.element.addEventListener("keydown", (event) => this._onShellKeydown(event));
   }
 
   _onRender(context, options) {
@@ -182,7 +230,8 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async refreshFromExternalUpdate(payload = {}) {
     const changed = payload.changed ?? {};
-    if (changed.data || changed.knowledge || changed.creatures || changed.seen || changed.social) await this.render();
+    if (changed.data || changed.knowledge || changed.creatures || changed.seen || changed.social)
+      await this.render();
   }
 
   _onShellKeydown(event) {
@@ -219,7 +268,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const results = this.element.querySelector(".library-search-results, .library-creature-results");
     if (results) {
       const cards = results.querySelectorAll(".library-creature-card");
-      const shown = [...cards].filter(card => !card.classList.contains("is-filtered-out")).length;
+      const shown = [...cards].filter((card) => !card.classList.contains("is-filtered-out")).length;
       // An empty list has its own message; this one is only for a query that hides every card.
       results.classList.toggle("is-empty", !!query && cards.length > 0 && shown === 0);
     }
@@ -236,13 +285,15 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _activateCreatureCards() {
     for (const card of this.element.querySelectorAll("[data-uuid][draggable='true']")) {
-      card.addEventListener("dragstart", event => {
+      card.addEventListener("dragstart", (event) => {
         event.dataTransfer.setData("text/plain", JSON.stringify({ type: "Actor", uuid: card.dataset.uuid }));
         event.dataTransfer.setData(CARD_DRAG_TYPE, card.dataset.uuid);
       });
     }
-    for (const card of this.element.querySelectorAll("[data-action='openSection'][tabindex], [data-action='openCreature'][tabindex]")) {
-      card.addEventListener("keydown", event => {
+    for (const card of this.element.querySelectorAll(
+      "[data-action='openSection'][tabindex], [data-action='openCreature'][tabindex]",
+    )) {
+      card.addEventListener("keydown", (event) => {
         if (event.target !== card) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -255,11 +306,11 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _activateContextMenus() {
     if (!game.user.isGM) return;
     for (const tile of this.element.querySelectorAll(".collection-card[data-section-id]")) {
-      tile.addEventListener("contextmenu", event => {
+      tile.addEventListener("contextmenu", (event) => {
         event.preventDefault();
         this._showSectionMenu(event, tile.dataset.sectionId, {
           isHidden: tile.dataset.hidden === "true",
-          isLocked: tile.dataset.locked === "true"
+          isLocked: tile.dataset.locked === "true",
         });
       });
     }
@@ -267,30 +318,35 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _showSectionMenu(event, sectionId, { isHidden, isLocked }) {
     showContextMenu(event, [
-      { name: localize("BESTIARY.EditSection"), icon: "fa-pen", callback: () => this._editSectionById(sectionId) },
+      {
+        name: localize("BESTIARY.EditSection"),
+        icon: "fa-pen",
+        callback: () => this._editSectionById(sectionId),
+      },
       {
         name: localize(isHidden ? "BESTIARY.ShowToPlayers" : "BESTIARY.HideFromPlayers"),
         icon: isHidden ? "fa-eye" : "fa-eye-slash",
-        callback: () => runCommand({ type: BESTIARY_COMMANDS.TOGGLE_SECTION_VISIBILITY, sectionId })
+        callback: () => runCommand({ type: BESTIARY_COMMANDS.TOGGLE_SECTION_VISIBILITY, sectionId }),
       },
       {
         name: localize(isLocked ? "BESTIARY.Lock.Unlock" : "BESTIARY.Lock.Lock"),
         icon: isLocked ? "fa-lock-open" : "fa-lock",
-        callback: () => runCommand({ type: BESTIARY_COMMANDS.SET_SECTION_LOCK, sectionId, locked: !isLocked })
+        callback: () =>
+          runCommand({ type: BESTIARY_COMMANDS.SET_SECTION_LOCK, sectionId, locked: !isLocked }),
       },
       { separator: true },
       {
         name: localize("BESTIARY.Transfer.ExportSection"),
         icon: "fa-file-export",
-        callback: () => exportBestiary({ sectionIds: [sectionId] })
+        callback: () => exportBestiary({ sectionIds: [sectionId] }),
       },
       {
         name: localize("BESTIARY.DeleteSection"),
         icon: "fa-trash",
         danger: true,
         disabled: isLocked,
-        callback: () => this._deleteSectionById(sectionId)
-      }
+        callback: () => this._deleteSectionById(sectionId),
+      },
     ]);
   }
 
@@ -298,15 +354,23 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** The look drawer's choices, AIM's settings drawer: theme, accent, density, motion; «Как в AIM» only with AIM on. */
   _buildLook() {
-    const choices = (key, values, prefix) => values.map(value => ({
-      key, value, label: localize(`BESTIARY.Settings.${prefix}_${value}`), active: game.settings.get(MODULE_ID, key) === value
-    }));
+    const choices = (key, values, prefix) =>
+      values.map((value) => ({
+        key,
+        value,
+        label: localize(`BESTIARY.Settings.${prefix}_${value}`),
+        active: game.settings.get(MODULE_ID, key) === value,
+      }));
     const aimActive = !!game.modules.get("actor-inventory-manager")?.active;
     return {
-      themes: choices("uiTheme", THEMES.filter(theme => theme !== "aim" || aimActive), "Theme"),
+      themes: choices(
+        "uiTheme",
+        THEMES.filter((theme) => theme !== "aim" || aimActive),
+        "Theme",
+      ),
       accents: choices("uiAccent", ACCENTS, "Accent"),
       densities: choices("uiDensity", DENSITIES, "Density"),
-      motions: choices("uiMotion", MOTION_LEVELS, "Motion")
+      motions: choices("uiMotion", MOTION_LEVELS, "Motion"),
     };
   }
 
@@ -385,12 +449,12 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const bounds = target.getBoundingClientRect();
     this._showSectionMenu({ clientX: bounds.left, clientY: bounds.bottom + 4 }, tile.dataset.sectionId, {
       isHidden: tile.dataset.hidden === "true",
-      isLocked: tile.dataset.locked === "true"
+      isLocked: tile.dataset.locked === "true",
     });
   }
 
   _editSectionById(sectionId) {
-    const section = getBestiaryData().sections.find(item => item.id === sectionId);
+    const section = getBestiaryData().sections.find((item) => item.id === sectionId);
     if (!section) return;
     new BestiaryTileEditor({ mode: "section", tileData: section }).render({ force: true });
   }
@@ -401,9 +465,12 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       yes: { label: localize("BESTIARY.DeleteSection") },
       no: { label: localize("BESTIARY.Cancel") },
       content: `<p>${localize("BESTIARY.ConfirmDelete")}</p>`,
-      rejectClose: false
+      rejectClose: false,
     });
     if (!confirmed) return;
-    await runCommand({ type: BESTIARY_COMMANDS.DELETE_SECTION, sectionId }, { unchanged: "BESTIARY.Lock.Blocked" });
+    await runCommand(
+      { type: BESTIARY_COMMANDS.DELETE_SECTION, sectionId },
+      { unchanged: "BESTIARY.Lock.Blocked" },
+    );
   }
 }

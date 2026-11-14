@@ -38,7 +38,7 @@ export async function prepareResearchCommand(command, requester) {
       ...read,
       creatureUuid: research?.uuid,
       consumed: !!research?.consumed,
-      ownedByRequester: !!actor?.testUserPermission?.(requester, "OWNER")
+      ownedByRequester: !!actor?.testUserPermission?.(requester, "OWNER"),
     },
     data,
     knowledge: normalizeKnowledge(game.settings.get(MODULE_ID, "bestiaryKnowledge")),
@@ -46,9 +46,9 @@ export async function prepareResearchCommand(command, requester) {
     settings: {
       enabled: game.settings.get(MODULE_ID, "researchRollEnabled") !== false,
       singleAttempt: game.settings.get(MODULE_ID, "researchSingleAttempt") === true,
-      allowedSkills: allowedResearchSkills()
+      allowedSkills: allowedResearchSkills(),
     },
-    now: Date.now()
+    now: Date.now(),
   });
 
   // Marked first: even if anything below fails, this roll is spent.
@@ -56,10 +56,21 @@ export async function prepareResearchCommand(command, requester) {
 
   return {
     command: recorded,
-    finalize: async result => {
+    finalize: async (result) => {
       if (!result?.changed) throw new BestiaryCommandError("BESTIARY.Errors.ResearchNotRecorded");
-      await postOutcome({ message, actor, requester, uuid, data, creature, skill: recorded.skill, total: recorded.total, config, success: recorded.success });
-    }
+      await postOutcome({
+        message,
+        actor,
+        requester,
+        uuid,
+        data,
+        creature,
+        skill: recorded.skill,
+        total: recorded.total,
+        config,
+        success: recorded.success,
+      });
+    },
   };
 }
 
@@ -69,7 +80,7 @@ async function waitForMessage(messageId) {
   const deadline = Date.now() + MESSAGE_WAIT_MS;
   let message = game.messages?.get(messageId);
   while (!message && Date.now() < deadline) {
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 150));
     message = game.messages?.get(messageId);
   }
   return message ?? null;
@@ -88,8 +99,19 @@ async function readCreatureDocument(uuid) {
  * whispered result, a blind roll is reported to the GMs only. The creature is
  * named only when every recipient knows its name; public results use the party.
  */
-async function postOutcome({ message, actor, requester, uuid, data, creature, skill, total, config, success }) {
-  const gmIds = game.users.filter(user => user.isGM).map(user => user.id);
+async function postOutcome({
+  message,
+  actor,
+  requester,
+  uuid,
+  data,
+  creature,
+  skill,
+  total,
+  config,
+  success,
+}) {
+  const gmIds = game.users.filter((user) => user.isGM).map((user) => user.id);
   let whisper = [];
   if (message.blind) whisper = gmIds;
   else if (message.whisper?.length) whisper = [...new Set([...message.whisper, requester.id, ...gmIds])];
@@ -97,11 +119,11 @@ async function postOutcome({ message, actor, requester, uuid, data, creature, sk
   // Read after persistence, so newly earned knowledge counts for its recipients.
   const knowledge = normalizeKnowledge(game.settings.get(MODULE_ID, "bestiaryKnowledge"));
   const viewers = whisper.length
-    ? whisper.map(id => game.users.get(id) ?? { id, isGM: false })
+    ? whisper.map((id) => game.users.get(id) ?? { id, isGM: false })
     : [PARTY_VIEWER];
-  const lenses = viewers.map(viewer => knowledgeLensFor({ data, knowledge }, viewer, uuid));
-  const knowsName = lenses.every(lens => lens.knowsName) && !!creature.name;
-  const showsDc = lenses.every(lens => lens.knowsDc(config));
+  const lenses = viewers.map((viewer) => knowledgeLensFor({ data, knowledge }, viewer, uuid));
+  const knowsName = lenses.every((lens) => lens.knowsName) && !!creature.name;
+  const showsDc = lenses.every((lens) => lens.knowsDc(config));
   const { dc } = config;
 
   const card = document.createElement("div");
@@ -109,13 +131,16 @@ async function postOutcome({ message, actor, requester, uuid, data, creature, sk
   const title = document.createElement("strong");
   title.textContent = localize("BESTIARY.Research.ChatTitle");
   const body = document.createElement("p");
-  body.textContent = game.i18n.format(showsDc ? "BESTIARY.Research.ChatBody" : "BESTIARY.Research.ChatBodyNoDc", {
-    actor: actor.name,
-    creature: knowsName ? creature.name : localize("BESTIARY.Tier.UnknownName"),
-    skill: skillLabel(skill),
-    total,
-    dc
-  });
+  body.textContent = game.i18n.format(
+    showsDc ? "BESTIARY.Research.ChatBody" : "BESTIARY.Research.ChatBodyNoDc",
+    {
+      actor: actor.name,
+      creature: knowsName ? creature.name : localize("BESTIARY.Tier.UnknownName"),
+      skill: skillLabel(skill),
+      total,
+      dc,
+    },
+  );
   const outcome = document.createElement("p");
   outcome.className = "bestiary-research-outcome";
   outcome.textContent = localize(success ? "BESTIARY.Research.ChatSuccess" : "BESTIARY.Research.ChatFailure");
@@ -126,6 +151,6 @@ async function postOutcome({ message, actor, requester, uuid, data, creature, sk
     content: card.outerHTML,
     whisper,
     blind: !!message.blind,
-    flags: { [MODULE_ID]: { researchOutcome: true } }
+    flags: { [MODULE_ID]: { researchOutcome: true } },
   });
 }

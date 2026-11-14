@@ -7,7 +7,7 @@ import {
   createBestiaryState,
   normalizeBestiaryData,
   normalizeKnowledge,
-  normalizeSocial
+  normalizeSocial,
 } from "../core/bestiary-domain.js";
 import { prepareResearchCommand } from "./research-authority.js";
 import { allowedResearchSkills } from "./research-skills.js";
@@ -23,7 +23,7 @@ const HANDLED_REQUEST_TTL_MS = 10 * 60_000;
 const SETTING_BY_STORE = Object.freeze({
   data: "bestiaryData",
   knowledge: "bestiaryKnowledge",
-  social: "bestiarySocial"
+  social: "bestiarySocial",
 });
 
 /**
@@ -32,7 +32,7 @@ const SETTING_BY_STORE = Object.freeze({
  * optional follow-up that runs once the change is persisted.
  */
 const COMMAND_PREPARERS = Object.freeze({
-  [BESTIARY_COMMANDS.RECORD_RESEARCH]: prepareResearchCommand
+  [BESTIARY_COMMANDS.RECORD_RESEARCH]: prepareResearchCommand,
 });
 
 export { BestiaryCommandError };
@@ -61,7 +61,7 @@ export function getBestiaryState() {
   return {
     data: getBestiaryData(),
     knowledge: getBestiaryKnowledge(),
-    social: getBestiarySocial()
+    social: getBestiarySocial(),
   };
 }
 
@@ -99,11 +99,15 @@ async function requestAuthority(command) {
   // would inherit every field of the previous command and silently apply them
   // (a leftover `hidden: true` once hid a creature). A string replaces cleanly,
   // and it also sidesteps dots being read as paths in flag keys.
-  await game.user.setFlag(MODULE_ID, COMMAND_REQUEST_FLAG, JSON.stringify({
-    requestId,
-    command,
-    issuedAt: Date.now()
-  }));
+  await game.user.setFlag(
+    MODULE_ID,
+    COMMAND_REQUEST_FLAG,
+    JSON.stringify({
+      requestId,
+      command,
+      issuedAt: Date.now(),
+    }),
+  );
 
   const response = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -116,7 +120,7 @@ async function requestAuthority(command) {
   game.socket.emit(SOCKET_NAME, {
     action: "bestiaryCommand",
     requestId,
-    requesterId: game.user.id
+    requesterId: game.user.id,
   });
   return response;
 }
@@ -232,7 +236,7 @@ async function persistCommand(command, requester) {
     generateId: () => foundry.utils.randomID(16),
     isPlayerUser,
     sharingFacts: () => sharingFacts(requester),
-    allowedSkills: allowedResearchSkills()
+    allowedSkills: allowedResearchSkills(),
   });
   if (!result.changedAny) return { changed: false };
 
@@ -244,7 +248,7 @@ async function persistCommand(command, requester) {
     action: "refreshBestiary",
     changed: result.changed,
     uuids: affectedUuids(command, current, result.state),
-    revision: result.state.data.revision
+    revision: result.state.data.revision,
   };
   game.socket?.emit(SOCKET_NAME, payload);
   Hooks.callAll("bestiaryJournalRefresh", payload);
@@ -259,8 +263,9 @@ function affectedUuids(command, before, after) {
   if (command.uuid) return [String(command.uuid)];
   if (Array.isArray(command.uuids) && command.uuids.length) return command.uuids.map(String);
   if (command.commentId) {
-    const comment = [...before.social.comments, ...after.social.comments]
-      .find(item => item.id === command.commentId);
+    const comment = [...before.social.comments, ...after.social.comments].find(
+      (item) => item.id === command.commentId,
+    );
     return comment ? [comment.uuid] : null;
   }
   return null;
@@ -268,10 +273,11 @@ function affectedUuids(command, before, after) {
 
 function getAuthorityGm() {
   const users = game.users?.contents ?? [...(game.users?.values?.() ?? [])];
-  return users
-    .filter(user => user.active && user.isGM)
-    .sort((left, right) => left.id.localeCompare(right.id))[0]
-    ?? (game.user?.isGM ? game.user : null);
+  return (
+    users
+      .filter((user) => user.active && user.isGM)
+      .sort((left, right) => left.id.localeCompare(right.id))[0] ?? (game.user?.isGM ? game.user : null)
+  );
 }
 
 export function isAuthorityGm() {
@@ -285,7 +291,7 @@ function emitCommandResult(request, result, error = null) {
     requesterId: request.requesterId,
     result,
     error: error ? (error.key ?? error.message ?? String(error)) : null,
-    errorData: error?.data ?? null
+    errorData: error?.data ?? null,
   });
 }
 

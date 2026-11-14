@@ -17,7 +17,7 @@ export function buildCreatureCard({ uuid, entry, creature, lens, searchExtra = [
   const source = creature ?? missingCreature(entry);
   const { show } = lens;
   // A deleted actor has a name and art left in its entry, but no statistics to show.
-  const showStat = key => !!creature && show(key);
+  const showStat = (key) => !!creature && show(key);
 
   const knowsName = show("name");
   const knowsType = show("type");
@@ -34,14 +34,14 @@ export function buildCreatureCard({ uuid, entry, creature, lens, searchExtra = [
     knowsName,
     sortName: knowsName ? source.name : "",
     typeLabel,
-    typeKey: knowsType ? source.creatureTypeKey ?? "" : "",
-    typeName: knowsType ? source.creatureType ?? "" : "",
-    size: knowsType ? source.size ?? "" : "",
+    typeKey: knowsType ? (source.creatureTypeKey ?? "") : "",
+    typeName: knowsType ? (source.creatureType ?? "") : "",
+    size: knowsType ? (source.size ?? "") : "",
     knowsCr,
     cr: knowsCr ? Number(source.cr ?? 0) : "",
     crFormatted: knowsCr ? formatCR(source.cr) : "",
     showAc: showStat("ac"),
-    ac: showStat("ac") ? source.ac?.value ?? "" : "",
+    ac: showStat("ac") ? (source.ac?.value ?? "") : "",
     showHp: showStat("hp"),
     hp: showStat("hp") ? { value: source.hp?.value ?? 0, max: source.hp?.max ?? 0 } : null,
     speedLabel: showStat("speed") ? formatSpeed(source) : "",
@@ -51,9 +51,12 @@ export function buildCreatureCard({ uuid, entry, creature, lens, searchExtra = [
       knowsName ? source.name : "",
       knowsType ? source.creatureType : "",
       knowsType ? source.size : "",
-      ...searchExtra
-    ].filter(Boolean).join(" ").toLocaleLowerCase(),
-    isMissing: !creature
+      ...searchExtra,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLocaleLowerCase(),
+    isMissing: !creature,
   };
 }
 
@@ -71,7 +74,7 @@ function missingCreature(entry) {
     size: "",
     speeds: {},
     hp: { value: 0, max: 0 },
-    ac: { value: 0 }
+    ac: { value: 0 },
   };
 }
 
@@ -80,17 +83,19 @@ export function speedEntries(creature) {
   const unit = formatDistanceUnit(creature.speedUnits);
   return Object.entries(creature.speeds ?? {}).map(([key, value]) => ({
     label: localize(`BESTIARY.Speed${key.charAt(0).toUpperCase()}${key.slice(1)}`),
-    value: `${value} ${unit}`
+    value: `${value} ${unit}`,
   }));
 }
 
 function formatSpeed(creature) {
-  return speedEntries(creature).map(({ label, value }) => `${label}: ${value}`).join(" · ");
+  return speedEntries(creature)
+    .map(({ label, value }) => `${label}: ${value}`)
+    .join(" · ");
 }
 
 /** Known names alphabetically, creatures the viewer cannot name last. */
 export function sortByKnownName(cards) {
-  return cards.sort((a, b) => (!a.sortName - !b.sortName) || a.sortName.localeCompare(b.sortName));
+  return cards.sort((a, b) => !a.sortName - !b.sortName || a.sortName.localeCompare(b.sortName));
 }
 
 /**
@@ -104,7 +109,11 @@ export async function postCreatureToChat({ uuid, sectionId, viewer }) {
   if (!actor) return;
   const data = getBestiaryData();
   const context = selectEntryContext(data, uuid, viewer, sectionId);
-  const lens = knowledgeLensFor({ data, knowledge: getBestiaryKnowledge() }, viewer.isGM ? viewer : PARTY_VIEWER, uuid);
+  const lens = knowledgeLensFor(
+    { data, knowledge: getBestiaryKnowledge() },
+    viewer.isGM ? viewer : PARTY_VIEWER,
+    uuid,
+  );
   const { tier, knowsName } = lens;
   const knowsPortrait = lens.show("portrait");
   const displayName = knowsName ? actor.name : localize("BESTIARY.Tier.UnknownName");
@@ -116,7 +125,9 @@ export async function postCreatureToChat({ uuid, sectionId, viewer }) {
   if (posted) card.dataset.tier = posted.key;
 
   const portrait = document.createElement("img");
-  portrait.src = knowsPortrait ? actor.img || context?.entry?.thumb || CONST.DEFAULT_TOKEN : SILHOUETTE_PLACEHOLDER;
+  portrait.src = knowsPortrait
+    ? actor.img || context?.entry?.thumb || CONST.DEFAULT_TOKEN
+    : SILHOUETTE_PLACEHOLDER;
   portrait.alt = displayName;
   // Keeps the card small once the module (and its CSS) is disabled.
   portrait.width = portrait.height = 52;
@@ -125,7 +136,9 @@ export async function postCreatureToChat({ uuid, sectionId, viewer }) {
   const copy = document.createElement("div");
   const kicker = document.createElement("span");
   kicker.className = "bestiary-chat-kicker";
-  kicker.textContent = [localize("BESTIARY.Title"), posted && localize(posted.label)].filter(Boolean).join(" · ");
+  kicker.textContent = [localize("BESTIARY.Title"), posted && localize(posted.label)]
+    .filter(Boolean)
+    .join(" · ");
   const name = document.createElement("strong");
   name.textContent = displayName;
 
@@ -145,6 +158,6 @@ export async function postCreatureToChat({ uuid, sectionId, viewer }) {
   await ChatMessage.create({
     speaker: knowsName ? ChatMessage.getSpeaker({ actor }) : ChatMessage.getSpeaker({ user: game.user }),
     content: card.outerHTML,
-    flags: { "bestiary-journal": { creatureUuid: actor.uuid } }
+    flags: { "bestiary-journal": { creatureUuid: actor.uuid } },
   });
 }

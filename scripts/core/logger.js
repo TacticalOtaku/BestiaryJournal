@@ -20,5 +20,5 @@ export const log = {
   },
   error(...args) {
     console.error(PREFIX, ...args);
-  }
+  },
 };

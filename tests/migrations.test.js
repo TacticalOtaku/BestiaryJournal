@@ -13,9 +13,12 @@ function setupLegacyWorld({ failWrites = false } = {}) {
     bestiaryKnowledge: {},
     creatureCustomDisplay: { "Actor.wolf": ["abilities", "actions"] },
     gmOnlyDetailToggle: true,
-    creatureDetailLevels: { "Actor.wolf": "standard" }
+    creatureDetailLevels: { "Actor.wolf": "standard" },
   };
-  const users = [{ id: "gm", name: "GM", isGM: true }, { id: "p1", name: "Ann", isGM: false }];
+  const users = [
+    { id: "gm", name: "GM", isGM: true },
+    { id: "p1", name: "Ann", isGM: false },
+  ];
   globalThis.game = {
     users: { contents: users },
     settings: {
@@ -23,13 +26,13 @@ function setupLegacyWorld({ failWrites = false } = {}) {
       set: async (scope, key, value) => {
         if (failWrites) throw new Error("disk full");
         values[key] = structuredClone(value);
-      }
-    }
+      },
+    },
   };
   return values;
 }
 
-test("a legacy world moves to block tiers and starting knowledge", async t => {
+test("a legacy world moves to block tiers and starting knowledge", async (t) => {
   t.mock.method(console, "info", () => {});
   const values = setupLegacyWorld();
   assert.equal(await runMigrations(), true);
@@ -43,7 +46,7 @@ test("a legacy world moves to block tiers and starting knowledge", async t => {
   assert.equal(await runMigrations(), false, "runs once");
 });
 
-test("a failed migration leaves the world data and its version untouched", async t => {
+test("a failed migration leaves the world data and its version untouched", async (t) => {
   t.mock.method(console, "error", () => {});
   const values = setupLegacyWorld({ failWrites: true });
   const before = structuredClone(values);
@@ -52,7 +55,7 @@ test("a failed migration leaves the world data and its version untouched", async
 });
 
 for (const failedKey of ["bestiaryData", "bestiaryKnowledge", "dataVersion"]) {
-  test(`migration restores originals when ${failedKey} fails after saving`, async t => {
+  test(`migration restores originals when ${failedKey} fails after saving`, async (t) => {
     t.mock.method(console, "error", () => {});
     t.mock.method(console, "info", () => {});
     const values = setupLegacyWorld();
@@ -75,7 +78,7 @@ for (const failedKey of ["bestiaryData", "bestiaryKnowledge", "dataVersion"]) {
   });
 }
 
-test("migration saves recovery data before touching either store", async t => {
+test("migration saves recovery data before touching either store", async (t) => {
   t.mock.method(console, "error", () => {});
   const values = setupLegacyWorld();
   const before = structuredClone(values);
@@ -89,7 +92,7 @@ test("migration saves recovery data before touching either store", async t => {
   assert.deepEqual(values, before);
 });
 
-test("a failed rollback retains originals and prevents overwriting their recovery copy", async t => {
+test("a failed rollback retains originals and prevents overwriting their recovery copy", async (t) => {
   t.mock.method(console, "error", () => {});
   const values = setupLegacyWorld();
   const before = structuredClone(values);
@@ -105,7 +108,7 @@ test("a failed rollback retains originals and prevents overwriting their recover
   assert.deepEqual(values.migrationBackup.originals, {
     bestiaryData: before.bestiaryData,
     bestiaryKnowledge: before.bestiaryKnowledge,
-    dataVersion: before.dataVersion
+    dataVersion: before.dataVersion,
   });
   assert.notDeepEqual(values.bestiaryData, before.bestiaryData);
   const afterFailure = structuredClone(values);
@@ -113,7 +116,7 @@ test("a failed rollback retains originals and prevents overwriting their recover
   assert.deepEqual(values, afterFailure, "do not overwrite recovery data with partial state");
 });
 
-test("a recovery-copy cleanup failure does not roll back a completed migration", async t => {
+test("a recovery-copy cleanup failure does not roll back a completed migration", async (t) => {
   t.mock.method(console, "warn", () => {});
   t.mock.method(console, "info", () => {});
   const values = setupLegacyWorld();

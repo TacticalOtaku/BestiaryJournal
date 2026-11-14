@@ -14,7 +14,6 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
  * framed, the identification DC, and the visibility/lock flags.
  */
 export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
-
   static DEFAULT_OPTIONS = {
     id: "bestiary-entry-editor-{id}",
     classes: ["bestiary-journal", "bestiary-app", "bestiary-entry-editor"],
@@ -22,21 +21,31 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
     window: { title: "BESTIARY.Entry.Title", icon: "fa-solid fa-sliders", resizable: false },
     position: { width: 620, height: "auto" },
     form: {
-      handler: function (event, form, formData) { return this._onFormSubmit(event, form, formData); },
+      handler: function (event, form, formData) {
+        return this._onFormSubmit(event, form, formData);
+      },
       submitOnChange: false,
       // Closed by the handler once the change is saved, so a refused save keeps the draft.
-      closeOnSubmit: false
+      closeOnSubmit: false,
     },
     actions: {
-      setImageSource: function (event, target) { this._onSetImageSource(event, target); },
-      setFit: function (event, target) { this._onSetFit(event, target); },
-      centerFocus: function () { this._setFocus(50, 50); },
-      suggestDc: function () { this._onSuggestDc(); }
-    }
+      setImageSource: function (event, target) {
+        this._onSetImageSource(event, target);
+      },
+      setFit: function (event, target) {
+        this._onSetFit(event, target);
+      },
+      centerFocus: function () {
+        this._setFocus(50, 50);
+      },
+      suggestDc: function () {
+        this._onSuggestDc();
+      },
+    },
   };
 
   static PARTS = {
-    form: { template: "modules/bestiary-journal/templates/entry-editor.hbs" }
+    form: { template: "modules/bestiary-journal/templates/entry-editor.hbs" },
   };
 
   constructor(options = {}) {
@@ -49,13 +58,13 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
   }
 
   get entry() {
-    const section = getBestiaryData().sections.find(item => item.id === this.sectionId);
-    return section?.creatures.find(item => item.uuid === this.uuid) ?? null;
+    const section = getBestiaryData().sections.find((item) => item.id === this.sectionId);
+    return section?.creatures.find((item) => item.uuid === this.uuid) ?? null;
   }
 
   async _prepareContext() {
     const data = getBestiaryData();
-    const section = data.sections.find(item => item.id === this.sectionId);
+    const section = data.sections.find((item) => item.id === this.sectionId);
     const entry = this.entry;
     if (!entry) return { error: true };
 
@@ -71,11 +80,11 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
       sectionName: section?.name ?? "",
       families: [
         { id: "", name: game.i18n.localize("BESTIARY.Families.None"), selected: !this._draft.familyId },
-        ...selectVisibleFamilies(section, game.user).map(family => ({
+        ...selectVisibleFamilies(section, game.user).map((family) => ({
           id: family.id,
           name: family.name,
-          selected: family.id === this._draft.familyId
-        }))
+          selected: family.id === this._draft.familyId,
+        })),
       ],
       imageSource: this._draft.image.source,
       isPortraitSource: this._draft.image.source === "portrait",
@@ -91,10 +100,10 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
       // and saving must not quietly pin it.
       skills: researchSkillOptions(this._draft.research.skills ?? []),
       autoSkillLabel: game.i18n.format("BESTIARY.Research.SkillsAuto", {
-        skill: skillLabel(suggestResearchSkill(this._creature?.creatureTypeKey))
+        skill: skillLabel(suggestResearchSkill(this._creature?.creatureTypeKey)),
       }),
       hidden: !!this._draft.hidden,
-      locked: !!this._draft.locked
+      locked: !!this._draft.locked,
     };
   }
 
@@ -110,11 +119,13 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
   _captureForm() {
     const form = this.element;
     if (!this._draft || !form?.querySelector) return;
-    const value = name => form.querySelector(`[name="${name}"]`);
+    const value = (name) => form.querySelector(`[name="${name}"]`);
     this._draft.familyId = value("familyId")?.value || null;
     const dc = value("dc")?.value;
     this._draft.research.dc = dc === "" || dc === undefined ? null : Number(dc);
-    this._draft.research.skills = [...form.querySelectorAll('[name="skills"]:checked')].map(input => input.value);
+    this._draft.research.skills = [...form.querySelectorAll('[name="skills"]:checked')].map(
+      (input) => input.value,
+    );
     this._draft.hidden = !!value("hidden")?.checked;
     this._draft.locked = !!value("locked")?.checked;
   }
@@ -125,24 +136,28 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
     if (!stage) return;
     let dragging = false;
 
-    const apply = event => {
+    const apply = (event) => {
       const bounds = stage.getBoundingClientRect();
       const x = ((event.clientX - bounds.left) / bounds.width) * 100;
       const y = ((event.clientY - bounds.top) / bounds.height) * 100;
       this._setFocus(x, y);
     };
 
-    stage.addEventListener("pointerdown", event => {
+    stage.addEventListener("pointerdown", (event) => {
       dragging = true;
       stage.setPointerCapture(event.pointerId);
       apply(event);
     });
-    stage.addEventListener("pointermove", event => { if (dragging) apply(event); });
-    stage.addEventListener("pointerup", event => {
+    stage.addEventListener("pointermove", (event) => {
+      if (dragging) apply(event);
+    });
+    stage.addEventListener("pointerup", (event) => {
       dragging = false;
       stage.releasePointerCapture(event.pointerId);
     });
-    stage.addEventListener("pointercancel", () => { dragging = false; });
+    stage.addEventListener("pointercancel", () => {
+      dragging = false;
+    });
   }
 
   _setFocus(x, y) {
@@ -206,22 +221,22 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
         source: this._draft.image.source,
         fit: this._draft.image.fit,
         focusX: this._draft.image.focusX,
-        focusY: this._draft.image.focusY
+        focusY: this._draft.image.focusY,
       },
       research: {
         dc: data.dc === "" || data.dc === null || data.dc === undefined ? null : Number(data.dc),
-        skills
-      }
+        skills,
+      },
     };
 
     // A locked entry refuses edits, so lift the lock around the update and
     // put it back even if the update itself is rejected.
-    if (wasLocked && !await this._setLock(false)) return;
+    if (wasLocked && !(await this._setLock(false))) return;
     const result = await runCommand({
       type: BESTIARY_COMMANDS.UPDATE_CREATURE_ENTRY,
       sectionId: this.sectionId,
       uuid: this.uuid,
-      patch
+      patch,
     });
     if (wantsLocked) await this._setLock(true);
     if (result?.changed) await this.close();
@@ -233,7 +248,7 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
       type: BESTIARY_COMMANDS.SET_CREATURE_LOCK,
       sectionId: this.sectionId,
       uuid: this.uuid,
-      locked
+      locked,
     });
     return !!result;
   }

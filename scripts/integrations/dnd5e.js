@@ -3,7 +3,7 @@ import {
   getDnd5eConfig,
   hasTranslation,
   localize,
-  simplifyDnd5eBonus
+  simplifyDnd5eBonus,
 } from "../foundry/foundry-runtime.js";
 import { log } from "../core/logger.js";
 
@@ -14,9 +14,13 @@ export async function enrichText(text, options = {}) {
   try {
     const relativeTo = options.item ?? options.actor ?? undefined;
     return await enrichHtml(text, {
-      secrets: false, documents: true, links: true, rolls: true,
-      embeds: true, relativeTo,
-      rollData: options.actor?.getRollData?.() ?? {}
+      secrets: false,
+      documents: true,
+      links: true,
+      rolls: true,
+      embeds: true,
+      relativeTo,
+      rollData: options.actor?.getRollData?.() ?? {},
     });
   } catch (e) {
     log.warn("Failed to enrich HTML text", e);
@@ -30,7 +34,10 @@ export async function enrichText(text, options = {}) {
 export async function extractCreatureData(actor, { enrich = false } = {}) {
   const system = actor.system ?? {};
   const creature = {
-    id: actor.id, uuid: actor.uuid, name: actor.name, img: actor.img,
+    id: actor.id,
+    uuid: actor.uuid,
+    name: actor.name,
+    img: actor.img,
     prototypeToken: actor.prototypeToken?.texture?.src ?? actor.img,
     ...extractAbilitiesAndSkills(system),
     ...extractMovement(system),
@@ -41,11 +48,9 @@ export async function extractCreatureData(actor, { enrich = false } = {}) {
     // dnd5e keeps a player-facing biography next to the full one; prefer it
     // when the GM wrote one, otherwise fall back to the main text (its
     // secret blocks are stripped during enrichment).
-    biography: system.details?.biography?.public || system.details?.biography?.value || ""
+    biography: system.details?.biography?.public || system.details?.biography?.value || "",
   };
-  return enrich
-    ? enrichCreatureData(creature, actor)
-    : stripCreatureDocuments(creature);
+  return enrich ? enrichCreatureData(creature, actor) : stripCreatureDocuments(creature);
 }
 
 function extractAbilitiesAndSkills(system) {
@@ -58,7 +63,7 @@ function extractAbilitiesAndSkills(system) {
       value,
       mod,
       save: _numericValue(ability.save) ?? mod,
-      label: localizeDndLabel("Abilities", dnd5e.abilities, key, key.toUpperCase())
+      label: localizeDndLabel("Abilities", dnd5e.abilities, key, key.toUpperCase()),
     };
   }
 
@@ -68,7 +73,7 @@ function extractAbilitiesAndSkills(system) {
     skills[key] = {
       label: localizeDndLabel("Skills", dnd5e.skills, key, key),
       total: skill.total,
-      value: skill.value
+      value: skill.value,
     };
   }
   return { abilities, skills };
@@ -98,9 +103,7 @@ function extractTraitsAndSenses(system) {
   const dnd5e = getDnd5eConfig();
   const sensesData = system.attributes?.senses ?? {};
   const senseRanges = sensesData.ranges ?? {};
-  const senses = Object.fromEntries(
-    Object.entries(senseRanges).filter(([, value]) => !!value)
-  );
+  const senses = Object.fromEntries(Object.entries(senseRanges).filter(([, value]) => !!value));
   if (sensesData.special) senses.special = sensesData.special;
 
   return {
@@ -110,7 +113,7 @@ function extractTraitsAndSenses(system) {
     conditionImmunities: _traitArray(system.traits?.ci, dnd5e.conditionTypes, "Conditions"),
     languages: _traitArray(system.traits?.languages, dnd5e.languages, "Languages"),
     senses,
-    senseUnits: sensesData.units ?? senseRanges.units ?? "ft"
+    senseUnits: sensesData.units ?? senseRanges.units ?? "ft",
   };
 }
 
@@ -127,11 +130,19 @@ function extractDamageModifications(actor) {
     .map(([key, formula]) => ({ key, amount: simplifyDnd5eBonus(formula, rollData) }))
     .filter(({ amount }) => Number.isFinite(amount) && amount !== 0);
   const typeKeys = Object.keys(damageTypes);
-  const coversAll = typeKeys.length > 1 && totals.length === typeKeys.length
-    && totals.every(({ amount }) => amount === totals[0].amount);
-  const describe = (label, amount) => ({ label, amount, text: `${label} ${amount > 0 ? "+" : "−"}${Math.abs(amount)}` });
+  const coversAll =
+    typeKeys.length > 1 &&
+    totals.length === typeKeys.length &&
+    totals.every(({ amount }) => amount === totals[0].amount);
+  const describe = (label, amount) => ({
+    label,
+    amount,
+    text: `${label} ${amount > 0 ? "+" : "−"}${Math.abs(amount)}`,
+  });
   if (coversAll) return [describe(localize("BESTIARY.DamageAll"), totals[0].amount)];
-  return totals.map(({ key, amount }) => describe(localizeDndLabel("DamageTypes", damageTypes, key, key), amount));
+  return totals.map(({ key, amount }) =>
+    describe(localizeDndLabel("DamageTypes", damageTypes, key, key), amount),
+  );
 }
 
 function extractIdentityAndVitals(system) {
@@ -149,12 +160,12 @@ function extractIdentityAndVitals(system) {
     hp: {
       value: system.attributes?.hp?.value ?? 0,
       max: system.attributes?.hp?.max ?? 0,
-      formula: system.attributes?.hp?.formula ?? ""
+      formula: system.attributes?.hp?.formula ?? "",
     },
     ac: {
       value: system.attributes?.ac?.value ?? 10,
-      label: system.attributes?.ac?.label ?? ""
-    }
+      label: system.attributes?.ac?.label ?? "",
+    },
   };
 }
 
@@ -166,7 +177,7 @@ function categorizeActorItems(actor) {
     bonusActions: [],
     reactions: [],
     legendaryActions: [],
-    spells: []
+    spells: [],
   };
   for (const item of actor.items ?? []) {
     categorizeItem(item, createItemData(item), buckets);
@@ -182,7 +193,7 @@ function createItemData(item) {
     description: item.system.description?.value ?? "",
     img: item.img,
     _item: item,
-    ...extractItemMeta(item)
+    ...extractItemMeta(item),
   };
 }
 
@@ -191,7 +202,7 @@ function categorizeItem(item, itemData, buckets) {
     buckets.spells.push({
       ...itemData,
       level: item.system.level,
-      school: item.system.school
+      school: item.system.school,
     });
     return;
   }
@@ -212,31 +223,38 @@ function categorizeItem(item, itemData, buckets) {
 
 async function enrichCreatureData(creature, actor) {
   const listKeys = [
-    "features", "actions", "inventory", "bonusActions",
-    "reactions", "legendaryActions", "spells"
+    "features",
+    "actions",
+    "inventory",
+    "bonusActions",
+    "reactions",
+    "legendaryActions",
+    "spells",
   ];
-  const enrichedLists = await Promise.all(
-    listKeys.map(key => enrichItemList(creature[key], actor))
-  );
+  const enrichedLists = await Promise.all(listKeys.map((key) => enrichItemList(creature[key], actor)));
   const result = { ...creature };
-  listKeys.forEach((key, index) => { result[key] = enrichedLists[index]; });
+  listKeys.forEach((key, index) => {
+    result[key] = enrichedLists[index];
+  });
   result.biography = await enrichText(creature.biography, { actor });
   return result;
 }
 
 function enrichItemList(list, actor) {
-  return Promise.all(list.map(async entry => {
-    const description = await enrichText(entry.description, {
-      actor,
-      item: entry._item
-    });
-    const { _item, ...rest } = entry;
-    return { ...rest, description };
-  }));
+  return Promise.all(
+    list.map(async (entry) => {
+      const description = await enrichText(entry.description, {
+        actor,
+        item: entry._item,
+      });
+      const { _item, ...rest } = entry;
+      return { ...rest, description };
+    }),
+  );
 }
 
 function stripCreatureDocuments(creature) {
-  const strip = list => list.map(({ _item, ...rest }) => rest);
+  const strip = (list) => list.map(({ _item, ...rest }) => rest);
   return {
     ...creature,
     features: strip(creature.features),
@@ -245,7 +263,7 @@ function stripCreatureDocuments(creature) {
     bonusActions: strip(creature.bonusActions),
     reactions: strip(creature.reactions),
     legendaryActions: strip(creature.legendaryActions),
-    spells: strip(creature.spells)
+    spells: strip(creature.spells),
   };
 }
 
@@ -258,16 +276,13 @@ function extractItemMeta(item) {
   const handler = ITEM_META_HANDLERS[item.type] ?? appendDefaultItemMeta;
   handler(context);
   if (!collector.tags.length && activities.length) {
-    collector.pushTag(
-      "BESTIARY.ItemActivation",
-      collectActivationSummary(activities)
-    );
+    collector.pushTag("BESTIARY.ItemActivation", collectActivationSummary(activities));
   }
 
   return {
     tags: collector.tags,
     stats: collector.stats,
-    activities
+    activities,
   };
 }
 
@@ -279,7 +294,7 @@ const ITEM_META_HANDLERS = {
   loot: appendEquipmentMeta,
   container: appendEquipmentMeta,
   backpack: appendEquipmentMeta,
-  feat: appendFeatMeta
+  feat: appendFeatMeta,
 };
 
 function createMetaCollector() {
@@ -295,7 +310,7 @@ function createMetaCollector() {
     pushStat(label, value) {
       if (value === null || value === undefined || value === "") return;
       stats.push({ label, value: String(value) });
-    }
+    },
   };
 }
 
@@ -352,7 +367,7 @@ export function extractItemActivities(item) {
       damage,
       save,
       range,
-      target
+      target,
     };
   });
 }
@@ -371,7 +386,12 @@ function formatActivityAttack(activity) {
 /** dnd5e's damage labels resolve @mod and name the types (parts keep them in a `types` Set). */
 function formatActivityDamage(activity) {
   const labels = activity?.labels?.damage;
-  return Array.isArray(labels) ? labels.map(damage => damage?.label).filter(Boolean).join(", ") : "";
+  return Array.isArray(labels)
+    ? labels
+        .map((damage) => damage?.label)
+        .filter(Boolean)
+        .join(", ")
+    : "";
 }
 
 function formatActivitySave(activity) {
@@ -379,7 +399,8 @@ function formatActivitySave(activity) {
   if (!save) return "";
   const dc = save.dc?.value ?? save.dc ?? "";
   // dnd5e 5.x keeps the save abilities in a Set; one save may allow several.
-  const abilities = save.ability instanceof Set ? [...save.ability] : [save.ability ?? save.type].filter(Boolean);
+  const abilities =
+    save.ability instanceof Set ? [...save.ability] : [save.ability ?? save.type].filter(Boolean);
   const pieces = [];
   if (abilities.length) pieces.push(abilities.map(localizeAbilityShort).join("/"));
   if (dc !== "") pieces.push(`DC ${dc}`);
@@ -440,11 +461,11 @@ function _weightUnitLabel(unit) {
 }
 
 function collectDamageSummary(activities) {
-  return joinList(activities.map(a => a.damage).filter(Boolean));
+  return joinList(activities.map((a) => a.damage).filter(Boolean));
 }
 
 function collectActivationSummary(activities) {
-  return joinList(activities.map(a => a.activationLabel).filter(Boolean));
+  return joinList(activities.map((a) => a.activationLabel).filter(Boolean));
 }
 
 function collectWeaponProperties(system) {
@@ -487,7 +508,7 @@ function localizeItemType(baseType, subtype) {
       consumable: dnd5e.consumableTypes,
       tool: dnd5e.toolTypes,
       loot: dnd5e.miscEquipmentTypes,
-      feat: dnd5e.featureTypes
+      feat: dnd5e.featureTypes,
     };
     const localized = configMap[baseType]?.[subtype]?.label ?? configMap[baseType]?.[subtype];
     if (localized) return localized;
@@ -509,7 +530,7 @@ function localizeActivityType(type) {
     summon: "BESTIARY.ActivitySummon",
     enchant: "BESTIARY.ActivityEnchant",
     cast: "BESTIARY.ActivityCast",
-    activity: "BESTIARY.Activity"
+    activity: "BESTIARY.Activity",
   };
   return localize(map[type] ?? map.activity);
 }
@@ -520,7 +541,7 @@ function localizeActivationType(type, cost) {
     action: "BESTIARY.ActivityAction",
     bonus: "BESTIARY.ActivityBonus",
     reaction: "BESTIARY.ActivityReaction",
-    legendary: "BESTIARY.ActivityLegendary"
+    legendary: "BESTIARY.ActivityLegendary",
   };
   // The module's own wording for the common types, the system's labels
   // (already localized by dnd5e) for everything else.
@@ -555,7 +576,7 @@ export function formatDistanceUnit(unit) {
   const map = {
     ft: localize("BESTIARY.UnitFeet"),
     mi: localize("BESTIARY.UnitMiles"),
-    m: localize("BESTIARY.UnitMeters")
+    m: localize("BESTIARY.UnitMeters"),
   };
   return map[unit] ?? unit;
 }
@@ -650,8 +671,14 @@ export function getDnd5eSkillIds() {
   if (!skills) return [];
   const entries = skills instanceof Map ? [...skills.entries()] : Object.entries(skills);
   return entries
-    .filter(([key, entry]) => typeof key === "string" && key.trim() !== ""
-      && entry !== null && entry !== undefined && entry !== false)
+    .filter(
+      ([key, entry]) =>
+        typeof key === "string" &&
+        key.trim() !== "" &&
+        entry !== null &&
+        entry !== undefined &&
+        entry !== false,
+    )
     .map(([key]) => key);
 }
 
@@ -665,7 +692,7 @@ export function readCreatureTraits(source) {
   return {
     name: source?.name ?? "",
     cr: source?.system?.details?.cr ?? 0,
-    creatureTypeKey: source?.system?.details?.type?.value ?? ""
+    creatureTypeKey: source?.system?.details?.type?.value ?? "",
   };
 }
 
@@ -679,11 +706,13 @@ export function readResearchRoll(message) {
     isSkillCheck: roll?.type === "skill",
     skill: String(roll?.skillId ?? ""),
     total: Number(message.rolls?.[0]?.total),
-    at: Number(message.timestamp ?? 0)
+    at: Number(message.timestamp ?? 0),
   };
 }
 
-export function formatMod(mod) { return mod >= 0 ? `+${mod}` : `${mod}`; }
+export function formatMod(mod) {
+  return mod >= 0 ? `+${mod}` : `${mod}`;
+}
 
 export function formatCR(cr) {
   if (cr === 0.125) return "1/8";

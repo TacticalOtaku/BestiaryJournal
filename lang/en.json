@@ -49,6 +49,7 @@
       "EncounterReveal": "Meeting in combat",
       "EncounterRevealHint": "When a creature from the bestiary fights the party, every player who does not know it yet gets «Rumors» about it.",
       "Density": "Density",
+      "DensityHint": "Spacing inside the library, collection lists and creature cards.",
       "Density_comfortable": "Comfortable",
       "Density_compact": "Compact"
     },
@@ -372,7 +373,6 @@
     "Collections": "Collections",
     "NewCollection": "New collection",
     "Library": "Creature library",
-    "Creatures": "Creatures",
     "SearchLibrary": "Search creatures and collections…",
     "SearchCollection": "Search this collection…",
     "ClearSearch": "Clear search",

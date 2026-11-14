@@ -9,12 +9,14 @@ function block(selector) {
   const start = css.indexOf(`${selector} {`);
   assert.ok(start >= 0, `${selector} is missing`);
   const body = css.slice(start, css.indexOf("\n}", start));
-  return Object.fromEntries([...body.matchAll(/--([\w-]+):\s*(#[\da-f]{6})\s*;/gi)].map(([, key, value]) => [key, value]));
+  return Object.fromEntries(
+    [...body.matchAll(/--([\w-]+):\s*(#[\da-f]{6})\s*;/gi)].map(([, key, value]) => [key, value]),
+  );
 }
 
-const luminance = hex => {
-  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
-  const channel = c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const luminance = (hex) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const channel = (c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
   return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
 };
 const contrast = (a, b) => {
@@ -24,8 +26,17 @@ const contrast = (a, b) => {
 
 const SURFACES = ["suite-bg", "suite-surface", "suite-raised", "suite-sunken"];
 const TEXT = [
-  "suite-text", "suite-muted", "suite-subtle", "suite-danger", "suite-positive", "suite-warning",
-  "tier-unknown", "tier-rumors", "tier-studied", "tier-mastered", "tier-never"
+  "suite-text",
+  "suite-muted",
+  "suite-subtle",
+  "suite-danger",
+  "suite-positive",
+  "suite-warning",
+  "tier-unknown",
+  "tier-rumors",
+  "tier-studied",
+  "tier-mastered",
+  "tier-never",
 ];
 const ACCENTS = ["acc-brass", "acc-embers", "acc-arcane", "acc-forest", "acc-frost", "acc-rose"];
 
@@ -36,7 +47,7 @@ for (const [name, tokens] of Object.entries(themes)) {
   test(`«${name}»: text, tier and accent colours reach 4.5:1 on every surface`, () => {
     for (const token of [...TEXT, ...ACCENTS]) {
       assert.ok(tokens[token], `${name}: --${token} is not a hex colour`);
-      const worst = Math.min(...SURFACES.map(surface => contrast(tokens[token], tokens[surface])));
+      const worst = Math.min(...SURFACES.map((surface) => contrast(tokens[token], tokens[surface])));
       assert.ok(worst >= 4.5, `${name}: --${token} ${tokens[token]} is ${worst.toFixed(2)}:1`);
     }
   });

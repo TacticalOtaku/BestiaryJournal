@@ -17,15 +17,15 @@ export function importSnapshot(sections, payload, mode, { now, generateId }) {
   if (!incoming.length) return { sections: current, imported: false, report };
 
   if (mode === "replace") {
-    const kept = current.filter(section => section.locked);
-    const keptIds = new Set(kept.map(section => section.id));
-    const keptNames = new Set(kept.map(section => section.name));
+    const kept = current.filter((section) => section.locked);
+    const keptIds = new Set(kept.map((section) => section.id));
+    const keptNames = new Set(kept.map((section) => section.name));
     const replacements = incoming
-      .filter(section => !keptIds.has(section.id) && !keptNames.has(section.name))
-      .map(section => ({ ...section, updatedAt: now() }));
-    report.created = replacements.map(section => section.name);
-    report.removed = current.filter(section => !section.locked).map(section => section.name);
-    report.locked = kept.map(section => section.name);
+      .filter((section) => !keptIds.has(section.id) && !keptNames.has(section.name))
+      .map((section) => ({ ...section, updatedAt: now() }));
+    report.created = replacements.map((section) => section.name);
+    report.removed = current.filter((section) => !section.locked).map((section) => section.name);
+    report.locked = kept.map((section) => section.name);
     return { sections: [...kept, ...replacements], imported: true, report };
   }
 
@@ -34,7 +34,7 @@ export function importSnapshot(sections, payload, mode, { now, generateId }) {
     const existing = matches.get(section);
     if (!existing) {
       const maxSort = current.reduce((max, item) => Math.max(max, item.sort), 0);
-      const id = current.some(item => item.id === section.id) ? generateId() : section.id;
+      const id = current.some((item) => item.id === section.id) ? generateId() : section.id;
       current.push({ ...section, id, sort: maxSort + 100, updatedAt: now() });
       report.created.push(section.name);
     } else if (existing.locked) {
@@ -52,7 +52,7 @@ export function planSnapshotImport(data, payload, mode = "merge") {
   let counter = 0;
   return importSnapshot(normalizeBestiaryData(data).sections, payload, mode, {
     now: () => 0,
-    generateId: () => `__preview${++counter}`
+    generateId: () => `__preview${++counter}`,
   }).report;
 }
 
@@ -64,17 +64,17 @@ function prepareIncomingSections(payload, generateId) {
   const source = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
   const sections = normalizeBestiaryData({ sections: source.sections }).sections;
   const seenIds = new Set();
-  return sections.map(section => {
+  return sections.map((section) => {
     const id = section.id && !seenIds.has(section.id) ? section.id : generateId();
     seenIds.add(id);
     const familyIds = new Set();
-    const families = section.families.map(family => {
+    const families = section.families.map((family) => {
       const familyId = family.id && !familyIds.has(family.id) ? family.id : generateId();
       familyIds.add(familyId);
       return { ...family, id: familyId };
     });
     const uuids = new Set();
-    const creatures = section.creatures.filter(entry => {
+    const creatures = section.creatures.filter((entry) => {
       if (!entry.uuid || uuids.has(entry.uuid)) return false;
       uuids.add(entry.uuid);
       return true;
@@ -92,7 +92,7 @@ function matchSnapshotSections(existingSections, incoming) {
   const matches = new Map();
   const claimed = new Set();
   for (const section of incoming) {
-    const byId = existingSections.find(item => item.id === section.id);
+    const byId = existingSections.find((item) => item.id === section.id);
     if (byId && !claimed.has(byId)) {
       matches.set(section, byId);
       claimed.add(byId);
@@ -100,7 +100,7 @@ function matchSnapshotSections(existingSections, incoming) {
   }
   for (const section of incoming) {
     if (matches.has(section)) continue;
-    const byName = existingSections.find(item => !claimed.has(item) && item.name === section.name);
+    const byName = existingSections.find((item) => !claimed.has(item) && item.name === section.name);
     if (byName) {
       matches.set(section, byName);
       claimed.add(byName);
@@ -112,8 +112,9 @@ function matchSnapshotSections(existingSections, incoming) {
 function mergeSectionInto(existing, incoming, now) {
   const familyIdMap = new Map();
   for (const family of incoming.families) {
-    const match = existing.families.find(item => item.id === family.id)
-      ?? existing.families.find(item => item.name === family.name);
+    const match =
+      existing.families.find((item) => item.id === family.id) ??
+      existing.families.find((item) => item.name === family.name);
     if (match) {
       familyIdMap.set(family.id, match.id);
       continue;
@@ -122,11 +123,11 @@ function mergeSectionInto(existing, incoming, now) {
     existing.families.push({ ...family, updatedAt: now() });
   }
   for (const entry of incoming.creatures) {
-    if (existing.creatures.some(item => item.uuid === entry.uuid)) continue;
+    if (existing.creatures.some((item) => item.uuid === entry.uuid)) continue;
     existing.creatures.push({
       ...entry,
-      familyId: entry.familyId ? familyIdMap.get(entry.familyId) ?? null : null,
-      addedAt: entry.addedAt || now()
+      familyId: entry.familyId ? (familyIdMap.get(entry.familyId) ?? null) : null,
+      addedAt: entry.addedAt || now(),
     });
   }
   existing.updatedAt = now();

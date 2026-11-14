@@ -38,7 +38,10 @@ export default [
       "no-implied-eval": "error",
       "no-new-func": "error",
       "no-script-url": "error",
-      "no-unused-vars": ["error", { argsIgnorePattern: "^_", caughtErrors: "none", ignoreRestSiblings: true }],
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", caughtErrors: "none", ignoreRestSiblings: true },
+      ],
     },
   },
   {

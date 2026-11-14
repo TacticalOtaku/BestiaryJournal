@@ -7,17 +7,17 @@ import { UNGROUPED_ID, UNIDENTIFIED_ID } from "./creature-rows.js";
 /** The family groups of a collection; a player sees only groups with creatures in them. */
 export function buildFamilyGroups(section, families, creatures, isGM) {
   const collapsed = getCollapsedFamilies();
-  const groups = families.map(family => ({
+  const groups = families.map((family) => ({
     id: family.id,
     name: family.name,
     image: family.image,
     hidden: !!family.hidden,
     isUngrouped: false,
     collapsed: collapsed.has(`${section.id}:${family.id}`),
-    creatures: creatures.filter(creature => creature.familyId === family.id)
+    creatures: creatures.filter((creature) => creature.familyId === family.id),
   }));
 
-  const ungrouped = creatures.filter(creature => creature.familyId === UNGROUPED_ID);
+  const ungrouped = creatures.filter((creature) => creature.familyId === UNGROUPED_ID);
   if (ungrouped.length || !families.length) {
     groups.push({
       id: UNGROUPED_ID,
@@ -26,10 +26,10 @@ export function buildFamilyGroups(section, families, creatures, isGM) {
       hidden: false,
       isUngrouped: true,
       collapsed: collapsed.has(`${section.id}:${UNGROUPED_ID}`),
-      creatures: ungrouped
+      creatures: ungrouped,
     });
   }
-  const unidentified = creatures.filter(creature => creature.familyId === UNIDENTIFIED_ID);
+  const unidentified = creatures.filter((creature) => creature.familyId === UNIDENTIFIED_ID);
   if (unidentified.length) {
     groups.push({
       id: UNIDENTIFIED_ID,
@@ -38,27 +38,28 @@ export function buildFamilyGroups(section, families, creatures, isGM) {
       hidden: false,
       isUngrouped: true,
       collapsed: collapsed.has(`${section.id}:${UNIDENTIFIED_ID}`),
-      creatures: unidentified
+      creatures: unidentified,
     });
   }
   return groups
-    .filter(group => isGM || group.creatures.length)
-    .map(group => ({
+    .filter((group) => isGM || group.creatures.length)
+    .map((group) => ({
       ...group,
       count: group.creatures.length,
-      isEmpty: group.creatures.length === 0
+      isEmpty: group.creatures.length === 0,
     }));
 }
 
 export function buildFilterOptions(creatures) {
   return {
     typeOptions: uniqueSortedOptions(
-      creatures.filter(creature => creature.typeKey)
-        .map(creature => [creature.typeKey, creature.typeName || creature.typeKey])
+      creatures
+        .filter((creature) => creature.typeKey)
+        .map((creature) => [creature.typeKey, creature.typeName || creature.typeKey]),
     ),
     sizeOptions: uniqueSortedOptions(
-      creatures.filter(creature => creature.size).map(creature => [creature.size, creature.size])
-    )
+      creatures.filter((creature) => creature.size).map((creature) => [creature.size, creature.size]),
+    ),
   };
 }
 

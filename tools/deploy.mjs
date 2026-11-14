@@ -8,7 +8,7 @@ import { existsSync } from "node:fs";
 import { cp, readFile, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { presentEntries, readJson, root } from "./package-files.mjs";
+import { isPackagedFile, presentEntries, readJson, root } from "./package-files.mjs";
 
 const { id } = await readJson("module.json");
 
@@ -17,7 +17,8 @@ function resolveDataRoot() {
   if (flagIndex !== -1 && process.argv[flagIndex + 1]) return process.argv[flagIndex + 1];
   if (process.env.FOUNDRY_DATA) return process.env.FOUNDRY_DATA;
   if (process.env.LOCALAPPDATA) return join(process.env.LOCALAPPDATA, "FoundryVTT", "Data");
-  if (process.platform === "darwin") return join(homedir(), "Library", "Application Support", "FoundryVTT", "Data");
+  if (process.platform === "darwin")
+    return join(homedir(), "Library", "Application Support", "FoundryVTT", "Data");
   return null;
 }
 
@@ -39,6 +40,6 @@ if (existsSync(target)) {
 }
 
 for (const entry of presentEntries()) {
-  await cp(join(root, entry), join(target, entry), { recursive: true });
+  await cp(join(root, entry), join(target, entry), { recursive: true, filter: isPackagedFile });
 }
 console.log(`Deployed ${id} → ${target}`);

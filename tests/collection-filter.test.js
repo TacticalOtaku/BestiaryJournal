@@ -1,10 +1,30 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { activeFilterCount, compareCollectionCards, matchesCollectionFilter } from "../scripts/core/collection-filter.js";
+import {
+  activeFilterCount,
+  compareCollectionCards,
+  matchesCollectionFilter,
+} from "../scripts/core/collection-filter.js";
 
-const state = overrides => ({ query: "", types: new Set(), sizes: new Set(), families: new Set(), crMin: "", crMax: "", ...overrides });
-const card = overrides => ({ searchText: "goblin humanoid", type: "humanoid", size: "sm", familyId: "f1", cr: "0.25", name: "Goblin", ...overrides });
+const state = (overrides) => ({
+  query: "",
+  types: new Set(),
+  sizes: new Set(),
+  families: new Set(),
+  crMin: "",
+  crMax: "",
+  ...overrides,
+});
+const card = (overrides) => ({
+  searchText: "goblin humanoid",
+  type: "humanoid",
+  size: "sm",
+  familyId: "f1",
+  cr: "0.25",
+  name: "Goblin",
+  ...overrides,
+});
 
 test("every filter narrows on its own field", () => {
   assert.equal(matchesCollectionFilter(card(), state()), true);
@@ -29,8 +49,13 @@ test("the search box is not counted as a filter", () => {
 });
 
 test("unknown names and CRs sort last in either direction", () => {
-  const cards = [card({ name: "", cr: "" }), card({ name: "Zombie", cr: "0.25" }), card({ name: "Adult Dragon", cr: "17" })];
-  const names = mode => [...cards].sort((a, b) => compareCollectionCards(a, b, mode)).map(item => item.name);
+  const cards = [
+    card({ name: "", cr: "" }),
+    card({ name: "Zombie", cr: "0.25" }),
+    card({ name: "Adult Dragon", cr: "17" }),
+  ];
+  const names = (mode) =>
+    [...cards].sort((a, b) => compareCollectionCards(a, b, mode)).map((item) => item.name);
   assert.deepEqual(names("name-asc"), ["Adult Dragon", "Zombie", ""]);
   assert.deepEqual(names("name-desc"), ["Zombie", "Adult Dragon", ""]);
   assert.deepEqual(names("cr-asc"), ["Zombie", "Adult Dragon", ""]);

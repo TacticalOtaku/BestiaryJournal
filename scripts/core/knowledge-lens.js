@@ -1,11 +1,16 @@
-import { getEntryContexts, getUserTier, isCreatureEntryVisible, isSectionVisible } from "./bestiary-domain.js";
+import {
+  getEntryContexts,
+  getUserTier,
+  isCreatureEntryVisible,
+  isSectionVisible,
+} from "./bestiary-domain.js";
 import {
   GM_TIER,
   MIN_RESEARCH_TIER,
   isBlockVisible,
   isItemVisible,
   requiredTierForItem,
-  resolveBlockTiers
+  resolveBlockTiers,
 } from "./research-model.js";
 
 /** The viewer of a public post: all players together. */
@@ -19,7 +24,7 @@ export function viewerTier(knowledge, viewer, uuid, players = []) {
   if (viewer?.isGM) return GM_TIER;
   if (viewer?.isParty) {
     return players.length
-      ? Math.min(...players.map(user => getUserTier(knowledge, user.id, uuid)))
+      ? Math.min(...players.map((user) => getUserTier(knowledge, user.id, uuid)))
       : MIN_RESEARCH_TIER;
   }
   return getUserTier(knowledge, viewer?.id, uuid);
@@ -27,9 +32,10 @@ export function viewerTier(knowledge, viewer, uuid, players = []) {
 
 /** The (collection, entry) pairs players can see: the ones whose reveal thresholds count. */
 export function playerEntryContexts(data, uuid) {
-  return getEntryContexts(data, uuid)
-    .filter(({ section, entry }) => isSectionVisible(section, PARTY_VIEWER)
-      && isCreatureEntryVisible(entry, section, PARTY_VIEWER));
+  return getEntryContexts(data, uuid).filter(
+    ({ section, entry }) =>
+      isSectionVisible(section, PARTY_VIEWER) && isCreatureEntryVisible(entry, section, PARTY_VIEWER),
+  );
 }
 
 /**
@@ -37,9 +43,9 @@ export function playerEntryContexts(data, uuid) {
  * the entries players can see (docs/adr/0001). With no entry the world thresholds apply.
  */
 function mergeRevealThresholds(worldTiers, entries) {
-  const resolved = entries.map(entry => ({
+  const resolved = entries.map((entry) => ({
     blocks: resolveBlockTiers(worldTiers, entry?.blockTiers),
-    items: entry?.itemTiers ?? {}
+    items: entry?.itemTiers ?? {},
   }));
   if (!resolved.length) return { blockTiers: resolveBlockTiers(worldTiers, null), itemTiers: {} };
 
@@ -53,7 +59,9 @@ function mergeRevealThresholds(worldTiers, entries) {
     const split = key.indexOf(":");
     const blockKey = key.slice(0, split);
     const itemId = key.slice(split + 1);
-    itemTiers[key] = Math.min(...resolved.map(({ blocks, items }) => requiredTierForItem(blockKey, itemId, blocks, items)));
+    itemTiers[key] = Math.min(
+      ...resolved.map(({ blocks, items }) => requiredTierForItem(blockKey, itemId, blocks, items)),
+    );
   }
   return { blockTiers, itemTiers };
 }
@@ -64,7 +72,7 @@ function mergeRevealThresholds(worldTiers, entries) {
  */
 export function createKnowledgeLens({ tier, worldTiers, entries = [] }) {
   const { blockTiers, itemTiers } = mergeRevealThresholds(worldTiers, entries);
-  const show = blockKey => isBlockVisible(blockKey, tier, blockTiers);
+  const show = (blockKey) => isBlockVisible(blockKey, tier, blockTiers);
   return {
     tier,
     blockTiers,
@@ -73,7 +81,7 @@ export function createKnowledgeLens({ tier, worldTiers, entries = [] }) {
     showItem: (blockKey, itemId) => isItemVisible(blockKey, itemId, tier, blockTiers, itemTiers),
     knowsName: show("name"),
     // An automatic DC follows CR and an automatic skill the creature type: known once those are.
-    knowsDc: config => !!config?.isDcExplicit || show("cr"),
-    knowsSkill: config => !!config?.isSkillsExplicit || show("type")
+    knowsDc: (config) => !!config?.isDcExplicit || show("cr"),
+    knowsSkill: (config) => !!config?.isSkillsExplicit || show("type"),
   };
 }

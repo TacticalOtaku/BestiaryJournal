@@ -11,7 +11,10 @@ function chosenLook() {
   if (theme !== "aim") return { theme, accent };
   try {
     if (game.modules.get(AIM_ID)?.active) {
-      return { theme: game.settings.get(AIM_ID, "windowTheme"), accent: game.settings.get(AIM_ID, "windowAccent") };
+      return {
+        theme: game.settings.get(AIM_ID, "windowTheme"),
+        accent: game.settings.get(AIM_ID, "windowAccent"),
+      };
     }
   } catch (error) {
     log.debug("AIM's theme settings are not readable; using «Авто»", error);
@@ -36,7 +39,7 @@ export function stampTheme(element) {
   element.dataset.density = game.settings.get(MODULE_ID, "uiDensity");
   element.dataset.motion = effectiveMotion(game.settings.get(MODULE_ID, "uiMotion"), {
     reducedMotion: globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
-    performanceLow: document.body.classList.contains("performance-low")
+    performanceLow: document.body.classList.contains("performance-low"),
   });
 }
 
@@ -52,7 +55,7 @@ export function restampAll() {
 export function registerThemeRoot() {
   Hooks.on("renderApplicationV2", (application, element) => stampTheme(element));
   // A user's first change of an AIM setting creates its document; later ones update it.
-  const followAim = setting => {
+  const followAim = (setting) => {
     if (setting.key?.startsWith(`${AIM_ID}.window`)) restampAll();
   };
   Hooks.on("createSetting", followAim);

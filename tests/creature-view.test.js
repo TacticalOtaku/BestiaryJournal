@@ -4,45 +4,85 @@ import assert from "node:assert/strict";
 // Foundry owns the application frame and persistence; the real card, comments,
 // extraction, command dispatch and reducer run against these small host doubles.
 globalThis.foundry = {
-  applications: { api: { ApplicationV2: class {
-    constructor(options) { this.options = options; }
-    async render() { return this; }
-  }, HandlebarsApplicationMixin: Base => Base } },
-  utils: { randomID: (() => { let id = 0; return () => `id${++id}`; })() }
+  applications: {
+    api: {
+      ApplicationV2: class {
+        constructor(options) {
+          this.options = options;
+        }
+        async render() {
+          return this;
+        }
+      },
+      HandlebarsApplicationMixin: (Base) => Base,
+    },
+  },
+  utils: {
+    randomID: (() => {
+      let id = 0;
+      return () => `id${++id}`;
+    })(),
+  },
 };
 globalThis.Hooks = { on() {}, callAll() {} };
 globalThis.document = { addEventListener() {} };
 globalThis.CONFIG = { DND5E: {} };
-globalThis.fromUuid = async uuid => ({ uuid, name: "Wolf", img: "wolf.webp", system: {}, items: [] });
+globalThis.fromUuid = async (uuid) => ({ uuid, name: "Wolf", img: "wolf.webp", system: {}, items: [] });
 globalThis.ui = { notifications: { warn() {}, error() {} } };
 const { BestiaryCreatureView } = await import("../scripts/ui/creature-view.js");
 
 function setup({ collectionLocked = false, entryLocked = false, otherLocked = false } = {}) {
   const values = {
-    bestiaryData: { sections: [
-      { id: "forest", name: "Forest", locked: collectionLocked, creatures: [{ uuid: "Actor.wolf", locked: entryLocked }] },
-      { id: "caves", name: "Caves", creatures: [{ uuid: "Actor.wolf", locked: otherLocked }] }
-    ] },
-    bestiaryKnowledge: {}, bestiarySocial: {}, tierBlockConfig: {}, favoriteCreatures: []
+    bestiaryData: {
+      sections: [
+        {
+          id: "forest",
+          name: "Forest",
+          locked: collectionLocked,
+          creatures: [{ uuid: "Actor.wolf", locked: entryLocked }],
+        },
+        { id: "caves", name: "Caves", creatures: [{ uuid: "Actor.wolf", locked: otherLocked }] },
+      ],
+    },
+    bestiaryKnowledge: {},
+    bestiarySocial: {},
+    tierBlockConfig: {},
+    favoriteCreatures: [],
   };
   const gm = { id: "gm", name: "GM", isGM: true, active: true };
   globalThis.game = {
-    user: gm, users: { contents: [gm], get: id => id === "gm" ? gm : null },
+    user: gm,
+    users: { contents: [gm], get: (id) => (id === "gm" ? gm : null) },
     settings: {
       get: (_scope, key) => structuredClone(values[key]),
-      set: async (_scope, key, value) => { values[key] = structuredClone(value); }
+      set: async (_scope, key, value) => {
+        values[key] = structuredClone(value);
+      },
     },
-    i18n: { localize: key => key, has: () => false, format: key => key }
+    i18n: { localize: (key) => key, has: () => false, format: (key) => key },
   };
   const listeners = {};
-  const input = { value: "", addEventListener: (type, handler) => { listeners[type] = handler; } };
+  const input = {
+    value: "",
+    addEventListener: (type, handler) => {
+      listeners[type] = handler;
+    },
+  };
   const attributes = {};
-  const submit = { disabled: false, setAttribute: (key, value) => { attributes[key] = value; } };
-  const element = { querySelector: selector => ({
-    ".comment-composer-input": input,
-    '[data-action="submitComment"]': submit,
-    ".comment-channel-tabs .is-active": { dataset: { channel: "party" } }
-  })[selector] ?? null };
+  const submit = {
+    disabled: false,
+    setAttribute: (key, value) => {
+      attributes[key] = value;
+    },
+  };
+  const element = {
+    querySelector: (selector) =>
+      ({
+        ".comment-composer-input": input,
+        '[data-action="submitComment"]': submit,
+        ".comment-channel-tabs .is-active": { dataset: { channel: "party" } },
+      })[selector] ?? null,
+  };
   const app = new BestiaryCreatureView({ uuid: "Actor.wolf", sectionId: "forest" });
   app.element = element;
   app._commentDraft = "First note";
@@ -53,11 +93,18 @@ function setup({ collectionLocked = false, entryLocked = false, otherLocked = fa
 function delaySocialSave() {
   let release;
   let started;
-  const ready = new Promise(resolve => { started = resolve; });
-  const gate = new Promise(resolve => { release = resolve; });
+  const ready = new Promise((resolve) => {
+    started = resolve;
+  });
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
   const save = game.settings.set;
   game.settings.set = async (scope, key, value) => {
-    if (key === "bestiarySocial") { started(); await gate; }
+    if (key === "bestiarySocial") {
+      started();
+      await gate;
+    }
     return save(scope, key, value);
   };
   return { ready, release };
@@ -73,7 +120,7 @@ test("rapid comment submissions persist one note before acknowledgement", async 
   gate.release();
   await Promise.all([first, second]);
   // Also drain any command accidentally queued by the keyboard shortcut.
-  await new Promise(resolve => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
   assert.equal(values.bestiarySocial.comments.length, 1);
 });
 
@@ -114,11 +161,13 @@ test("a refused comment save retains the draft and permits retry", async () => {
   assert.equal(app._commentDraft, "");
 });
 
-test("a failed comment save retains its draft and clears busy state for retry", async t => {
+test("a failed comment save retains its draft and clears busy state for retry", async (t) => {
   const { app, values, submit } = setup();
   const save = game.settings.set;
   t.mock.method(console, "warn", () => {});
-  game.settings.set = async () => { throw new Error("offline"); };
+  game.settings.set = async () => {
+    throw new Error("offline");
+  };
   await app._onSubmitComment();
   assert.equal(app._commentDraft, "First note");
   assert.equal(submit.disabled, false);
@@ -169,10 +218,12 @@ test("item disclosure updates aria-expanded together with visible state", () => 
   const attributes = { "aria-expanded": "false" };
   const item = {
     dataset: { itemKey: "actions:bite" },
-    classList: { toggle: (name, enabled) => enabled ? classes.add(name) : classes.delete(name) },
-    setAttribute: (name, value) => { attributes[name] = value; },
+    classList: { toggle: (name, enabled) => (enabled ? classes.add(name) : classes.delete(name)) },
+    setAttribute: (name, value) => {
+      attributes[name] = value;
+    },
     querySelector: () => null,
-    closest: selector => selector === "[data-item-key]" ? item : null
+    closest: (selector) => (selector === "[data-item-key]" ? item : null),
   };
   app._onExpandItem({ target: item }, item);
   assert.equal(classes.has("is-expanded"), true);

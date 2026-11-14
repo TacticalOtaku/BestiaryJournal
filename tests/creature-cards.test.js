@@ -6,7 +6,7 @@ import { createKnowledgeLens } from "../scripts/core/knowledge-lens.js";
 
 globalThis.game = {
   settings: { get: () => ({}) },
-  i18n: { localize: key => key, has: () => false }
+  i18n: { localize: (key) => key, has: () => false },
 };
 globalThis.CONFIG = { DND5E: {} };
 
@@ -20,10 +20,10 @@ const creature = {
   cr: 17,
   ac: { value: 19 },
   hp: { value: 250, max: 250 },
-  speeds: { walk: 40 }
+  speeds: { walk: 40 },
 };
 const entry = { uuid: "Actor.grim", image: {}, blockTiers: {} };
-const lens = tier => createKnowledgeLens({ tier, worldTiers: {}, entries: [entry] });
+const lens = (tier) => createKnowledgeLens({ tier, worldTiers: {}, entries: [entry] });
 
 test("a creature the viewer does not know reveals nothing anywhere in its card", () => {
   const card = buildCreatureCard({ uuid: "Actor.grim", entry, creature, lens: lens(0) });
@@ -45,7 +45,12 @@ test("each block opens at its own tier", () => {
 });
 
 test("a deleted actor keeps its name for the GM but shows no statistics", () => {
-  const card = buildCreatureCard({ uuid: "Actor.gone", entry: { ...entry, label: "QA Ghost" }, creature: null, lens: lens(99) });
+  const card = buildCreatureCard({
+    uuid: "Actor.gone",
+    entry: { ...entry, label: "QA Ghost" },
+    creature: null,
+    lens: lens(99),
+  });
   assert.equal(card.name, "QA Ghost");
   assert.equal(card.isMissing, true);
   assert.equal(card.knowsCr, false, "no «CR 0» for an actor that is gone");

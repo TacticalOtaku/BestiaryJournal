@@ -8,10 +8,28 @@ export const DATA_VERSION = 2;
 
 /** Legacy custom-display keys that map one-to-one onto the new block catalog. */
 const LEGACY_BLOCKS = [
-  "abilities", "str", "dex", "con", "int", "wis", "cha", "skills",
-  "senses", "languages", "resistances", "immunities", "vulnerabilities",
-  "conditionImmunities", "features", "actions", "inventory", "bonusActions",
-  "reactions", "legendaryActions", "spells", "biography"
+  "abilities",
+  "str",
+  "dex",
+  "con",
+  "int",
+  "wis",
+  "cha",
+  "skills",
+  "senses",
+  "languages",
+  "resistances",
+  "immunities",
+  "vulnerabilities",
+  "conditionImmunities",
+  "features",
+  "actions",
+  "inventory",
+  "bonusActions",
+  "reactions",
+  "legendaryActions",
+  "spells",
+  "biography",
 ];
 
 const LEGACY_LEVEL_TIERS = { minimal: 1, standard: 2, expanded: 3, custom: 2 };
@@ -25,12 +43,21 @@ export async function runMigrations() {
   const current = Number(game.settings.get(MODULE_ID, "dataVersion") ?? 0);
   if (current >= DATA_VERSION) return false;
 
-  const originals = Object.fromEntries(["bestiaryData", "bestiaryKnowledge", "dataVersion"]
-    .map(key => [key, structuredClone(game.settings.get(MODULE_ID, key))]));
+  const originals = Object.fromEntries(
+    ["bestiaryData", "bestiaryKnowledge", "dataVersion"].map((key) => [
+      key,
+      structuredClone(game.settings.get(MODULE_ID, key)),
+    ]),
+  );
   const previous = game.settings.get(MODULE_ID, "migrationBackup");
-  if (previous?.originals && current < previous.targetVersion
-    && JSON.stringify(previous.originals) !== JSON.stringify(originals)) {
-    log.error("Migration recovery is required; restore the originals in bestiary-journal.migrationBackup before retrying");
+  if (
+    previous?.originals &&
+    current < previous.targetVersion &&
+    JSON.stringify(previous.originals) !== JSON.stringify(originals)
+  ) {
+    log.error(
+      "Migration recovery is required; restore the originals in bestiary-journal.migrationBackup before retrying",
+    );
     return false;
   }
 
@@ -49,7 +76,11 @@ export async function runMigrations() {
     migrateCustomDisplay(data);
     migrateDetailLevels(knowledge);
 
-    for (const [key, value] of [["bestiaryData", data], ["bestiaryKnowledge", knowledge], ["dataVersion", DATA_VERSION]]) {
+    for (const [key, value] of [
+      ["bestiaryData", data],
+      ["bestiaryKnowledge", knowledge],
+      ["dataVersion", DATA_VERSION],
+    ]) {
       // A rejected acknowledgement does not prove that the server did not save.
       attempted.push(key);
       await game.settings.set(MODULE_ID, key, value);
@@ -64,7 +95,10 @@ export async function runMigrations() {
       }
     }
     if (failedRestores.length) {
-      log.error(`Migration failed; could not restore ${failedRestores.join(", ")}. Originals remain in bestiary-journal.migrationBackup`, error);
+      log.error(
+        `Migration failed; could not restore ${failedRestores.join(", ")}. Originals remain in bestiary-journal.migrationBackup`,
+        error,
+      );
     } else {
       await clearMigrationBackup();
       log.error("Migration failed; original world data restored", error);
@@ -122,7 +156,7 @@ function migrateDetailLevels(knowledge) {
     const tier = LEGACY_LEVEL_TIERS[level];
     if (!tier) continue;
     for (const user of players) {
-      const bucket = knowledge.users[user.id] ??= {};
+      const bucket = (knowledge.users[user.id] ??= {});
       const existing = bucket[uuid];
       if (existing && existing.tier >= tier) continue;
       bucket[uuid] = {
@@ -132,7 +166,7 @@ function migrateDetailLevels(knowledge) {
         grantedBy: null,
         attempts: 0,
         blocked: false,
-        lastRoll: null
+        lastRoll: null,
       };
     }
   }

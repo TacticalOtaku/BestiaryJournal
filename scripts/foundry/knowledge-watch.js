@@ -51,10 +51,12 @@ export async function announceKnowledge() {
     } catch (error) {
       log.debug(`Could not read ${uuid} for a knowledge notice`, error);
     }
-    ui.notifications.info(game.i18n.format("BESTIARY.Notice.Learned", {
-      name: name || localize("BESTIARY.Tier.UnknownName"),
-      tier: describeTier(to).label
-    }));
+    ui.notifications.info(
+      game.i18n.format("BESTIARY.Notice.Learned", {
+        name: name || localize("BESTIARY.Tier.UnknownName"),
+        tier: describeTier(to).label,
+      }),
+    );
   }
 }
 

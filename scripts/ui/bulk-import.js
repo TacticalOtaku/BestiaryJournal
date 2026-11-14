@@ -15,7 +15,6 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
  * editable actors.
  */
 export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2) {
-
   static DEFAULT_OPTIONS = {
     id: "bestiary-bulk-import-{id}",
     classes: ["bestiary-journal", "bestiary-app", "bestiary-bulk-import"],
@@ -23,15 +22,23 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
     window: { title: "BESTIARY.Import.Title", icon: "fa-solid fa-layer-group", resizable: true },
     position: { width: 880, height: 700 },
     actions: {
-      selectSource: function (event, target) { this._onSelectSource(event, target); },
-      toggleAll: function (event, target) { this._onToggleAll(event, target); },
-      importSelected: function () { this._onImport(); },
-      closeDialog: function () { this.close(); }
-    }
+      selectSource: function (event, target) {
+        this._onSelectSource(event, target);
+      },
+      toggleAll: function (event, target) {
+        this._onToggleAll(event, target);
+      },
+      importSelected: function () {
+        this._onImport();
+      },
+      closeDialog: function () {
+        this.close();
+      },
+    },
   };
 
   static PARTS = {
-    body: { template: "modules/bestiary-journal/templates/bulk-import.hbs" }
+    body: { template: "modules/bestiary-journal/templates/bulk-import.hbs" },
   };
 
   constructor(options = {}) {
@@ -51,10 +58,12 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
 
   async _prepareContext() {
     const data = getBestiaryData();
-    const section = data.sections.find(item => item.id === this.sectionId);
+    const section = data.sections.find((item) => item.id === this.sectionId);
     // Big compendiums take a moment: show the spinner, load, then redraw.
     if (!this._loaded && !this._loading) {
-      this._loadSource().then(() => { if (this.rendered) this.render(); });
+      this._loadSource().then(() => {
+        if (this.rendered) this.render();
+      });
     }
 
     return {
@@ -69,30 +78,30 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
       sectionName: section?.name ?? "",
       families: [
         { id: "", name: localize("BESTIARY.Families.None"), selected: !this.familyId },
-        ...selectVisibleFamilies(section, game.user).map(family => ({
+        ...selectVisibleFamilies(section, game.user).map((family) => ({
           id: family.id,
           name: family.name,
-          selected: family.id === this.familyId
-        }))
+          selected: family.id === this.familyId,
+        })),
       ],
       query: this._query,
       crMin: this._crMin,
-      crMax: this._crMax
+      crMax: this._crMax,
     };
   }
 
   _buildSources() {
     const packs = [...(game.packs ?? [])]
-      .filter(pack => pack.documentName === "Actor" && pack.visible !== false)
-      .map(pack => ({
+      .filter((pack) => pack.documentName === "Actor" && pack.visible !== false)
+      .map((pack) => ({
         id: pack.collection,
         label: `${pack.metadata.label} (${pack.metadata.packageName ?? pack.metadata.package ?? ""})`.trim(),
-        selected: pack.collection === this._sourceId
+        selected: pack.collection === this._sourceId,
       }))
       .sort((left, right) => left.label.localeCompare(right.label));
     return [
       { id: "world", label: localize("BESTIARY.Import.SourceWorld"), selected: this._sourceId === "world" },
-      ...packs
+      ...packs,
     ];
   }
 
@@ -101,9 +110,7 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
     this._loading = true;
     let entries;
     try {
-      entries = sourceId === "world"
-        ? this._loadWorldActors()
-        : await this._loadPackActors(sourceId);
+      entries = sourceId === "world" ? this._loadWorldActors() : await this._loadPackActors(sourceId);
     } catch (error) {
       log.error("Could not read the import source", error);
       ui.notifications.error(localize("BESTIARY.Import.LoadFailed"));
@@ -121,13 +128,13 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
 
   _loadWorldActors() {
     return (game.actors?.contents ?? [])
-      .filter(actor => actor.type === "npc")
-      .map(actor => ({
+      .filter((actor) => actor.type === "npc")
+      .map((actor) => ({
         uuid: actor.uuid,
         name: actor.name,
         img: actor.img,
         ...creatureTraits(actor),
-        folder: actor.folder?.name ?? ""
+        folder: actor.folder?.name ?? "",
       }));
   }
 
@@ -135,23 +142,23 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
     const pack = game.packs?.get(packId);
     if (!pack) return [];
     const index = await pack.getIndex({
-      fields: ["img", ...CREATURE_TRAIT_FIELDS, "type"]
+      fields: ["img", ...CREATURE_TRAIT_FIELDS, "type"],
     });
     return [...index]
-      .filter(record => (record.type ?? "npc") === "npc")
-      .map(record => ({
+      .filter((record) => (record.type ?? "npc") === "npc")
+      .map((record) => ({
         uuid: `Compendium.${packId}.Actor.${record._id}`,
         name: record.name,
         img: record.img || "icons/svg/mystery-man.svg",
         ...creatureTraits(record),
-        folder: pack.metadata.label
+        folder: pack.metadata.label,
       }));
   }
 
   /** Entries already present in the target collection are shown but disabled. */
   _markExisting() {
-    const section = getBestiaryData().sections.find(item => item.id === this.sectionId);
-    const present = new Set((section?.creatures ?? []).map(entry => entry.uuid));
+    const section = getBestiaryData().sections.find((item) => item.id === this.sectionId);
+    const present = new Set((section?.creatures ?? []).map((entry) => entry.uuid));
     for (const entry of this._entries) {
       entry.alreadyAdded = present.has(entry.uuid);
       entry.crLabel = formatCR(entry.cr);
@@ -170,32 +177,32 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
 
   _activateControls() {
     const root = this.element;
-    root.querySelector(".bulk-source-select")?.addEventListener("change", event => {
+    root.querySelector(".bulk-source-select")?.addEventListener("change", (event) => {
       this._sourceId = event.currentTarget.value;
       this._entries = [];
       this._loaded = false;
       this._selected.clear();
       this.render();
     });
-    root.querySelector(".bulk-family-select")?.addEventListener("change", event => {
+    root.querySelector(".bulk-family-select")?.addEventListener("change", (event) => {
       this.familyId = event.currentTarget.value;
     });
-    root.querySelector(".bulk-copy-toggle")?.addEventListener("change", event => {
+    root.querySelector(".bulk-copy-toggle")?.addEventListener("change", (event) => {
       this._copyToWorld = event.currentTarget.checked;
     });
-    root.querySelector(".bulk-search-input")?.addEventListener("input", event => {
+    root.querySelector(".bulk-search-input")?.addEventListener("input", (event) => {
       this._query = event.currentTarget.value.trim().toLocaleLowerCase();
       this._applyFilters();
     });
     for (const input of root.querySelectorAll("[data-cr-bound]")) {
-      input.addEventListener("input", event => {
+      input.addEventListener("input", (event) => {
         if (event.currentTarget.dataset.crBound === "min") this._crMin = event.currentTarget.value;
         else this._crMax = event.currentTarget.value;
         this._applyFilters();
       });
     }
     for (const checkbox of root.querySelectorAll("input[data-entry-uuid]")) {
-      checkbox.addEventListener("change", event => {
+      checkbox.addEventListener("change", (event) => {
         const uuid = event.currentTarget.dataset.entryUuid;
         event.currentTarget.checked ? this._selected.add(uuid) : this._selected.delete(uuid);
         this._updateCounter();
@@ -209,8 +216,7 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
     let visible = 0;
     for (const row of this.element.querySelectorAll("[data-entry-row]")) {
       const cr = Number(row.dataset.cr);
-      const show = (!this._query || row.dataset.searchText.includes(this._query))
-        && cr >= min && cr <= max;
+      const show = (!this._query || row.dataset.searchText.includes(this._query)) && cr >= min && cr <= max;
       row.classList.toggle("is-filtered-out", !show);
       if (show) visible += 1;
     }
@@ -232,7 +238,9 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
       const row = checkbox.closest("[data-entry-row]");
       if (checkbox.disabled || row?.classList.contains("is-filtered-out")) continue;
       checkbox.checked = select;
-      select ? this._selected.add(checkbox.dataset.entryUuid) : this._selected.delete(checkbox.dataset.entryUuid);
+      select
+        ? this._selected.add(checkbox.dataset.entryUuid)
+        : this._selected.delete(checkbox.dataset.entryUuid);
     }
     this._updateCounter();
   }
@@ -251,24 +259,29 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
     const button = this.element?.querySelector("[data-action='importSelected']");
     if (button) button.disabled = true;
     try {
-      const chosen = this._entries.filter(entry => this._selected.has(entry.uuid));
-      const prepared = this._copyToWorld && this._sourceId !== "world"
-        ? await this._copyIntoWorld(chosen)
-        : chosen;
-      const present = new Set(getBestiaryData().sections
-        .find(item => item.id === this.sectionId)?.creatures.map(entry => entry.uuid) ?? []);
-      const fresh = prepared.filter(entry => !present.has(entry.uuid));
+      const chosen = this._entries.filter((entry) => this._selected.has(entry.uuid));
+      const prepared =
+        this._copyToWorld && this._sourceId !== "world" ? await this._copyIntoWorld(chosen) : chosen;
+      const present = new Set(
+        getBestiaryData()
+          .sections.find((item) => item.id === this.sectionId)
+          ?.creatures.map((entry) => entry.uuid) ?? [],
+      );
+      const fresh = prepared.filter((entry) => !present.has(entry.uuid));
       if (!fresh.length) {
         ui.notifications.info(localize("BESTIARY.Import.NothingNew"));
         return;
       }
 
-      const result = await runCommand({
-        type: BESTIARY_COMMANDS.ADD_CREATURES,
-        sectionId: this.sectionId,
-        familyId: this.familyId || null,
-        entries: fresh.map(entry => ({ uuid: entry.uuid, label: entry.name, thumb: entry.img }))
-      }, { unchanged: "BESTIARY.Lock.Blocked" });
+      const result = await runCommand(
+        {
+          type: BESTIARY_COMMANDS.ADD_CREATURES,
+          sectionId: this.sectionId,
+          familyId: this.familyId || null,
+          entries: fresh.map((entry) => ({ uuid: entry.uuid, label: entry.name, thumb: entry.img })),
+        },
+        { unchanged: "BESTIARY.Lock.Blocked" },
+      );
       if (!result?.changed) return;
       ui.notifications.info(game.i18n.format("BESTIARY.Import.Done", { count: fresh.length }));
       this.close();
@@ -288,8 +301,9 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
     const copied = [];
     const missing = [];
     for (const entry of entries) {
-      const existing = game.actors.find(actor =>
-        (actor._stats?.compendiumSource ?? actor.flags?.core?.sourceId) === entry.uuid);
+      const existing = game.actors.find(
+        (actor) => (actor._stats?.compendiumSource ?? actor.flags?.core?.sourceId) === entry.uuid,
+      );
       if (existing) copied.push({ ...entry, uuid: existing.uuid });
       else missing.push(entry);
     }
@@ -297,13 +311,16 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
 
     try {
       const pack = game.packs.get(this._sourceId);
-      const sources = await pack.getDocuments({ _id__in: missing.map(entry => foundry.utils.parseUuid(entry.uuid).id) });
+      const sources = await pack.getDocuments({
+        _id__in: missing.map((entry) => foundry.utils.parseUuid(entry.uuid).id),
+      });
       const actors = await Actor.implementation.createDocuments(
-        sources.map(source => game.actors.fromCompendium(source, { clearFolder: true }))
+        sources.map((source) => game.actors.fromCompendium(source, { clearFolder: true })),
       );
       // The server does not keep the request order, so each copy is matched back by its source.
-      const byUuid = new Map(missing.map(entry => [entry.uuid, entry]));
-      for (const actor of actors) copied.push({ ...byUuid.get(actor._stats.compendiumSource), uuid: actor.uuid });
+      const byUuid = new Map(missing.map((entry) => [entry.uuid, entry]));
+      for (const actor of actors)
+        copied.push({ ...byUuid.get(actor._stats.compendiumSource), uuid: actor.uuid });
     } catch (error) {
       log.error("Could not copy actors into the world", error);
       ui.notifications.error(localize("BESTIARY.Import.CopyFailed"));

@@ -3,16 +3,31 @@ import {
   canEditComment,
   canSeeComment,
   normalizeSocial,
-  selectComments
+  selectComments,
 } from "../core/bestiary-domain.js";
 import { dispatchBestiaryCommand } from "../foundry/bestiary-store.js";
 import { enrichHtml, formatTimestamp, getUserById, localize } from "../foundry/foundry-runtime.js";
 import { log } from "../core/logger.js";
 
 export const COMMENT_CHANNEL_META = Object.freeze([
-  { key: "gm", label: "BESTIARY.Comments.ChannelGm", hint: "BESTIARY.Comments.ChannelGmHint", icon: "fa-crown" },
-  { key: "party", label: "BESTIARY.Comments.ChannelParty", hint: "BESTIARY.Comments.ChannelPartyHint", icon: "fa-users" },
-  { key: "private", label: "BESTIARY.Comments.ChannelPrivate", hint: "BESTIARY.Comments.ChannelPrivateHint", icon: "fa-lock" }
+  {
+    key: "gm",
+    label: "BESTIARY.Comments.ChannelGm",
+    hint: "BESTIARY.Comments.ChannelGmHint",
+    icon: "fa-crown",
+  },
+  {
+    key: "party",
+    label: "BESTIARY.Comments.ChannelParty",
+    hint: "BESTIARY.Comments.ChannelPartyHint",
+    icon: "fa-users",
+  },
+  {
+    key: "private",
+    label: "BESTIARY.Comments.ChannelPrivate",
+    hint: "BESTIARY.Comments.ChannelPrivateHint",
+    icon: "fa-lock",
+  },
 ]);
 
 /**
@@ -21,9 +36,9 @@ export const COMMENT_CHANNEL_META = Object.freeze([
  */
 export async function buildCommentThreads(social, uuid, viewer, { locked = false } = {}) {
   const visible = selectComments(social, uuid, viewer);
-  const rendered = await Promise.all(visible.map(comment => decorateComment(comment, viewer, locked)));
-  const channels = COMMENT_CHANNEL_META.map(meta => {
-    const comments = rendered.filter(comment => comment.channel === meta.key);
+  const rendered = await Promise.all(visible.map((comment) => decorateComment(comment, viewer, locked)));
+  const channels = COMMENT_CHANNEL_META.map((meta) => {
+    const comments = rendered.filter((comment) => comment.channel === meta.key);
     return {
       key: meta.key,
       label: localize(meta.label),
@@ -31,14 +46,14 @@ export async function buildCommentThreads(social, uuid, viewer, { locked = false
       icon: meta.icon,
       comments,
       count: comments.length,
-      canPost: !locked && (meta.key !== "gm" || !!viewer.isGM)
+      canPost: !locked && (meta.key !== "gm" || !!viewer.isGM),
     };
-  }).filter(channel => channel.comments.length || channel.canPost);
+  }).filter((channel) => channel.comments.length || channel.canPost);
 
   return {
     channels,
     total: rendered.length,
-    locked
+    locked,
   };
 }
 
@@ -49,20 +64,26 @@ const FEED_LIMIT = 60;
  * the viewer can open. `names` maps each such creature to the name the viewer knows it by.
  */
 export function selectPartyNotes(social, viewer, names) {
-  return normalizeSocial(social).comments
-    .filter(comment => comment.channel !== "private" && names.has(comment.uuid) && canSeeComment(comment, viewer))
+  return normalizeSocial(social)
+    .comments.filter(
+      (comment) => comment.channel !== "private" && names.has(comment.uuid) && canSeeComment(comment, viewer),
+    )
     .sort((left, right) => right.createdAt - left.createdAt);
 }
 
 export function buildNotesFeed(social, viewer, names) {
-  const channels = new Map(COMMENT_CHANNEL_META.map(meta => [meta.key, meta]));
-  return Promise.all(selectPartyNotes(social, viewer, names).slice(0, FEED_LIMIT).map(async comment => ({
-    ...(await decorateComment(comment, viewer, true)),
-    creatureName: names.get(comment.uuid),
-    channelLabel: localize(channels.get(comment.channel).label),
-    channelIcon: channels.get(comment.channel).icon,
-    searchText: `${names.get(comment.uuid)} ${comment.text}`.toLocaleLowerCase()
-  })));
+  const channels = new Map(COMMENT_CHANNEL_META.map((meta) => [meta.key, meta]));
+  return Promise.all(
+    selectPartyNotes(social, viewer, names)
+      .slice(0, FEED_LIMIT)
+      .map(async (comment) => ({
+        ...(await decorateComment(comment, viewer, true)),
+        creatureName: names.get(comment.uuid),
+        channelLabel: localize(channels.get(comment.channel).label),
+        channelIcon: channels.get(comment.channel).icon,
+        searchText: `${names.get(comment.uuid)} ${comment.text}`.toLocaleLowerCase(),
+      })),
+  );
 }
 
 async function decorateComment(comment, viewer, locked) {
@@ -79,9 +100,9 @@ async function decorateComment(comment, viewer, locked) {
     canEdit: !locked && canEditComment(comment, viewer),
     canPin: !locked && !!viewer.isGM,
     canShare: !locked && !!viewer.isGM && comment.channel === "gm",
-    shareLabel: localize(comment.shared
-      ? "BESTIARY.Comments.SharedWithPlayers"
-      : "BESTIARY.Comments.HiddenFromPlayers")
+    shareLabel: localize(
+      comment.shared ? "BESTIARY.Comments.SharedWithPlayers" : "BESTIARY.Comments.HiddenFromPlayers",
+    ),
   };
 }
 
@@ -94,7 +115,11 @@ async function renderCommentText(text) {
   let enriched = escaped;
   try {
     enriched = await enrichHtml(escaped, {
-      secrets: false, documents: true, links: true, rolls: true, embeds: false
+      secrets: false,
+      documents: true,
+      links: true,
+      rolls: true,
+      embeds: false,
     });
   } catch (error) {
     log.warn("Could not enrich a comment", error);
@@ -108,7 +133,7 @@ export function postComment({ uuid, channel, text, shared = false }) {
     uuid,
     channel,
     text,
-    shared
+    shared,
   });
 }
 
@@ -116,20 +141,20 @@ export function editComment(commentId, patch) {
   return dispatchBestiaryCommand({
     type: BESTIARY_COMMANDS.UPDATE_COMMENT,
     commentId,
-    patch
+    patch,
   });
 }
 
 export function removeComment(commentId) {
   return dispatchBestiaryCommand({
     type: BESTIARY_COMMANDS.DELETE_COMMENT,
-    commentId
+    commentId,
   });
 }
 
 export function toggleCommentPin(commentId) {
   return dispatchBestiaryCommand({
     type: BESTIARY_COMMANDS.TOGGLE_COMMENT_PIN,
-    commentId
+    commentId,
   });
 }

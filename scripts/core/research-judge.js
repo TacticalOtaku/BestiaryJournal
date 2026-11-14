@@ -12,24 +12,25 @@ export const RESEARCH_ROLL_MAX_AGE_MS = 10 * 60_000;
  */
 export function judgeResearchRoll({ requester, uuid, roll, data, knowledge, creature, settings, now }) {
   if (!settings.enabled) throw new BestiaryCommandError("BESTIARY.Errors.ResearchDisabled");
-  const entries = playerEntryContexts(data, uuid).map(context => context.entry);
+  const entries = playerEntryContexts(data, uuid).map((context) => context.entry);
   if (!entries.length) throw new BestiaryCommandError("BESTIARY.CreatureUnavailable");
   if (getUserTier(knowledge, requester.id, uuid) >= MAX_RESEARCH_TIER) {
     throw new BestiaryCommandError("BESTIARY.Research.Complete");
   }
 
-  const verified = !!roll
-    && roll.authorId === requester.id
-    && roll.creatureUuid === uuid
-    && !roll.consumed
-    && roll.isSkillCheck
-    && now - roll.at < RESEARCH_ROLL_MAX_AGE_MS
-    && roll.ownedByRequester
-    && Number.isFinite(roll.total);
+  const verified =
+    !!roll &&
+    roll.authorId === requester.id &&
+    roll.creatureUuid === uuid &&
+    !roll.consumed &&
+    roll.isSkillCheck &&
+    now - roll.at < RESEARCH_ROLL_MAX_AGE_MS &&
+    roll.ownedByRequester &&
+    Number.isFinite(roll.total);
   if (!verified) throw new BestiaryCommandError("BESTIARY.Errors.ResearchUnverified");
 
   const config = resolveCreatureResearch(entries, creature, {
-    allowedSkills: settings.allowedSkills ?? RESEARCH_SKILLS
+    allowedSkills: settings.allowedSkills ?? RESEARCH_SKILLS,
   });
   if (!config.skills.includes(roll.skill)) throw new BestiaryCommandError("BESTIARY.Errors.ResearchSkill");
 
@@ -45,7 +46,7 @@ export function judgeResearchRoll({ requester, uuid, roll, data, knowledge, crea
       dc: config.dc,
       success: total >= config.dc,
       skill: roll.skill,
-      singleAttempt: !!settings.singleAttempt
-    }
+      singleAttempt: !!settings.singleAttempt,
+    },
   };
 }

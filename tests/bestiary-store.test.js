@@ -13,16 +13,16 @@ function setupWorld({ includeCustomSkills = false, researchSkills = null, custom
         {
           id: "s1",
           name: "Caves",
-          creatures: [{ uuid: UUID, ...(researchSkills ? { research: { skills: researchSkills } } : {}) }]
-        }
-      ]
+          creatures: [{ uuid: UUID, ...(researchSkills ? { research: { skills: researchSkills } } : {}) }],
+        },
+      ],
     },
     bestiaryKnowledge: {},
     bestiarySocial: {},
     tierBlockConfig: {},
     researchRollEnabled: true,
     researchSingleAttempt: false,
-    includeCustomSkills
+    includeCustomSkills,
   };
   const flags = {};
   const user = (id, isGM) => ({
@@ -30,7 +30,7 @@ function setupWorld({ includeCustomSkills = false, researchSkills = null, custom
     isGM,
     active: true,
     getFlag: (scope, key) => flags[`${id}.${key}`],
-    unsetFlag: async (scope, key) => delete flags[`${id}.${key}`]
+    unsetFlag: async (scope, key) => delete flags[`${id}.${key}`],
   });
   const gm = user("gm", true);
   const player = user("p1", false);
@@ -41,25 +41,35 @@ function setupWorld({ includeCustomSkills = false, researchSkills = null, custom
 
   globalThis.game = {
     user: gm,
-    users: { contents: users, get: id => users.find(item => item.id === id), filter: fn => users.filter(fn) },
+    users: {
+      contents: users,
+      get: (id) => users.find((item) => item.id === id),
+      filter: (fn) => users.filter(fn),
+    },
     settings: {
       get: (scope, key) => structuredClone(values[key]),
       set: async (scope, key, value) => {
         values[key] = structuredClone(value);
-      }
+      },
     },
     socket: { emit: (name, message) => emitted.push(message) },
-    messages: { get: id => messages.get(id) },
-    actors: { get: id => (id === "hero" ? { name: "Hero", testUserPermission: owner => owner.id === "p1" } : null) },
-    i18n: { localize: key => key, format: key => key, has: () => false }
+    messages: { get: (id) => messages.get(id) },
+    actors: {
+      get: (id) =>
+        id === "hero" ? { name: "Hero", testUserPermission: (owner) => owner.id === "p1" } : null,
+    },
+    i18n: { localize: (key) => key, format: (key) => key, has: () => false },
   };
   globalThis.foundry = { utils: { randomID: () => `id${++counter}` } };
   globalThis.Hooks = { callAll() {} };
   globalThis.CONFIG = { DND5E: { skills: customSkills } };
-  globalThis.fromUuid = async () => ({ name: "Goblin", system: { details: { cr: 0.25, type: { value: "humanoid" } } } });
+  globalThis.fromUuid = async () => ({
+    name: "Goblin",
+    system: { details: { cr: 0.25, type: { value: "humanoid" } } },
+  });
   globalThis.ChatMessage = { create: async () => ({}) };
   globalThis.document = {
-    createElement: () => ({ className: "", textContent: "", append() {}, outerHTML: "<div></div>" })
+    createElement: () => ({ className: "", textContent: "", append() {}, outerHTML: "<div></div>" }),
   };
 
   /** What a player's client does: persist the request on its own user, then name it over the socket. */
@@ -82,7 +92,7 @@ function setupWorld({ includeCustomSkills = false, researchSkills = null, custom
       speaker: { actor: "hero" },
       timestamp: Date.now(),
       whisper: [],
-      blind: false
+      blind: false,
     };
     messages.set(id, message);
     return message;
@@ -134,18 +144,22 @@ test("overlapping requests with different IDs cannot spend the same research rol
   const roll = world.addRoll("m-overlap");
   const research = { type: "recordResearch", uuid: UUID, messageId: "m-overlap" };
 
-  await Promise.all([
-    world.send("r-overlap-first", research),
-    world.send("r-overlap-second", research)
-  ]);
+  await Promise.all([world.send("r-overlap-first", research), world.send("r-overlap-second", research)]);
 
   const record = world.values.bestiaryKnowledge.users.p1[UUID];
   assert.equal(record.tier, 1, "one successful roll earns exactly one tier");
   assert.equal(record.attempts, 1, "one roll counts as exactly one attempt");
   assert.equal(roll.flags.research.consumed, true);
-  const responses = world.emitted.filter(message => message.action === "bestiaryCommandResult");
-  assert.deepEqual(responses.map(message => message.error), [null, "BESTIARY.Errors.ResearchUnverified"]);
-  assert.equal((await world.send("r-after-overlap", comment)).error, null, "the queue still accepts later commands");
+  const responses = world.emitted.filter((message) => message.action === "bestiaryCommandResult");
+  assert.deepEqual(
+    responses.map((message) => message.error),
+    [null, "BESTIARY.Errors.ResearchUnverified"],
+  );
+  assert.equal(
+    (await world.send("r-after-overlap", comment)).error,
+    null,
+    "the queue still accepts later commands",
+  );
 });
 
 test("a roll made by someone else's character is rejected", async () => {
@@ -176,10 +190,7 @@ test("a custom skill research roll is judged according to the includeCustomSkill
 
   // With custom skills disabled, the automatic skill remains accepted as fallback.
   disabled.addRoll("m-auto", { skillId: "his" });
-  assert.equal(
-    (await disabled.send("r-auto-fallback", { ...research, messageId: "m-auto" })).error,
-    null
-  );
+  assert.equal((await disabled.send("r-auto-fallback", { ...research, messageId: "m-auto" })).error, null);
   assert.equal(disabled.values.bestiaryKnowledge.users.p1[UUID].tier, 1);
 
   const enabled = setupWorld({ includeCustomSkills: true, researchSkills: ["mec"], customSkills });

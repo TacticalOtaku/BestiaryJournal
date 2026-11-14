@@ -5,23 +5,38 @@ import {
   createBestiaryState,
   PLAYER_COMMANDS,
   selectResearchTargets,
-  summarizeResearchTargets
+  summarizeResearchTargets,
 } from "../scripts/core/bestiary-domain.js";
 
 function fixture() {
-  return createBestiaryState({ data: { sections: [
-    { id: "a", families: [{ id: "f" }], creatures: [
-      { uuid: "Actor.one", familyId: "f", research: { dc: 12, skills: ["nat"] } },
-      { uuid: "Actor.two", research: { dc: 16, skills: ["arc"] } },
-      { uuid: "Actor.locked", familyId: "f", locked: true }
-    ] },
-    { id: "b", locked: true, creatures: [{ uuid: "Actor.three" }] },
-    { id: "c", creatures: [{ uuid: "Actor.four" }] }
-  ] } });
+  return createBestiaryState({
+    data: {
+      sections: [
+        {
+          id: "a",
+          families: [{ id: "f" }],
+          creatures: [
+            { uuid: "Actor.one", familyId: "f", research: { dc: 12, skills: ["nat"] } },
+            { uuid: "Actor.two", research: { dc: 16, skills: ["arc"] } },
+            { uuid: "Actor.locked", familyId: "f", locked: true },
+          ],
+        },
+        { id: "b", locked: true, creatures: [{ uuid: "Actor.three" }] },
+        { id: "c", creatures: [{ uuid: "Actor.four" }] },
+      ],
+    },
+  });
 }
-const run = (state, options, deps) => applyBestiaryCommand(state, {
-  type: "bulkUpdateResearch", isGM: true, ...options
-}, deps);
+const run = (state, options, deps) =>
+  applyBestiaryCommand(
+    state,
+    {
+      type: "bulkUpdateResearch",
+      isGM: true,
+      ...options,
+    },
+    deps,
+  );
 
 test("bulk research updates only the chosen family and preserves unrelated settings", () => {
   const state = fixture();
@@ -55,8 +70,9 @@ test("bulk research rejects invalid scope, DC and skills without a partial updat
     { scope: "family", sectionId: "a", patch: { dc: 12 } },
     { scope: "all", patch: { dc: -1 } },
     { scope: "all", patch: { dc: 12.5 } },
-    { scope: "all", patch: { dc: 12, skills: ["invalid"] } }
-  ]) assert.throws(() => run(fixture(), options));
+    { scope: "all", patch: { dc: 12, skills: ["invalid"] } },
+  ])
+    assert.throws(() => run(fixture(), options));
 });
 
 test("bulk research is GM-only and an empty patch does not bump revisions", () => {
@@ -67,19 +83,30 @@ test("bulk research is GM-only and an empty patch does not bump revisions", () =
 
 test("the batch editor summary reports shared, automatic and mixed settings of unlocked entries", () => {
   const { data } = fixture();
-  const summary = selection => summarizeResearchTargets(selectResearchTargets(data, selection));
-  assert.deepEqual(summary({ scope: "family", sectionId: "a", familyId: "f" }),
-    { dc: { mode: "set", value: 12 }, skills: { mode: "set", values: ["nat"] } });
-  assert.deepEqual(summary({ scope: "section", sectionId: "a" }), { dc: { mode: "mixed" }, skills: { mode: "mixed" } });
-  assert.deepEqual(summary({ scope: "section", sectionId: "c" }), { dc: { mode: "auto" }, skills: { mode: "auto" } });
-  assert.deepEqual(summary({ scope: "section", sectionId: "b" }), { dc: { mode: "keep" }, skills: { mode: "keep" } });
+  const summary = (selection) => summarizeResearchTargets(selectResearchTargets(data, selection));
+  assert.deepEqual(summary({ scope: "family", sectionId: "a", familyId: "f" }), {
+    dc: { mode: "set", value: 12 },
+    skills: { mode: "set", values: ["nat"] },
+  });
+  assert.deepEqual(summary({ scope: "section", sectionId: "a" }), {
+    dc: { mode: "mixed" },
+    skills: { mode: "mixed" },
+  });
+  assert.deepEqual(summary({ scope: "section", sectionId: "c" }), {
+    dc: { mode: "auto" },
+    skills: { mode: "auto" },
+  });
+  assert.deepEqual(summary({ scope: "section", sectionId: "b" }), {
+    dc: { mode: "keep" },
+    skills: { mode: "keep" },
+  });
 });
 
 test("bulk research supports custom skills when allowedSkills includes them and filters summary", () => {
   const result = run(
     fixture(),
     { scope: "section", sectionId: "c", patch: { skills: ["mec", "sci"] } },
-    { allowedSkills: ["nat", "mec", "sci"] }
+    { allowedSkills: ["nat", "mec", "sci"] },
   );
   assert.deepEqual(result.state.data.sections[2].creatures[0].research, { dc: null, skills: ["mec", "sci"] });
 
@@ -87,6 +114,6 @@ test("bulk research supports custom skills when allowedSkills includes them and 
   assert.deepEqual(summarizeResearchTargets(targets, { allowedSkills: ["nat"] }).skills, { mode: "auto" });
   assert.deepEqual(summarizeResearchTargets(targets, { allowedSkills: ["nat", "mec", "sci"] }).skills, {
     mode: "set",
-    values: ["mec", "sci"]
+    values: ["mec", "sci"],
   });
 });

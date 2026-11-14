@@ -2,14 +2,14 @@ import {
   BESTIARY_COMMANDS,
   isSectionVisible,
   selectVisibleFamilies,
-  selectVisibleSections
+  selectVisibleSections,
 } from "../core/bestiary-domain.js";
 import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store.js";
 import { runCommand } from "../foundry/command-feedback.js";
 import {
   getLibraryViewMode,
   setLibraryViewMode,
-  toggleCollapsedFamily
+  toggleCollapsedFamily,
 } from "../foundry/client-preferences.js";
 import { postCreatureToChat } from "./creature-cards.js";
 import { PARTY_VIEWER } from "../core/knowledge-lens.js";
@@ -23,14 +23,17 @@ import { exportBestiary, exportCreatureEntry } from "../foundry/transfer.js";
 import { playApplicationEntrance, showContextMenu } from "./ui-effects.js";
 import { buildFamilyGroups, buildFilterOptions } from "./section-model.js";
 import { UNGROUPED_ID, buildCreatureRows, rowInputs, summarizeRows } from "./creature-rows.js";
-import { activeFilterCount, compareCollectionCards, matchesCollectionFilter } from "../core/collection-filter.js";
+import {
+  activeFilterCount,
+  compareCollectionCards,
+  matchesCollectionFilter,
+} from "../core/collection-filter.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const CARD_DRAG_TYPE = "application/x-bestiary-card";
 
 export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV2) {
-
   static _instances = new Set();
 
   static DEFAULT_OPTIONS = {
@@ -40,37 +43,82 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     window: { title: "BESTIARY.Title", icon: "fa-solid fa-book-open", resizable: true, minimizable: true },
     position: { width: 1280, height: 820 },
     actions: {
-      openKnowledgeBoard: function () { BestiaryKnowledgeBoard.open(this.sectionId); },
-      goBack: function () { this._onGoBack(); },
-      switchSection: function (event, target) { this._onSwitchSection(event, target); },
-      toggleView: function (event, target) { this._onToggleView(event, target); },
-      selectCreature: function (event, target) { this._onSelectCreature(event, target); },
-      openCreature: function (event, target) { this._onOpenCreature(event, target); },
-      removeCreature: function (event, target) { this._onRemoveCreature(event, target); },
-      openSheet: function (event, target) { this._onOpenSheet(event, target); },
-      toggleCreatureVisibility: function (event, target) { this._onToggleCreatureVisibility(event, target); },
-      toggleCreatureLock: function (event, target) { this._onToggleCreatureLock(event, target); },
-      openEntryEditor: function (event, target) { this._onOpenEntryEditor(event, target); },
-      toggleFilters: function () { this._toggleFilters(); },
-      closePreview: function () { this._closePreview(); },
-      resetFilters: function () { this._resetFilters(); },
-      createFamily: function () { this._onCreateFamily(); },
-      editFamily: function (event, target) { this._onEditFamily(event, target); },
-      deleteFamily: function (event, target) { this._onDeleteFamily(event, target); },
-      toggleFamily: function (event, target) { this._onToggleFamily(event, target); },
-      openBulkImport: function (event, target) { this._onOpenBulkImport(event, target); },
+      openKnowledgeBoard: function () {
+        BestiaryKnowledgeBoard.open(this.sectionId);
+      },
+      goBack: function () {
+        this._onGoBack();
+      },
+      switchSection: function (event, target) {
+        this._onSwitchSection(event, target);
+      },
+      toggleView: function (event, target) {
+        this._onToggleView(event, target);
+      },
+      selectCreature: function (event, target) {
+        this._onSelectCreature(event, target);
+      },
+      openCreature: function (event, target) {
+        this._onOpenCreature(event, target);
+      },
+      removeCreature: function (event, target) {
+        this._onRemoveCreature(event, target);
+      },
+      openSheet: function (event, target) {
+        this._onOpenSheet(event, target);
+      },
+      toggleCreatureVisibility: function (event, target) {
+        this._onToggleCreatureVisibility(event, target);
+      },
+      toggleCreatureLock: function (event, target) {
+        this._onToggleCreatureLock(event, target);
+      },
+      openEntryEditor: function (event, target) {
+        this._onOpenEntryEditor(event, target);
+      },
+      toggleFilters: function () {
+        this._toggleFilters();
+      },
+      closePreview: function () {
+        this._closePreview();
+      },
+      resetFilters: function () {
+        this._resetFilters();
+      },
+      createFamily: function () {
+        this._onCreateFamily();
+      },
+      editFamily: function (event, target) {
+        this._onEditFamily(event, target);
+      },
+      deleteFamily: function (event, target) {
+        this._onDeleteFamily(event, target);
+      },
+      toggleFamily: function (event, target) {
+        this._onToggleFamily(event, target);
+      },
+      openBulkImport: function (event, target) {
+        this._onOpenBulkImport(event, target);
+      },
       openBulkResearch: function (event, target) {
         if (!game.user.isGM) return;
         const familyId = target.dataset.familyId;
-        new BestiaryBulkResearch({ sectionId: this.sectionId, familyId: familyId === UNGROUPED_ID ? null : familyId }).render({ force: true });
+        new BestiaryBulkResearch({
+          sectionId: this.sectionId,
+          familyId: familyId === UNGROUPED_ID ? null : familyId,
+        }).render({ force: true });
       },
-      exportSection: function () { this._onExportSection(); },
-      exportEntry: function (event, target) { this._onExportEntry(event, target); }
-    }
+      exportSection: function () {
+        this._onExportSection();
+      },
+      exportEntry: function (event, target) {
+        this._onExportEntry(event, target);
+      },
+    },
   };
 
   static PARTS = {
-    section: { template: "modules/bestiary-journal/templates/section-view.hbs" }
+    section: { template: "modules/bestiary-journal/templates/section-view.hbs" },
   };
 
   constructor(options = {}) {
@@ -91,14 +139,14 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
   }
 
   get title() {
-    const section = getBestiaryData().sections.find(item => item.id === this.sectionId);
+    const section = getBestiaryData().sections.find((item) => item.id === this.sectionId);
     return (section && isSectionVisible(section, game.user) && section.name) || localize("BESTIARY.Title");
   }
 
   async _prepareContext() {
     const data = getBestiaryData();
     const knowledge = getBestiaryKnowledge();
-    const found = data.sections.find(item => item.id === this.sectionId);
+    const found = data.sections.find((item) => item.id === this.sectionId);
     const isGM = game.user.isGM;
     // A collection hidden while a player had it open disappears for them too.
     const section = found && isSectionVisible(found, game.user) ? found : null;
@@ -117,7 +165,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       creatures,
       groups,
       families,
-      familyOptions: families.map(family => ({ value: family.id, label: family.name })),
+      familyOptions: families.map((family) => ({ value: family.id, label: family.name })),
       allSections,
       typeOptions,
       sizeOptions,
@@ -132,7 +180,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       viewMode: this._viewMode,
       isGrid: this._viewMode === "grid",
       filtersOpen: this._filtersOpen,
-      hasFamilies: families.length > 0
+      hasFamilies: families.length > 0,
     };
   }
 
@@ -143,10 +191,10 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
   }
 
   _buildSectionNavigation(visibleSections, inputs) {
-    return visibleSections.map(section => ({
+    return visibleSections.map((section) => ({
       ...section,
       creatureCount: buildCreatureRows([section], inputs).length,
-      isActive: section.id === this.sectionId
+      isActive: section.id === this.sectionId,
     }));
   }
 
@@ -156,7 +204,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     super._onFirstRender(context, options);
     // The outer element survives re-renders, so element-level listeners are
     // bound once and always look up the current controls.
-    this.element.addEventListener("keydown", event => this._onShellKeydown(event));
+    this.element.addEventListener("keydown", (event) => this._onShellKeydown(event));
     this.element.addEventListener("drop", () => this._clearDragState(), true);
     this.element.addEventListener("dragend", () => this._clearDragState(), true);
   }
@@ -184,7 +232,9 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
   _restoreSelection() {
     if (!this._selectedUuid) return;
-    const exists = this.element.querySelector(`.creature-preview-content[data-uuid="${CSS.escape(this._selectedUuid)}"]`);
+    const exists = this.element.querySelector(
+      `.creature-preview-content[data-uuid="${CSS.escape(this._selectedUuid)}"]`,
+    );
     if (exists) this._selectCreatureByUuid(this._selectedUuid);
     else this._closePreview();
   }
@@ -214,16 +264,16 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
   _activateSearchAndFilters() {
     const search = this.element.querySelector(".collection-search-input");
-    search?.addEventListener("input", event => {
+    search?.addEventListener("input", (event) => {
       this._searchQuery = event.currentTarget.value.trim().toLocaleLowerCase();
       this._applyClientState();
     });
-    this.element.querySelector(".collection-sort-select")?.addEventListener("change", event => {
+    this.element.querySelector(".collection-sort-select")?.addEventListener("change", (event) => {
       this._sortMode = event.currentTarget.value;
       this._applyClientState();
     });
     for (const checkbox of this.element.querySelectorAll("[data-filter-type]")) {
-      checkbox.addEventListener("change", event => {
+      checkbox.addEventListener("change", (event) => {
         const set = this._filterSetFor(event.currentTarget.dataset.filterType);
         event.currentTarget.checked
           ? set.add(event.currentTarget.value)
@@ -232,7 +282,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       });
     }
     for (const input of this.element.querySelectorAll("[data-cr-bound]")) {
-      input.addEventListener("input", event => {
+      input.addEventListener("input", (event) => {
         if (event.currentTarget.dataset.crBound === "min") this._crMin = event.currentTarget.value;
         else this._crMax = event.currentTarget.value;
         this._applyClientState();
@@ -258,19 +308,22 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
   _activateCards() {
     for (const card of this.element.querySelectorAll("[data-creature-entry][data-uuid]")) {
-      card.addEventListener("dblclick", event => {
+      card.addEventListener("dblclick", (event) => {
         if (game.user.isGM) this._onOpenSheet(event, card);
         else this._onOpenCreature(event, card);
       });
-      card.addEventListener("dragstart", event => {
-        event.dataTransfer.setData("text/plain", JSON.stringify({
-          type: "Actor",
-          uuid: card.dataset.uuid,
-          bestiarySource: this.sectionId
-        }));
+      card.addEventListener("dragstart", (event) => {
+        event.dataTransfer.setData(
+          "text/plain",
+          JSON.stringify({
+            type: "Actor",
+            uuid: card.dataset.uuid,
+            bestiarySource: this.sectionId,
+          }),
+        );
         event.dataTransfer.setData(CARD_DRAG_TYPE, card.dataset.uuid);
       });
-      card.addEventListener("keydown", event => {
+      card.addEventListener("keydown", (event) => {
         if (event.target !== card) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -283,7 +336,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
   _activateContextMenus() {
     if (!game.user.isGM) return;
     for (const card of this.element.querySelectorAll("[data-creature-entry][data-uuid]")) {
-      card.addEventListener("contextmenu", event => {
+      card.addEventListener("contextmenu", (event) => {
         event.preventDefault();
         this._showCreatureMenu(event, card);
       });
@@ -295,24 +348,40 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     const isHidden = card.dataset.hidden === "true";
     const isLocked = card.dataset.locked === "true";
     const data = getBestiaryData();
-    const section = data.sections.find(item => item.id === this.sectionId);
+    const section = data.sections.find((item) => item.id === this.sectionId);
     const families = selectVisibleFamilies(section, game.user);
 
     const items = [
-      { name: localize("BESTIARY.ViewCreature"), icon: "fa-eye", callback: () => this._openCreatureByUuid(uuid) },
-      { name: localize("BESTIARY.OpenSheet"), icon: "fa-arrow-up-right-from-square", callback: () => this._openSheetByUuid(uuid) },
-      { name: localize("BESTIARY.SendToChatParty"), icon: "fa-message", callback: () => this._sendToChatByUuid(uuid) },
-      { name: localize("BESTIARY.Entry.Title"), icon: "fa-sliders", callback: () => this._openEntryEditorByUuid(uuid) },
+      {
+        name: localize("BESTIARY.ViewCreature"),
+        icon: "fa-eye",
+        callback: () => this._openCreatureByUuid(uuid),
+      },
+      {
+        name: localize("BESTIARY.OpenSheet"),
+        icon: "fa-arrow-up-right-from-square",
+        callback: () => this._openSheetByUuid(uuid),
+      },
+      {
+        name: localize("BESTIARY.SendToChatParty"),
+        icon: "fa-message",
+        callback: () => this._sendToChatByUuid(uuid),
+      },
+      {
+        name: localize("BESTIARY.Entry.Title"),
+        icon: "fa-sliders",
+        callback: () => this._openEntryEditorByUuid(uuid),
+      },
       {
         name: localize(isHidden ? "BESTIARY.ShowToPlayers" : "BESTIARY.HideFromPlayers"),
         icon: isHidden ? "fa-eye" : "fa-eye-slash",
-        callback: () => this._toggleVisibilityByUuid(uuid)
+        callback: () => this._toggleVisibilityByUuid(uuid),
       },
       {
         name: localize(isLocked ? "BESTIARY.Lock.Unlock" : "BESTIARY.Lock.Lock"),
         icon: isLocked ? "fa-lock-open" : "fa-lock",
-        callback: () => this._toggleLockByUuid(uuid, !isLocked)
-      }
+        callback: () => this._toggleLockByUuid(uuid, !isLocked),
+      },
     ];
 
     if (families.length) {
@@ -321,19 +390,28 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
         items.push({
           name: game.i18n.format("BESTIARY.Families.MoveTo", { name: family.name }),
           icon: "fa-folder-tree",
-          callback: () => this._moveToFamily(uuid, family.id)
+          callback: () => this._moveToFamily(uuid, family.id),
         });
       }
       items.push({
         name: localize("BESTIARY.Families.MoveToNone"),
         icon: "fa-folder-minus",
-        callback: () => this._moveToFamily(uuid, null)
+        callback: () => this._moveToFamily(uuid, null),
       });
     }
 
     items.push({ separator: true });
-    items.push({ name: localize("BESTIARY.Transfer.ExportEntry"), icon: "fa-file-export", callback: () => exportCreatureEntry(this.sectionId, uuid) });
-    items.push({ name: localize("BESTIARY.RemoveCreature"), icon: "fa-trash", danger: true, callback: () => this._removeByUuid(uuid) });
+    items.push({
+      name: localize("BESTIARY.Transfer.ExportEntry"),
+      icon: "fa-file-export",
+      callback: () => exportCreatureEntry(this.sectionId, uuid),
+    });
+    items.push({
+      name: localize("BESTIARY.RemoveCreature"),
+      icon: "fa-trash",
+      danger: true,
+      callback: () => this._removeByUuid(uuid),
+    });
     showContextMenu(event, items);
   }
 
@@ -346,10 +424,14 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     if (workspace) this._bindDropZone(workspace, () => null, { acceptMove: false });
 
     for (const header of this.element.querySelectorAll("[data-family-drop]")) {
-      this._bindDropZone(header, () => {
-        const id = header.dataset.familyDrop;
-        return id === UNGROUPED_ID ? null : id;
-      }, { acceptMove: true });
+      this._bindDropZone(
+        header,
+        () => {
+          const id = header.dataset.familyDrop;
+          return id === UNGROUPED_ID ? null : id;
+        },
+        { acceptMove: true },
+      );
     }
   }
 
@@ -358,21 +440,21 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
    * family headers also accept cards moved within the collection.
    */
   _bindDropZone(element, resolveFamilyId, { acceptMove = true } = {}) {
-    const accepts = event => acceptMove || !event.dataTransfer?.types?.includes(CARD_DRAG_TYPE);
-    element.addEventListener("dragenter", event => {
+    const accepts = (event) => acceptMove || !event.dataTransfer?.types?.includes(CARD_DRAG_TYPE);
+    element.addEventListener("dragenter", (event) => {
       event.preventDefault();
       if (!accepts(event)) return;
       this._dragDepth.set(element, (this._dragDepth.get(element) ?? 0) + 1);
       element.classList.add("is-dragging-actor");
     });
-    element.addEventListener("dragover", event => event.preventDefault());
-    element.addEventListener("dragleave", event => {
+    element.addEventListener("dragover", (event) => event.preventDefault());
+    element.addEventListener("dragleave", (event) => {
       if (!accepts(event)) return;
       const depth = Math.max(0, (this._dragDepth.get(element) ?? 0) - 1);
       this._dragDepth.set(element, depth);
       if (!depth) element.classList.remove("is-dragging-actor");
     });
-    element.addEventListener("drop", async event => {
+    element.addEventListener("drop", async (event) => {
       event.preventDefault();
       event.stopPropagation();
       this._clearDragState();
@@ -395,7 +477,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       sizes: this._sizeFilters,
       families: this._familyFilters,
       crMin: this._crMin,
-      crMax: this._crMax
+      crMax: this._crMax,
     };
   }
 
@@ -412,17 +494,18 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
     for (const container of this.element.querySelectorAll(".family-grid, .collection-list-body")) {
       [...container.children]
-        .filter(child => child.matches("[data-creature-entry]"))
+        .filter((child) => child.matches("[data-creature-entry]"))
         .sort((a, b) => compareCollectionCards(a.dataset, b.dataset, this._sortMode))
-        .forEach(child => container.appendChild(child));
+        .forEach((child) => container.appendChild(child));
     }
 
     const activeFilters = activeFilterCount(state);
     const isNarrowing = activeFilters > 0 || !!this._searchQuery;
 
     for (const group of this.element.querySelectorAll("[data-family-group]")) {
-      const shown = [...group.querySelectorAll("[data-creature-entry]")]
-        .filter(card => !card.classList.contains("is-filtered-out")).length;
+      const shown = [...group.querySelectorAll("[data-creature-entry]")].filter(
+        (card) => !card.classList.contains("is-filtered-out"),
+      ).length;
       // An empty family is only hidden while a filter is narrowing the list.
       // Otherwise it has to stay on screen: it is the GM's drop target, and
       // the only way to rename or delete it.
@@ -449,7 +532,9 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     if (!container) return;
     container.replaceChildren();
 
-    for (const input of this.element.querySelectorAll(".collection-filter-panel input[type='checkbox']:checked")) {
+    for (const input of this.element.querySelectorAll(
+      ".collection-filter-panel input[type='checkbox']:checked",
+    )) {
       const chip = document.createElement("button");
       chip.type = "button";
       chip.innerHTML = `<span></span><i class="fa-solid fa-xmark"></i>`;
@@ -464,7 +549,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
     for (const [value, label, bound] of [
       [this._crMin, localize("BESTIARY.From"), "min"],
-      [this._crMax, localize("BESTIARY.To"), "max"]
+      [this._crMax, localize("BESTIARY.To"), "max"],
     ]) {
       if (value === "") continue;
       const chip = document.createElement("button");
@@ -544,8 +629,9 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     this._selectedUuid = null;
     this.element.querySelector(".collection-preview-panel")?.classList.remove("has-selection");
     this.element.querySelector(".collection-layout")?.classList.remove("has-preview");
-    this.element.querySelectorAll("[data-creature-entry]")
-      .forEach(card => card.classList.remove("is-selected"));
+    this.element
+      .querySelectorAll("[data-creature-entry]")
+      .forEach((card) => card.classList.remove("is-selected"));
   }
 
   _onGoBack() {
@@ -611,10 +697,12 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
   _onEditFamily(event, target) {
     event.stopPropagation();
     const familyId = target.closest("[data-family-id]")?.dataset.familyId;
-    const section = getBestiaryData().sections.find(item => item.id === this.sectionId);
-    const family = section?.families.find(item => item.id === familyId);
+    const section = getBestiaryData().sections.find((item) => item.id === this.sectionId);
+    const family = section?.families.find((item) => item.id === familyId);
     if (!family) return;
-    new BestiaryTileEditor({ mode: "family", sectionId: this.sectionId, tileData: family }).render({ force: true });
+    new BestiaryTileEditor({ mode: "family", sectionId: this.sectionId, tileData: family }).render({
+      force: true,
+    });
   }
 
   async _onDeleteFamily(event, target) {
@@ -626,14 +714,17 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       yes: { label: localize("BESTIARY.Families.Delete") },
       no: { label: localize("BESTIARY.Cancel") },
       content: `<p>${localize("BESTIARY.Families.ConfirmDelete")}</p>`,
-      rejectClose: false
+      rejectClose: false,
     });
     if (!confirmed) return;
-    await runCommand({
-      type: BESTIARY_COMMANDS.DELETE_FAMILY,
-      sectionId: this.sectionId,
-      familyId
-    }, { unchanged: "BESTIARY.Lock.Blocked" });
+    await runCommand(
+      {
+        type: BESTIARY_COMMANDS.DELETE_FAMILY,
+        sectionId: this.sectionId,
+        familyId,
+      },
+      { unchanged: "BESTIARY.Lock.Blocked" },
+    );
   }
 
   async _onToggleFamily(event, target) {
@@ -641,8 +732,9 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     const group = target.closest("[data-family-group]");
     const familyId = group?.dataset.familyGroup;
     if (!familyId) return;
-    const collapsed = (await toggleCollapsedFamily(`${this.sectionId}:${familyId}`))
-      .has(`${this.sectionId}:${familyId}`);
+    const collapsed = (await toggleCollapsedFamily(`${this.sectionId}:${familyId}`)).has(
+      `${this.sectionId}:${familyId}`,
+    );
     // The same family appears in both the grid and the list; keep them in step.
     for (const element of this.element.querySelectorAll(`[data-family-group="${CSS.escape(familyId)}"]`)) {
       element.classList.toggle("is-collapsed", collapsed);
@@ -657,7 +749,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       type: BESTIARY_COMMANDS.MOVE_CREATURE,
       sectionId: this.sectionId,
       uuid,
-      targetFamilyId: familyId
+      targetFamilyId: familyId,
     });
   }
 
@@ -668,7 +760,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     const familyId = target?.dataset.familyId ?? "";
     new BestiaryBulkImport({
       sectionId: this.sectionId,
-      familyId: familyId === UNGROUPED_ID ? "" : familyId
+      familyId: familyId === UNGROUPED_ID ? "" : familyId,
     }).render({ force: true });
   }
 
@@ -706,53 +798,63 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       ui.notifications.warn(localize("BESTIARY.OnlyNpcActors"));
       return;
     }
-    const section = getBestiaryData().sections.find(item => item.id === this.sectionId);
+    const section = getBestiaryData().sections.find((item) => item.id === this.sectionId);
     if (!section) return;
-    if (section.creatures?.some(entry => entry.uuid === actor.uuid)) {
+    if (section.creatures?.some((entry) => entry.uuid === actor.uuid)) {
       ui.notifications.info(game.i18n.format("BESTIARY.AlreadyInCollection", { name: actor.name }));
       return;
     }
 
-    const result = await runCommand({
-      type: BESTIARY_COMMANDS.ADD_CREATURE,
-      sectionId: this.sectionId,
-      familyId,
-      uuid: actor.uuid,
-      label: actor.name,
-      thumb: actor.img
-    }, { unchanged: "BESTIARY.Lock.Blocked" });
+    const result = await runCommand(
+      {
+        type: BESTIARY_COMMANDS.ADD_CREATURE,
+        sectionId: this.sectionId,
+        familyId,
+        uuid: actor.uuid,
+        label: actor.name,
+        thumb: actor.img,
+      },
+      { unchanged: "BESTIARY.Lock.Blocked" },
+    );
     if (!result?.changed) return;
-    ui.notifications.info(game.i18n.format("BESTIARY.AddedToCollection", {
-      name: actor.name,
-      collection: section.name
-    }));
+    ui.notifications.info(
+      game.i18n.format("BESTIARY.AddedToCollection", {
+        name: actor.name,
+        collection: section.name,
+      }),
+    );
   }
 
   /** Dropping an actor folder adds every NPC inside it at once. */
   async _onDropFolder(dropData, familyId) {
-    const folder = dropData.uuid
-      ? await resolveUuid(dropData.uuid)
-      : game.folders?.get(dropData.id);
+    const folder = dropData.uuid ? await resolveUuid(dropData.uuid) : game.folders?.get(dropData.id);
     if (!folder || folder.type !== "Actor") return;
-    const actors = folder.contents.filter(actor => actor.type === "npc");
+    const actors = folder.contents.filter((actor) => actor.type === "npc");
     if (!actors.length) {
       ui.notifications.warn(localize("BESTIARY.Import.FolderEmpty"));
       return;
     }
-    const present = new Set(getBestiaryData().sections
-      .find(item => item.id === this.sectionId)?.creatures.map(entry => entry.uuid) ?? []);
-    const fresh = actors.filter(actor => !present.has(actor.uuid));
+    const present = new Set(
+      getBestiaryData()
+        .sections.find((item) => item.id === this.sectionId)
+        ?.creatures.map((entry) => entry.uuid) ?? [],
+    );
+    const fresh = actors.filter((actor) => !present.has(actor.uuid));
     if (!fresh.length) {
       ui.notifications.info(localize("BESTIARY.Import.NothingNew"));
       return;
     }
-    const result = await runCommand({
-      type: BESTIARY_COMMANDS.ADD_CREATURES,
-      sectionId: this.sectionId,
-      familyId,
-      entries: fresh.map(actor => ({ uuid: actor.uuid, label: actor.name, thumb: actor.img }))
-    }, { unchanged: "BESTIARY.Lock.Blocked" });
-    if (result?.changed) ui.notifications.info(game.i18n.format("BESTIARY.Import.Done", { count: fresh.length }));
+    const result = await runCommand(
+      {
+        type: BESTIARY_COMMANDS.ADD_CREATURES,
+        sectionId: this.sectionId,
+        familyId,
+        entries: fresh.map((actor) => ({ uuid: actor.uuid, label: actor.name, thumb: actor.img })),
+      },
+      { unchanged: "BESTIARY.Lock.Blocked" },
+    );
+    if (result?.changed)
+      ui.notifications.info(game.i18n.format("BESTIARY.Import.Done", { count: fresh.length }));
   }
 
   // ── Entry mutations ──
@@ -765,8 +867,8 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
   async _removeByUuid(uuid) {
     // Only this collection's locks hold the entry here, as the command itself decides.
-    const section = getBestiaryData().sections.find(item => item.id === this.sectionId);
-    if (section?.locked || section?.creatures.find(item => item.uuid === uuid)?.locked) {
+    const section = getBestiaryData().sections.find((item) => item.id === this.sectionId);
+    if (section?.locked || section?.creatures.find((item) => item.uuid === uuid)?.locked) {
       ui.notifications.warn(localize("BESTIARY.Lock.Blocked"));
       return;
     }
@@ -775,14 +877,17 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       yes: { label: localize("BESTIARY.RemoveCreature") },
       no: { label: localize("BESTIARY.Cancel") },
       content: `<p>${localize("BESTIARY.ConfirmRemoveCreature")}</p>`,
-      rejectClose: false
+      rejectClose: false,
     });
     if (!confirmed) return;
-    await runCommand({
-      type: BESTIARY_COMMANDS.REMOVE_CREATURE,
-      sectionId: this.sectionId,
-      uuid
-    }, { unchanged: "BESTIARY.Lock.Blocked" });
+    await runCommand(
+      {
+        type: BESTIARY_COMMANDS.REMOVE_CREATURE,
+        sectionId: this.sectionId,
+        uuid,
+      },
+      { unchanged: "BESTIARY.Lock.Blocked" },
+    );
   }
 
   async _onToggleCreatureVisibility(event, target) {
@@ -795,7 +900,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     await runCommand({
       type: BESTIARY_COMMANDS.TOGGLE_CREATURE_VISIBILITY,
       sectionId: this.sectionId,
-      uuid
+      uuid,
     });
   }
 
@@ -811,14 +916,16 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       type: BESTIARY_COMMANDS.SET_CREATURE_LOCK,
       sectionId: this.sectionId,
       uuid,
-      locked
+      locked,
     });
   }
 
   async refreshFromExternalUpdate(payload = {}) {
     const changed = payload.changed ?? {};
-    const showsChangedCreature = (changed.creatures || changed.seen) && (!Array.isArray(payload.uuids)
-      || payload.uuids.some(uuid => this.element?.querySelector(`[data-uuid="${CSS.escape(uuid)}"]`)));
+    const showsChangedCreature =
+      (changed.creatures || changed.seen) &&
+      (!Array.isArray(payload.uuids) ||
+        payload.uuids.some((uuid) => this.element?.querySelector(`[data-uuid="${CSS.escape(uuid)}"]`)));
     if (!changed.data && !changed.knowledge && !showsChangedCreature) return;
     const scrollTop = this.element?.querySelector(".collection-results-scroll")?.scrollTop ?? 0;
     await this.render();

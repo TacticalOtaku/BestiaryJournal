@@ -8,9 +8,22 @@ import { BESTIARY_COMMANDS } from "../scripts/core/bestiary-domain.js";
 const UUID = "Actor.goblin";
 const NOW = 1_000_000;
 const section = (id, research, extra = {}) => ({
-  id, name: id, families: [], creatures: [{ uuid: UUID, research }], ...extra
+  id,
+  name: id,
+  families: [],
+  creatures: [{ uuid: UUID, research }],
+  ...extra,
 });
-const goodRoll = { authorId: "p1", creatureUuid: UUID, consumed: false, isSkillCheck: true, skill: "his", total: 14, at: NOW - 1000, ownedByRequester: true };
+const goodRoll = {
+  authorId: "p1",
+  creatureUuid: UUID,
+  consumed: false,
+  isSkillCheck: true,
+  skill: "his",
+  total: 14,
+  at: NOW - 1000,
+  ownedByRequester: true,
+};
 
 function judge(overrides = {}) {
   return judgeResearchRoll({
@@ -22,7 +35,7 @@ function judge(overrides = {}) {
     creature: { cr: 0.25, creatureTypeKey: "humanoid" },
     settings: { enabled: true, singleAttempt: false },
     now: NOW,
-    ...overrides
+    ...overrides,
   });
 }
 const refuses = (overrides, key) => assert.throws(() => judge(overrides), { key });
@@ -30,19 +43,28 @@ const refuses = (overrides, key) => assert.throws(() => judge(overrides), { key 
 test("a roll that meets the DC records a success, one that misses a failure", () => {
   const { command } = judge({ roll: { ...goodRoll, total: 15 } });
   assert.deepEqual(command, {
-    type: BESTIARY_COMMANDS.RECORD_RESEARCH, uuid: UUID, userId: "p1", isGM: false,
-    total: 15, dc: 15, success: true, skill: "his", singleAttempt: false
+    type: BESTIARY_COMMANDS.RECORD_RESEARCH,
+    uuid: UUID,
+    userId: "p1",
+    isGM: false,
+    total: 15,
+    dc: 15,
+    success: true,
+    skill: "his",
+    singleAttempt: false,
   });
   assert.equal(judge({ roll: { ...goodRoll, total: 14.9 } }).command.success, false);
   assert.equal(judge({ settings: { enabled: true, singleAttempt: true } }).command.singleAttempt, true);
 });
 
 test("the roll is judged by the easiest collection the player can see, wherever it was made", () => {
-  const data = { sections: [
-    section("caves", { dc: 15, skills: [] }),
-    section("forest", { dc: 12, skills: [] }),
-    section("secret", { dc: 5, skills: ["arc"] }, { hidden: true })
-  ] };
+  const data = {
+    sections: [
+      section("caves", { dc: 15, skills: [] }),
+      section("forest", { dc: 12, skills: [] }),
+      section("secret", { dc: 5, skills: ["arc"] }, { hidden: true }),
+    ],
+  };
   const { command, config } = judge({ data, roll: { ...goodRoll, total: 12 } });
   assert.equal(command.dc, 12);
   assert.equal(command.success, true);
@@ -65,8 +87,9 @@ test("a roll that is not the player's own fresh, unused skill check about this c
     { ...goodRoll, isSkillCheck: false },
     { ...goodRoll, at: NOW - RESEARCH_ROLL_MAX_AGE_MS },
     { ...goodRoll, ownedByRequester: false },
-    { ...goodRoll, total: Number.NaN }
-  ]) refuses({ roll }, "BESTIARY.Errors.ResearchUnverified");
+    { ...goodRoll, total: Number.NaN },
+  ])
+    refuses({ roll }, "BESTIARY.Errors.ResearchUnverified");
 });
 
 test("custom skill rolls succeed only when custom skills are enabled in allowedSkills", () => {
@@ -78,7 +101,7 @@ test("custom skill rolls succeed only when custom skills are enabled in allowedS
   const { command } = judge({
     data,
     roll,
-    settings: { enabled: true, singleAttempt: false, allowedSkills: [...RESEARCH_SKILLS, "mec"] }
+    settings: { enabled: true, singleAttempt: false, allowedSkills: [...RESEARCH_SKILLS, "mec"] },
   });
   assert.equal(command.success, true);
   assert.equal(command.skill, "mec");

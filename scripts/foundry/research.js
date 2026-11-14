@@ -1,7 +1,4 @@
-import {
-  MAX_RESEARCH_TIER,
-  getTierDefinition
-} from "../core/research-model.js";
+import { MAX_RESEARCH_TIER, getTierDefinition } from "../core/research-model.js";
 import { BESTIARY_COMMANDS } from "../core/bestiary-domain.js";
 import { BestiaryCommandError, dispatchBestiaryCommand, hasActiveAuthority } from "./bestiary-store.js";
 import { localize } from "./foundry-runtime.js";
@@ -18,10 +15,11 @@ export function isResearchRollEnabled() {
 
 /** Characters `user` may roll with. */
 export function researchActors(user = game.user) {
-  const owned = game.actors?.filter?.(actor =>
-    actor.type === "character" && actor.testUserPermission(user, "OWNER")) ?? [];
+  const owned =
+    game.actors?.filter?.((actor) => actor.type === "character" && actor.testUserPermission(user, "OWNER")) ??
+    [];
   const assigned = user?.character;
-  if (assigned && !owned.some(actor => actor.id === assigned.id)) owned.unshift(assigned);
+  if (assigned && !owned.some((actor) => actor.id === assigned.id)) owned.unshift(assigned);
   return owned;
 }
 
@@ -40,9 +38,13 @@ export async function runResearchCheck({ uuid, actor, skill, event }) {
   // Without a GM to verify it the roll would be wasted, so do not ask for one.
   if (!hasActiveAuthority()) throw new BestiaryCommandError("BESTIARY.NoActiveGm");
 
-  const rolls = await actor.rollSkill({ skill, event }, {}, {
-    data: { flags: { [MODULE_ID]: { research: { uuid } } } }
-  });
+  const rolls = await actor.rollSkill(
+    { skill, event },
+    {},
+    {
+      data: { flags: { [MODULE_ID]: { research: { uuid } } } },
+    },
+  );
   const message = rolls?.[0]?.parent;
   if (!rolls?.length) return false; // The player closed the roll dialog.
   if (!message?.id) {
@@ -53,7 +55,7 @@ export async function runResearchCheck({ uuid, actor, skill, event }) {
   await dispatchBestiaryCommand({
     type: BESTIARY_COMMANDS.RECORD_RESEARCH,
     uuid,
-    messageId: message.id
+    messageId: message.id,
   });
   return true;
 }

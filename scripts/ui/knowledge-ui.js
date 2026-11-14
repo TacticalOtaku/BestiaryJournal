@@ -2,7 +2,7 @@ import {
   MAX_RESEARCH_TIER,
   MIN_RESEARCH_TIER,
   RESEARCH_TIERS,
-  clampKnownTier
+  clampKnownTier,
 } from "../core/research-model.js";
 import { BESTIARY_COMMANDS, getUserTier } from "../core/bestiary-domain.js";
 import { runCommand } from "../foundry/command-feedback.js";
@@ -14,12 +14,12 @@ const SOURCE_LABELS = {
   gm: "BESTIARY.Knowledge.SourceGm",
   roll: "BESTIARY.Knowledge.SourceRoll",
   share: "BESTIARY.Knowledge.SourceShare",
-  encounter: "BESTIARY.Knowledge.SourceEncounter"
+  encounter: "BESTIARY.Knowledge.SourceEncounter",
 };
 
 /** One row per player for the GM assignment board. */
 export function buildKnowledgeRoster(knowledge, uuid) {
-  return getPlayerUsers().map(user => {
+  return getPlayerUsers().map((user) => {
     const record = knowledge?.users?.[user.id]?.[uuid] ?? null;
     const tier = clampKnownTier(record?.tier, MIN_RESEARCH_TIER);
     const definition = describeTier(tier);
@@ -36,14 +36,14 @@ export function buildKnowledgeRoster(knowledge, uuid) {
       lastRollLabel: record?.lastRoll
         ? game.i18n.format("BESTIARY.Knowledge.LastRoll", {
             total: record.lastRoll.total,
-            dc: record.lastRoll.dc
+            dc: record.lastRoll.dc,
           })
         : "",
-      tierOptions: RESEARCH_TIERS.map(choice => ({
+      tierOptions: RESEARCH_TIERS.map((choice) => ({
         value: choice.value,
         label: localize(choice.label),
-        selected: choice.value === tier
-      }))
+        selected: choice.value === tier,
+      })),
     };
   });
 }
@@ -54,14 +54,14 @@ export function buildKnowledgeRoster(knowledge, uuid) {
  */
 export function buildPartyBadge(knowledge, uuid, players) {
   if (!players.length) return null;
-  const tiers = players.map(user => getUserTier(knowledge, user.id, uuid));
-  const known = tiers.filter(tier => tier > MIN_RESEARCH_TIER).length;
-  const mastered = tiers.filter(tier => tier >= MAX_RESEARCH_TIER).length;
+  const tiers = players.map((user) => getUserTier(knowledge, user.id, uuid));
+  const known = tiers.filter((tier) => tier > MIN_RESEARCH_TIER).length;
+  const mastered = tiers.filter((tier) => tier >= MAX_RESEARCH_TIER).length;
   return {
     label: `${known}/${players.length}`,
-    key: known === 0 ? "none" : (mastered === players.length ? "mastered" : "partial"),
+    key: known === 0 ? "none" : mastered === players.length ? "mastered" : "partial",
     icon: known === 0 ? "fa-user-slash" : "fa-users",
-    tooltip: game.i18n.format("BESTIARY.Knowledge.PartyBadge", { known, total: players.length })
+    tooltip: game.i18n.format("BESTIARY.Knowledge.PartyBadge", { known, total: players.length }),
   };
 }
 
@@ -72,7 +72,7 @@ export function setKnowledgeTier(uuid, userIds, tier) {
     userIds: Array.isArray(userIds) ? userIds : [userIds],
     tier: clampKnownTier(tier, MIN_RESEARCH_TIER),
     source: "gm",
-    grantedBy: game.user.id
+    grantedBy: game.user.id,
   });
 }
 
@@ -80,7 +80,7 @@ export function resetKnowledge(uuid, userIds = []) {
   return runCommand({
     type: BESTIARY_COMMANDS.RESET_KNOWLEDGE,
     uuids: Array.isArray(uuid) ? uuid : [uuid],
-    userIds
+    userIds,
   });
 }
 
@@ -106,24 +106,32 @@ export async function openShareDialog({ uuid, creatureName, knowledge }) {
     return false;
   }
 
-  const recipients = getPlayerUsers().filter(user => user.id !== game.user.id);
+  const recipients = getPlayerUsers().filter((user) => user.id !== game.user.id);
   if (!recipients.length) {
     ui.notifications.info(localize("BESTIARY.Share.NoRecipients"));
     return false;
   }
 
-  const tierOptions = RESEARCH_TIERS
-    .filter(choice => choice.value > MIN_RESEARCH_TIER && choice.value <= senderTier)
-    .map(choice => `<option value="${choice.value}"${choice.value === senderTier ? " selected" : ""}>${foundry.utils.escapeHTML(localize(choice.label))}</option>`)
+  const tierOptions = RESEARCH_TIERS.filter(
+    (choice) => choice.value > MIN_RESEARCH_TIER && choice.value <= senderTier,
+  )
+    .map(
+      (choice) =>
+        `<option value="${choice.value}"${choice.value === senderTier ? " selected" : ""}>${foundry.utils.escapeHTML(localize(choice.label))}</option>`,
+    )
     .join("");
 
-  const rows = recipients.map(user => `
+  const rows = recipients
+    .map(
+      (user) => `
     <label class="bestiary-share-row">
       <input type="checkbox" name="recipient" value="${foundry.utils.escapeHTML(user.id)}" />
       <img src="${foundry.utils.escapeHTML(user.avatar)}" alt="" />
       <span class="bestiary-share-name" style="--user-color:${foundry.utils.escapeHTML(user.color)}">${foundry.utils.escapeHTML(user.name)}</span>
       <em>${foundry.utils.escapeHTML(describeTier(getUserTier(knowledge, user.id, uuid)).label)}</em>
-    </label>`).join("");
+    </label>`,
+    )
+    .join("");
 
   const content = `
     <section class="bestiary-share-dialog">
@@ -150,26 +158,30 @@ export async function openShareDialog({ uuid, creatureName, knowledge }) {
         callback: (event, button, dialog) => {
           const root = dialog.element ?? button.form;
           return {
-            userIds: [...root.querySelectorAll("input[name='recipient']:checked")].map(input => input.value),
-            tier: Number(root.querySelector("select[name='tier']")?.value ?? senderTier)
+            userIds: [...root.querySelectorAll("input[name='recipient']:checked")].map(
+              (input) => input.value,
+            ),
+            tier: Number(root.querySelector("select[name='tier']")?.value ?? senderTier),
           };
-        }
+        },
       },
-      { action: "cancel", icon: "fa-solid fa-xmark", label: localize("BESTIARY.Cancel") }
+      { action: "cancel", icon: "fa-solid fa-xmark", label: localize("BESTIARY.Cancel") },
     ],
-    rejectClose: false
+    rejectClose: false,
   });
 
   if (!result || result === "cancel" || !result.userIds?.length) return false;
 
-  const outcome = await runCommand({
-    type: BESTIARY_COMMANDS.SHARE_KNOWLEDGE,
-    uuid,
-    toUserIds: result.userIds,
-    tier: Math.min(result.tier, senderTier, MAX_RESEARCH_TIER)
-  }, { unchanged: "BESTIARY.Share.NothingChanged" });
+  const outcome = await runCommand(
+    {
+      type: BESTIARY_COMMANDS.SHARE_KNOWLEDGE,
+      uuid,
+      toUserIds: result.userIds,
+      tier: Math.min(result.tier, senderTier, MAX_RESEARCH_TIER),
+    },
+    { unchanged: "BESTIARY.Share.NothingChanged" },
+  );
   if (!outcome?.changed) return false;
   ui.notifications.info(game.i18n.format("BESTIARY.Share.Done", { count: result.userIds.length }));
   return true;
 }
-

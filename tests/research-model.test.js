@@ -15,7 +15,7 @@ import {
   resolveBlockTiers,
   resolveCreatureResearch,
   suggestResearchDc,
-  suggestResearchSkill
+  suggestResearchSkill,
 } from "../scripts/core/research-model.js";
 
 test("tiers are clamped into the selectable range", () => {
@@ -91,10 +91,10 @@ test("suggested skill follows the creature type", () => {
 
 test("a creature in several collections is researched at the lowest DC with every allowed skill", () => {
   const creature = { cr: 4, creatureTypeKey: "beast" };
-  const config = resolveCreatureResearch([
-    { research: { dc: 18, skills: ["arc"] } },
-    { research: { dc: 12, skills: [] } }
-  ], creature);
+  const config = resolveCreatureResearch(
+    [{ research: { dc: 18, skills: ["arc"] } }, { research: { dc: 12, skills: [] } }],
+    creature,
+  );
   assert.equal(config.dc, 12);
   assert.equal(config.isDcExplicit, true);
   assert.deepEqual(config.skills, ["arc", "nat"]);
@@ -108,7 +108,10 @@ test("an automatic DC can be the lowest, and then it is not the GM's", () => {
 });
 
 test("skills count as the GM's only when every collection sets them", () => {
-  const config = resolveCreatureResearch([{ research: { skills: ["arc"] } }, { research: { skills: ["his"] } }], {});
+  const config = resolveCreatureResearch(
+    [{ research: { skills: ["arc"] } }, { research: { skills: ["his"] } }],
+    {},
+  );
   assert.deepEqual(config.skills, ["arc", "his"]);
   assert.equal(config.isSkillsExplicit, true);
 });
@@ -125,7 +128,9 @@ test("custom entry skills apply only when included in allowedSkills", () => {
   assert.deepEqual(disabled.skills, ["arc"]);
   assert.equal(disabled.isSkillsExplicit, false);
 
-  const enabled = resolveCreatureResearch([entry], creature, { allowedSkills: [...RESEARCH_SKILLS, "mec", "sci"] });
+  const enabled = resolveCreatureResearch([entry], creature, {
+    allowedSkills: [...RESEARCH_SKILLS, "mec", "sci"],
+  });
   assert.deepEqual(enabled.skills, ["mec", "sci"]);
   assert.equal(enabled.isSkillsExplicit, true);
 });

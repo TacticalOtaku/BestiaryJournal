@@ -19,6 +19,14 @@
   scroll-behavior: auto !important;
 }
 
-.bestiary-app:not([data-motion="full"]) :is(.collection-card, .recent-creature-card, .library-creature-card,
-  .collection-creature-card, .suite-primary-button):hover,
-.bestiary-app:not([data-motion="full"]) .collection-card:hover > img { transform: none; }
+.bestiary-app:not([data-motion="full"])
+  :is(
+    .collection-card,
+    .recent-creature-card,
+    .library-creature-card,
+    .collection-creature-card,
+    .suite-primary-button
+  ):hover,
+.bestiary-app:not([data-motion="full"]) .collection-card:hover > img {
+  transform: none;
+}

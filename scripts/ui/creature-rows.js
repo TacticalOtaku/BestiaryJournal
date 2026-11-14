@@ -1,5 +1,10 @@
 import { selectVisibleCreatureEntries } from "../core/bestiary-domain.js";
-import { PARTY_VIEWER, createKnowledgeLens, playerEntryContexts, viewerTier } from "../core/knowledge-lens.js";
+import {
+  PARTY_VIEWER,
+  createKnowledgeLens,
+  playerEntryContexts,
+  viewerTier,
+} from "../core/knowledge-lens.js";
 import { isNewToViewer, tierProgress } from "../core/knowledge-progress.js";
 import { getFavoriteCreatureUuids } from "../foundry/client-preferences.js";
 import { getCreatureDataMany } from "../foundry/creature-cache.js";
@@ -23,16 +28,18 @@ export const UNIDENTIFIED_ID = "__unidentified__";
 /** Everything the rows read from the world, gathered once per render; `snapshot` is `{ data, knowledge }`. */
 export async function rowInputs(sections, { data, knowledge }) {
   const viewer = { id: game.user.id, isGM: game.user.isGM };
-  const uuids = new Set(sections.flatMap(section => selectVisibleCreatureEntries(section, viewer).map(entry => entry.uuid)));
+  const uuids = new Set(
+    sections.flatMap((section) => selectVisibleCreatureEntries(section, viewer).map((entry) => entry.uuid)),
+  );
   return {
     data,
     knowledge,
     worldTiers: getWorldBlockTiers(),
     viewer,
     players: getPlayerUsers(),
-    seenTiers: viewer.isGM ? {} : game.settings.get(MODULE_ID, "seenTiers") ?? {},
+    seenTiers: viewer.isGM ? {} : (game.settings.get(MODULE_ID, "seenTiers") ?? {}),
     favorites: getFavoriteCreatureUuids(),
-    creatures: await getCreatureDataMany([...uuids])
+    creatures: await getCreatureDataMany([...uuids]),
   };
 }
 
@@ -59,13 +66,13 @@ export function buildCreatureRows(sections, inputs) {
     const lens = createKnowledgeLens({
       tier: viewerTier(knowledge, viewer, uuid),
       worldTiers,
-      entries: playerEntryContexts(data, uuid).map(context => context.entry)
+      entries: playerEntryContexts(data, uuid).map((context) => context.entry),
     });
     const card = buildCreatureCard({ uuid, entry, creature, lens, searchExtra: collections });
     rows.push({
       ...card,
       // Also the data-family-id on the card: the real family must not reach the page while the name is hidden.
-      familyId: !viewer.isGM && !card.knowsName ? UNIDENTIFIED_ID : entry.familyId ?? UNGROUPED_ID,
+      familyId: !viewer.isGM && !card.knowsName ? UNIDENTIFIED_ID : (entry.familyId ?? UNGROUPED_ID),
       isHidden: !!entry.hidden,
       isLocked: !!entry.locked || !!section.locked,
       addedAt,
@@ -73,9 +80,13 @@ export function buildCreatureRows(sections, inputs) {
       isFavorite: favorites.has(uuid),
       viewerTier: lens.tier,
       // The GM follows the party, at the tier every player has reached; with no players there is nothing to follow.
-      progressTier: !viewer.isGM ? lens.tier : players.length ? viewerTier(knowledge, PARTY_VIEWER, uuid, players) : null,
+      progressTier: !viewer.isGM
+        ? lens.tier
+        : players.length
+          ? viewerTier(knowledge, PARTY_VIEWER, uuid, players)
+          : null,
       isNew: !viewer.isGM && isNewToViewer(seenTiers[uuid], lens.tier),
-      tierBadge: viewer.isGM ? buildPartyBadge(knowledge, uuid, players) : describeTier(lens.tier)
+      tierBadge: viewer.isGM ? buildPartyBadge(knowledge, uuid, players) : describeTier(lens.tier),
     });
   }
   return sortByKnownName(rows);
@@ -83,6 +94,8 @@ export function buildCreatureRows(sections, inputs) {
 
 /** How many rows there are and how far the viewer got; a deleted actor is nothing to learn. */
 export function summarizeRows(rows) {
-  const progress = tierProgress(rows.filter(row => !row.isMissing && row.progressTier !== null).map(row => row.progressTier));
+  const progress = tierProgress(
+    rows.filter((row) => !row.isMissing && row.progressTier !== null).map((row) => row.progressTier),
+  );
   return { count: rows.length, progress: progress.total ? progress : null };
 }

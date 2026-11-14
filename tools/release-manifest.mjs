@@ -29,7 +29,10 @@ export function validateManifest(manifest, { version, repository, exists }) {
   expect(Boolean(manifest.title), "title is required");
   expect(Boolean(manifest.compatibility?.minimum), "compatibility.minimum is required");
   expect(Boolean(manifest.compatibility?.verified), "compatibility.verified is required");
-  expect(Boolean(manifest.compatibility?.maximum), "compatibility.maximum is required until the next core version is tested");
+  expect(
+    Boolean(manifest.compatibility?.maximum),
+    "compatibility.maximum is required until the next core version is tested",
+  );
 
   const urls = releaseUrls(repository, manifest.id ?? "", version);
   for (const key of ["url", "manifest", "download"]) {

@@ -25,14 +25,14 @@ function fail(message) {
 function listFiles(directory, extension) {
   const full = join(root, directory);
   if (!existsSync(full)) return [];
-  return readdirSync(full, { withFileTypes: true }).flatMap(entry => {
+  return readdirSync(full, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) return listFiles(path, extension);
     return entry.name.endsWith(extension) ? [path] : [];
   });
 }
 
-const scripts = [...listFiles("scripts", ".js"), ...listFiles("tools", ".mjs")];
+const scripts = [...listFiles("scripts", ".js"), ...listFiles("tools", ".mjs"), ...listFiles("tools", ".js")];
 const templates = listFiles("templates", ".hbs");
 const locales = listFiles("lang", ".json");
 
@@ -61,7 +61,7 @@ if (manifest) {
   const declared = [
     ...(manifest.esmodules ?? []),
     ...(manifest.styles ?? []),
-    ...(manifest.languages ?? []).map(entry => entry.path)
+    ...(manifest.languages ?? []).map((entry) => entry.path),
   ];
   for (const path of declared) {
     if (!existsSync(join(root, path))) fail(`module.json references a missing file: ${path}`);
@@ -80,12 +80,18 @@ if (manifest) {
 /** Named exports of a module: declarations plus `export { ... }` lists. */
 function exportedNames(source) {
   const names = new Set();
-  for (const match of source.matchAll(/export\s+(?:async\s+)?(?:function|class|const|let|var)\s+([A-Za-z_$][\w$]*)/g)) {
+  for (const match of source.matchAll(
+    /export\s+(?:async\s+)?(?:function|class|const|let|var)\s+([A-Za-z_$][\w$]*)/g,
+  )) {
     names.add(match[1]);
   }
   for (const match of source.matchAll(/export\s*\{([^}]*)\}/g)) {
     for (const part of match[1].split(",")) {
-      const alias = part.trim().split(/\s+as\s+/).pop()?.trim();
+      const alias = part
+        .trim()
+        .split(/\s+as\s+/)
+        .pop()
+        ?.trim();
       if (alias) names.add(alias);
     }
   }
@@ -103,7 +109,10 @@ for (const file of scripts) {
     if (!existsSync(target)) continue;
     const available = exportedNames(readFileSync(target, "utf8"));
     for (const part of match[1].split(",")) {
-      const name = part.trim().split(/\s+as\s+/)[0]?.trim();
+      const name = part
+        .trim()
+        .split(/\s+as\s+/)[0]
+        ?.trim();
       if (!name || available.has(name)) continue;
       fail(`${file} imports "${name}" which ${match[2]} does not export`);
     }
@@ -149,7 +158,13 @@ for (const file of locales) {
 
 const usedKeys = new Set();
 const KEY_PATTERN = /BESTIARY\.[A-Za-z0-9_.]+/g;
-const DYNAMIC_PREFIXES = ["BESTIARY.Data.", "BESTIARY.Speed", "BESTIARY.Block.", "BESTIARY.Tier.", "BESTIARY.Count."];
+const DYNAMIC_PREFIXES = [
+  "BESTIARY.Data.",
+  "BESTIARY.Speed",
+  "BESTIARY.Block.",
+  "BESTIARY.Tier.",
+  "BESTIARY.Count.",
+];
 
 for (const file of [...scripts, ...templates]) {
   const source = readFileSync(join(root, file), "utf8");
@@ -164,7 +179,8 @@ for (const file of [...scripts, ...templates]) {
 for (const [file, keys] of localeKeys) {
   for (const key of usedKeys) {
     if (keys.has(key)) continue;
-    if (DYNAMIC_PREFIXES.some(prefix => key.startsWith(prefix) && !keys.has(key) && isDynamic(key, keys))) continue;
+    if (DYNAMIC_PREFIXES.some((prefix) => key.startsWith(prefix) && !keys.has(key) && isDynamic(key, keys)))
+      continue;
     fail(`${file} is missing the localization key ${key}`);
   }
 }
@@ -172,7 +188,7 @@ for (const [file, keys] of localeKeys) {
 function isDynamic(key, keys) {
   // A parent branch existing is good enough for runtime-assembled leaves.
   const parent = key.slice(0, key.lastIndexOf("."));
-  return [...keys].some(candidate => candidate.startsWith(`${parent}.`));
+  return [...keys].some((candidate) => candidate.startsWith(`${parent}.`));
 }
 
 // ── Unique application ids ──
@@ -194,4 +210,6 @@ if (problems.length) {
   process.exit(1);
 }
 
-console.log(`Checked ${scripts.length} scripts, ${templates.length} templates, ${locales.length} locales — all good.`);
+console.log(
+  `Checked ${scripts.length} scripts, ${templates.length} templates, ${locales.length} locales — all good.`,
+);

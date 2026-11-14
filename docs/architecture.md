@@ -38,8 +38,10 @@ scripts/
     knowledge-board.js   the GM's party knowledge table; api.js the public API (API.md)
 ```
 
-The dependency direction is one-way: `ui` → `foundry` / `integrations` → `core`. `core/` must stay importable in
-plain Node; if it needs something from the runtime, pass it in as an argument.
+The dependency direction is an acyclic hierarchy: `ui` → `foundry` → `integrations` → `core`, with
+`foundry/foundry-runtime.js` serving as the zero-import adapter over Foundry/dnd5e globals shared by `ui`, `foundry`,
+and `integrations`. `core/` must stay importable in plain Node; if it needs something from the runtime, pass it in as
+an argument.
 
 ## World state and commands
 
@@ -83,8 +85,9 @@ Cards, ability tiles, the row accent edge, the tab ink, the art sweep and the cu
 
 Stylesheets, in the order `module.json` loads them: `tokens.css` (type, palettes, accents), `frame.css` (every
 window: frame, resets, artwork, shared controls, the context menu), `library.css`, `collection.css`, `creature.css`,
-`editors.css` (forms, bulk import and research, world tiers, dialogs), `motion.css` (motion levels, last so they
-override every component) and `content.css` (cards posted to chat).
+`editors.css` (forms, bulk import and research, world tiers, dialogs), `board.css` (party knowledge board),
+`density.css` (compact density overrides), `motion.css` (motion levels, after components so they override them) and
+`content.css` (cards posted to chat).
 
 ## Localisation
 

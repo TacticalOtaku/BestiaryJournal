@@ -23,7 +23,7 @@ export function getDnd5eConfig() {
 /** dnd5e's own evaluation of a deterministic bonus formula such as "-3" or "-@prof". */
 export function simplifyDnd5eBonus(bonus, rollData) {
   const simplify = globalThis.dnd5e?.utils?.simplifyBonus;
-  return simplify ? simplify(bonus, rollData) : (Number(bonus) || 0);
+  return simplify ? simplify(bonus, rollData) : Number(bonus) || 0;
 }
 
 export function enrichHtml(text, options) {
@@ -35,14 +35,14 @@ export function enrichHtml(text, options) {
 export function getPlayerUsers() {
   const users = game.users?.contents ?? [...(game.users?.values?.() ?? [])];
   return users
-    .filter(user => !user.isGM)
-    .map(user => ({
+    .filter((user) => !user.isGM)
+    .map((user) => ({
       id: user.id,
       name: user.name,
       color: user.color?.css ?? user.color ?? "#7a7a7a",
       avatar: user.character?.img || user.avatar || "icons/svg/mystery-man.svg",
       characterName: user.character?.name ?? "",
-      active: !!user.active
+      active: !!user.active,
     }))
     .sort((left, right) => left.name.localeCompare(right.name));
 }
@@ -56,7 +56,7 @@ export function formatTimestamp(value) {
   try {
     return new Date(value).toLocaleString(game.i18n.lang, {
       dateStyle: "short",
-      timeStyle: "short"
+      timeStyle: "short",
     });
   } catch {
     return new Date(value).toLocaleString();

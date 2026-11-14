@@ -1,15 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { PARTY_VIEWER, createKnowledgeLens, playerEntryContexts, viewerTier } from "../scripts/core/knowledge-lens.js";
+import {
+  PARTY_VIEWER,
+  createKnowledgeLens,
+  playerEntryContexts,
+  viewerTier,
+} from "../scripts/core/knowledge-lens.js";
 import { GM_TIER, MIN_RESEARCH_TIER, NEVER_TIER, itemTierKey } from "../scripts/core/research-model.js";
 
 const lens = (tier, entries = [{}], worldTiers = {}) => createKnowledgeLens({ tier, worldTiers, entries });
 const knowledge = {
   users: {
     anna: { "Actor.wolf": { tier: 3 } },
-    boris: { "Actor.wolf": { tier: 1 } }
-  }
+    boris: { "Actor.wolf": { tier: 1 } },
+  },
 };
 
 test("the GM sees every block, GM-only ones too", () => {
@@ -50,10 +55,28 @@ test("a creature in two collections opens at the lower threshold of the two", ()
 test("an entry players cannot see does not lower the threshold", () => {
   const data = {
     sections: [
-      { id: "cave", sort: 1, hidden: false, families: [], creatures: [{ uuid: "Actor.wolf", blockTiers: { cr: 3 } }] },
-      { id: "secret", sort: 2, hidden: true, families: [], creatures: [{ uuid: "Actor.wolf", blockTiers: { cr: 1 } }] },
-      { id: "forest", sort: 3, hidden: false, families: [], creatures: [{ uuid: "Actor.wolf", hidden: true, blockTiers: { cr: 1 } }] }
-    ]
+      {
+        id: "cave",
+        sort: 1,
+        hidden: false,
+        families: [],
+        creatures: [{ uuid: "Actor.wolf", blockTiers: { cr: 3 } }],
+      },
+      {
+        id: "secret",
+        sort: 2,
+        hidden: true,
+        families: [],
+        creatures: [{ uuid: "Actor.wolf", blockTiers: { cr: 1 } }],
+      },
+      {
+        id: "forest",
+        sort: 3,
+        hidden: false,
+        families: [],
+        creatures: [{ uuid: "Actor.wolf", hidden: true, blockTiers: { cr: 1 } }],
+      },
+    ],
   };
   const entries = playerEntryContexts(data, "Actor.wolf").map(({ entry }) => entry);
   assert.equal(entries.length, 1);

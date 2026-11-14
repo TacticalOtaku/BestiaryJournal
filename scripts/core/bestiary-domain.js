@@ -3,7 +3,7 @@ import {
   MIN_RESEARCH_TIER,
   RESEARCH_SKILLS,
   clampKnownTier,
-  clampTier
+  clampTier,
 } from "./research-model.js";
 import { importSnapshot } from "./snapshot-import.js";
 
@@ -49,17 +49,19 @@ export const BESTIARY_COMMANDS = Object.freeze({
   ADD_COMMENT: "addComment",
   UPDATE_COMMENT: "updateComment",
   DELETE_COMMENT: "deleteComment",
-  TOGGLE_COMMENT_PIN: "toggleCommentPin"
+  TOGGLE_COMMENT_PIN: "toggleCommentPin",
 });
 
 /** Commands a non-GM user may request from the authoritative GM. */
-export const PLAYER_COMMANDS = Object.freeze(new Set([
-  BESTIARY_COMMANDS.RECORD_RESEARCH,
-  BESTIARY_COMMANDS.SHARE_KNOWLEDGE,
-  BESTIARY_COMMANDS.ADD_COMMENT,
-  BESTIARY_COMMANDS.UPDATE_COMMENT,
-  BESTIARY_COMMANDS.DELETE_COMMENT
-]));
+export const PLAYER_COMMANDS = Object.freeze(
+  new Set([
+    BESTIARY_COMMANDS.RECORD_RESEARCH,
+    BESTIARY_COMMANDS.SHARE_KNOWLEDGE,
+    BESTIARY_COMMANDS.ADD_COMMENT,
+    BESTIARY_COMMANDS.UPDATE_COMMENT,
+    BESTIARY_COMMANDS.DELETE_COMMENT,
+  ]),
+);
 
 /** A command the authority refused, with a localisation key the requester shows in their own language. */
 export class BestiaryCommandError extends Error {
@@ -81,7 +83,7 @@ export function normalizeBestiaryData(value) {
   const sections = Array.isArray(source.sections) ? source.sections : [];
   return {
     revision: safeInt(source.revision, 0),
-    sections: sections.map((section, index) => normalizeSection(section, index))
+    sections: sections.map((section, index) => normalizeSection(section, index)),
   };
 }
 
@@ -98,7 +100,7 @@ function normalizeSection(value, index = 0) {
     sort: safeInt(source.sort, index * 100),
     updatedAt: safeInt(source.updatedAt, 0),
     families: families.map((family, familyIndex) => normalizeFamily(family, familyIndex)),
-    creatures: creatures.map(entry => normalizeCreatureEntry(entry))
+    creatures: creatures.map((entry) => normalizeCreatureEntry(entry)),
   };
 }
 
@@ -110,7 +112,7 @@ function normalizeFamily(value, index = 0) {
     image: String(source.image ?? ""),
     hidden: !!source.hidden,
     sort: safeInt(source.sort, index * 100),
-    updatedAt: safeInt(source.updatedAt, 0)
+    updatedAt: safeInt(source.updatedAt, 0),
   };
 }
 
@@ -130,18 +132,19 @@ function normalizeCreatureEntry(value) {
       source: IMAGE_SOURCES.includes(image.source) ? image.source : "portrait",
       fit: IMAGE_FITS.includes(image.fit) ? image.fit : "auto",
       focusX: clampPercent(image.focusX, 50),
-      focusY: clampPercent(image.focusY, 50)
+      focusY: clampPercent(image.focusY, 50),
     },
     research: {
-      dc: research.dc === null || research.dc === undefined || research.dc === ""
-        ? null
-        : safeInt(research.dc, 10),
+      dc:
+        research.dc === null || research.dc === undefined || research.dc === ""
+          ? null
+          : safeInt(research.dc, 10),
       skills: Array.isArray(research.skills)
-        ? research.skills.filter(skill => typeof skill === "string" && skill)
-        : []
+        ? research.skills.filter((skill) => typeof skill === "string" && skill)
+        : [],
     },
     blockTiers: normalizeTierMap(source.blockTiers),
-    itemTiers: normalizeTierMap(source.itemTiers)
+    itemTiers: normalizeTierMap(source.itemTiers),
   };
 }
 
@@ -186,9 +189,9 @@ function normalizeKnowledgeRecord(value) {
           dc: safeInt(source.lastRoll.dc, 0),
           success: !!source.lastRoll.success,
           skill: String(source.lastRoll.skill ?? ""),
-          at: safeInt(source.lastRoll.at, 0)
+          at: safeInt(source.lastRoll.at, 0),
         }
-      : null
+      : null,
   };
 }
 
@@ -197,7 +200,7 @@ export function normalizeSocial(value) {
   const comments = Array.isArray(source.comments) ? source.comments : [];
   return {
     revision: safeInt(source.revision, 0),
-    comments: comments.filter(isObject).map(normalizeComment)
+    comments: comments.filter(isObject).map(normalizeComment),
   };
 }
 
@@ -211,7 +214,7 @@ function normalizeComment(value) {
     pinned: !!value.pinned,
     text: String(value.text ?? ""),
     createdAt: safeInt(value.createdAt, 0),
-    editedAt: value.editedAt ? safeInt(value.editedAt, 0) : null
+    editedAt: value.editedAt ? safeInt(value.editedAt, 0) : null,
   };
 }
 
@@ -219,7 +222,7 @@ export function createBestiaryState(sources = {}) {
   return {
     data: normalizeBestiaryData(sources.data),
     knowledge: normalizeKnowledge(sources.knowledge),
-    social: normalizeSocial(sources.social)
+    social: normalizeSocial(sources.social),
   };
 }
 
@@ -246,33 +249,32 @@ export function isCreatureEntryVisible(entry, section, viewer) {
   if (isGameMaster(viewer)) return true;
   if (entry?.hidden) return false;
   if (!entry?.familyId) return true;
-  const family = section?.families?.find(item => item.id === entry.familyId);
+  const family = section?.families?.find((item) => item.id === entry.familyId);
   return !family?.hidden;
 }
 
 export function selectVisibleSections(data, viewer) {
-  return normalizeBestiaryData(data).sections
-    .filter(section => isSectionVisible(section, viewer))
+  return normalizeBestiaryData(data)
+    .sections.filter((section) => isSectionVisible(section, viewer))
     .sort((left, right) => left.sort - right.sort);
 }
 
 export function selectVisibleFamilies(section, viewer) {
   return (section?.families ?? [])
-    .filter(family => isFamilyVisible(family, viewer))
+    .filter((family) => isFamilyVisible(family, viewer))
     .sort((left, right) => left.sort - right.sort);
 }
 
 export function selectVisibleCreatureEntries(section, viewer) {
-  return (section?.creatures ?? [])
-    .filter(entry => isCreatureEntryVisible(entry, section, viewer));
+  return (section?.creatures ?? []).filter((entry) => isCreatureEntryVisible(entry, section, viewer));
 }
 
 function findSection(data, sectionId) {
-  return data?.sections?.find(section => section.id === sectionId) ?? null;
+  return data?.sections?.find((section) => section.id === sectionId) ?? null;
 }
 
 function findFamily(section, familyId) {
-  return section?.families?.find(family => family.id === familyId) ?? null;
+  return section?.families?.find((family) => family.id === familyId) ?? null;
 }
 
 /**
@@ -297,12 +299,11 @@ export function getEntryContexts(data, uuid) {
  * gets the settings of a copy that lives in a collection hidden from them.
  */
 export function selectEntryContext(data, uuid, viewer, preferredSectionId = null) {
-  const visible = getEntryContexts(data, uuid)
-    .filter(({ section, entry }) => isSectionVisible(section, viewer)
-      && isCreatureEntryVisible(entry, section, viewer));
-  return visible.find(context => context.section.id === preferredSectionId)
-    ?? visible[0]
-    ?? null;
+  const visible = getEntryContexts(data, uuid).filter(
+    ({ section, entry }) =>
+      isSectionVisible(section, viewer) && isCreatureEntryVisible(entry, section, viewer),
+  );
+  return visible.find((context) => context.section.id === preferredSectionId) ?? visible[0] ?? null;
 }
 
 /**
@@ -311,26 +312,28 @@ export function selectEntryContext(data, uuid, viewer, preferredSectionId = null
  * everyone; the GM has to lift the lock first.
  */
 export function isCreatureLocked(data, uuid) {
-  return getEntryContexts(data, uuid)
-    .some(({ section, entry }) => entry.locked || section.locked);
+  return getEntryContexts(data, uuid).some(({ section, entry }) => entry.locked || section.locked);
 }
 
 export function canViewCreature(data, uuid, viewer) {
   if (!uuid) return false;
   if (isGameMaster(viewer)) return true;
-  return getEntryContexts(data, uuid)
-    .some(({ section, entry }) => isSectionVisible(section, viewer)
-      && isCreatureEntryVisible(entry, section, viewer));
+  return getEntryContexts(data, uuid).some(
+    ({ section, entry }) =>
+      isSectionVisible(section, viewer) && isCreatureEntryVisible(entry, section, viewer),
+  );
 }
 
 export function getCreatureCollections(data, uuid, viewer) {
   return getEntryContexts(data, uuid)
-    .filter(({ section, entry }) => isSectionVisible(section, viewer)
-      && isCreatureEntryVisible(entry, section, viewer))
+    .filter(
+      ({ section, entry }) =>
+        isSectionVisible(section, viewer) && isCreatureEntryVisible(entry, section, viewer),
+    )
     .map(({ section, entry }) => ({
       sectionId: section.id,
       sectionName: section.name,
-      familyName: findFamily(section, entry.familyId)?.name ?? ""
+      familyName: findFamily(section, entry.familyId)?.name ?? "",
     }));
 }
 
@@ -360,9 +363,9 @@ export function canEditComment(comment, viewer) {
 }
 
 export function selectComments(social, uuid, viewer) {
-  return normalizeSocial(social).comments
-    .filter(comment => comment.uuid === uuid && canSeeComment(comment, viewer))
-    .sort((left, right) => (right.pinned - left.pinned) || (left.createdAt - right.createdAt));
+  return normalizeSocial(social)
+    .comments.filter((comment) => comment.uuid === uuid && canSeeComment(comment, viewer))
+    .sort((left, right) => right.pinned - left.pinned || left.createdAt - right.createdAt);
 }
 
 // ── Command reducer ────────────────────────────────────────────────────────
@@ -377,7 +380,8 @@ export function applyBestiaryCommand(currentState, command, dependencies = {}) {
   const state = cloneState(currentState);
   const handler = COMMAND_HANDLERS[command?.type];
   if (!handler) throw new Error(`Unknown bestiary command: ${command?.type ?? "<empty>"}`);
-  if (!command.isGM && !PLAYER_COMMANDS.has(command.type)) throw new BestiaryCommandError("BESTIARY.Errors.GmOnly");
+  if (!command.isGM && !PLAYER_COMMANDS.has(command.type))
+    throw new BestiaryCommandError("BESTIARY.Errors.GmOnly");
   if (!command.isGM && command.type === BESTIARY_COMMANDS.SHARE_KNOWLEDGE) {
     assertMayShare(dependencies.sharingFacts?.() ?? { allowed: true, mode: "always" });
   }
@@ -387,14 +391,14 @@ export function applyBestiaryCommand(currentState, command, dependencies = {}) {
     generateId: dependencies.generateId ?? (() => Math.random().toString(36).slice(2, 18)),
     // Lets the authority reject ids that are not players of this world.
     isPlayerUser: dependencies.isPlayerUser ?? (() => true),
-    allowedSkills: dependencies.allowedSkills ?? RESEARCH_SKILLS
+    allowedSkills: dependencies.allowedSkills ?? RESEARCH_SKILLS,
   };
   const touched = handler(state, command, context) || [];
-  const changed = Object.fromEntries(STORE_KEYS.map(key => [key, touched.includes(key)]));
+  const changed = Object.fromEntries(STORE_KEYS.map((key) => [key, touched.includes(key)]));
   for (const key of STORE_KEYS) {
     if (changed[key]) state[key].revision += 1;
   }
-  return { state, changed, changedAny: STORE_KEYS.some(key => changed[key]) };
+  return { state, changed, changedAny: STORE_KEYS.some((key) => changed[key]) };
 }
 
 function assertMayShare(facts) {
@@ -405,7 +409,8 @@ function assertMayShare(facts) {
 
 /** Only a creature this user can actually open may be researched, shared or noted. */
 function assertMayView(data, uuid, userId, isGM) {
-  if (!canViewCreature(data, uuid, { id: userId, isGM })) throw new BestiaryCommandError("BESTIARY.Errors.NoAccess");
+  if (!canViewCreature(data, uuid, { id: userId, isGM }))
+    throw new BestiaryCommandError("BESTIARY.Errors.NoAccess");
 }
 
 const TOUCHED_DATA = ["data"];
@@ -443,7 +448,7 @@ const COMMAND_HANDLERS = {
   [BESTIARY_COMMANDS.ADD_COMMENT]: handleAddComment,
   [BESTIARY_COMMANDS.UPDATE_COMMENT]: handleUpdateComment,
   [BESTIARY_COMMANDS.DELETE_COMMENT]: handleDeleteComment,
-  [BESTIARY_COMMANDS.TOGGLE_COMMENT_PIN]: handleToggleCommentPin
+  [BESTIARY_COMMANDS.TOGGLE_COMMENT_PIN]: handleToggleCommentPin,
 };
 
 // ── Section handlers ──
@@ -452,14 +457,16 @@ function handleCreateSection(state, command, { now, generateId }) {
   const source = command.section ?? {};
   const id = source.id || generateId();
   const maxSort = state.data.sections.reduce((max, section) => Math.max(max, section.sort), 0);
-  state.data.sections.push(normalizeSection({
-    ...source,
-    id,
-    sort: maxSort + 100,
-    updatedAt: now(),
-    families: [],
-    creatures: []
-  }));
+  state.data.sections.push(
+    normalizeSection({
+      ...source,
+      id,
+      sort: maxSort + 100,
+      updatedAt: now(),
+      families: [],
+      creatures: [],
+    }),
+  );
   return TOUCHED_DATA;
 }
 
@@ -477,7 +484,7 @@ function handleUpdateSection(state, command, { now }) {
 function handleDeleteSection(state, command) {
   const section = findSection(state.data, command.sectionId);
   if (!section || section.locked) return TOUCHED_NONE;
-  state.data.sections = state.data.sections.filter(item => item.id !== command.sectionId);
+  state.data.sections = state.data.sections.filter((item) => item.id !== command.sectionId);
   return TOUCHED_DATA;
 }
 
@@ -520,12 +527,14 @@ function handleCreateFamily(state, command, { now, generateId }) {
   if (!section || section.locked) return TOUCHED_NONE;
   const source = command.family ?? {};
   const maxSort = section.families.reduce((max, family) => Math.max(max, family.sort), 0);
-  section.families.push(normalizeFamily({
-    ...source,
-    id: source.id || generateId(),
-    sort: maxSort + 100,
-    updatedAt: now()
-  }));
+  section.families.push(
+    normalizeFamily({
+      ...source,
+      id: source.id || generateId(),
+      sort: maxSort + 100,
+      updatedAt: now(),
+    }),
+  );
   section.updatedAt = now();
   return TOUCHED_DATA;
 }
@@ -546,7 +555,7 @@ function handleUpdateFamily(state, command, { now }) {
 function handleDeleteFamily(state, command, { now }) {
   const section = findSection(state.data, command.sectionId);
   if (!section || section.locked || !findFamily(section, command.familyId)) return TOUCHED_NONE;
-  section.families = section.families.filter(family => family.id !== command.familyId);
+  section.families = section.families.filter((family) => family.id !== command.familyId);
   for (const entry of section.creatures) {
     if (entry.familyId === command.familyId) entry.familyId = null;
   }
@@ -571,14 +580,16 @@ function addEntries(state, sectionId, sources, familyId, now) {
   let changed = false;
   for (const source of sources) {
     const uuid = String(source?.uuid ?? "");
-    if (!uuid || section.creatures.some(entry => entry.uuid === uuid)) continue;
-    section.creatures.push(normalizeCreatureEntry({
-      ...source,
-      uuid,
-      addedAt: now(),
-      hidden: !!source.hidden,
-      familyId: family?.id ?? null
-    }));
+    if (!uuid || section.creatures.some((entry) => entry.uuid === uuid)) continue;
+    section.creatures.push(
+      normalizeCreatureEntry({
+        ...source,
+        uuid,
+        addedAt: now(),
+        hidden: !!source.hidden,
+        familyId: family?.id ?? null,
+      }),
+    );
     changed = true;
   }
   if (changed) section.updatedAt = now();
@@ -588,16 +599,16 @@ function addEntries(state, sectionId, sources, familyId, now) {
 function handleRemoveCreature(state, command, { now }) {
   const section = findSection(state.data, command.sectionId);
   if (!section || section.locked) return TOUCHED_NONE;
-  const entry = section.creatures.find(item => item.uuid === command.uuid);
+  const entry = section.creatures.find((item) => item.uuid === command.uuid);
   if (!entry || entry.locked) return TOUCHED_NONE;
-  section.creatures = section.creatures.filter(item => item.uuid !== command.uuid);
+  section.creatures = section.creatures.filter((item) => item.uuid !== command.uuid);
   section.updatedAt = now();
   return TOUCHED_DATA;
 }
 
 function handleToggleCreatureVisibility(state, command, { now }) {
   const section = findSection(state.data, command.sectionId);
-  const entry = section?.creatures.find(item => item.uuid === command.uuid);
+  const entry = section?.creatures.find((item) => item.uuid === command.uuid);
   if (!entry) return TOUCHED_NONE;
   entry.hidden = typeof command.hidden === "boolean" ? command.hidden : !entry.hidden;
   section.updatedAt = now();
@@ -606,7 +617,7 @@ function handleToggleCreatureVisibility(state, command, { now }) {
 
 function handleUpdateCreatureEntry(state, command, { now }) {
   const section = findSection(state.data, command.sectionId);
-  const entry = section?.creatures.find(item => item.uuid === command.uuid);
+  const entry = section?.creatures.find((item) => item.uuid === command.uuid);
   if (!entry || section.locked || entry.locked) return TOUCHED_NONE;
   const patch = command.patch ?? {};
 
@@ -617,19 +628,22 @@ function handleUpdateCreatureEntry(state, command, { now }) {
   if ("hidden" in patch) entry.hidden = !!patch.hidden;
   if ("label" in patch) entry.label = String(patch.label ?? "");
   if ("thumb" in patch) entry.thumb = String(patch.thumb ?? "");
-  if (isObject(patch.image)) entry.image = normalizeCreatureEntry({ image: { ...entry.image, ...patch.image } }).image;
+  if (isObject(patch.image))
+    entry.image = normalizeCreatureEntry({ image: { ...entry.image, ...patch.image } }).image;
   if (isObject(patch.research)) {
     entry.research = normalizeCreatureEntry({
-      research: { ...entry.research, ...patch.research }
+      research: { ...entry.research, ...patch.research },
     }).research;
   }
   if (isObject(patch.blockTiers)) {
     entry.blockTiers = normalizeTierMap(
-      patch.replaceBlockTiers ? patch.blockTiers : { ...entry.blockTiers, ...patch.blockTiers }
+      patch.replaceBlockTiers ? patch.blockTiers : { ...entry.blockTiers, ...patch.blockTiers },
     );
   }
   if (isObject(patch.itemTiers)) {
-    const merged = patch.replaceItemTiers ? { ...patch.itemTiers } : { ...entry.itemTiers, ...patch.itemTiers };
+    const merged = patch.replaceItemTiers
+      ? { ...patch.itemTiers }
+      : { ...entry.itemTiers, ...patch.itemTiers };
     for (const [key, value] of Object.entries(patch.itemTiers)) {
       if (value === null) delete merged[key];
     }
@@ -642,14 +656,21 @@ function handleUpdateCreatureEntry(state, command, { now }) {
 /** Resolve explicit bulk scope without expanding an invalid selection to all entries. */
 export function selectResearchTargets(data, { scope, sectionId, familyId }) {
   if (!["all", "section", "family"].includes(scope)) throw new Error("Invalid research scope");
-  const sections = scope === "all" ? data.sections : data.sections.filter(section => section.id === sectionId);
+  const sections =
+    scope === "all" ? data.sections : data.sections.filter((section) => section.id === sectionId);
   if (scope !== "all" && !sections.length) throw new Error("Research collection not found");
-  if (scope === "family" && (familyId === undefined || (familyId !== null && !sections[0].families.some(family => family.id === familyId)))) {
+  if (
+    scope === "family" &&
+    (familyId === undefined ||
+      (familyId !== null && !sections[0].families.some((family) => family.id === familyId)))
+  ) {
     throw new Error("Research family not found");
   }
-  return sections.flatMap(section => section.creatures
-    .filter(entry => scope !== "family" || entry.familyId === familyId)
-    .map(entry => ({ section, entry, locked: !!section.locked || !!entry.locked })));
+  return sections.flatMap((section) =>
+    section.creatures
+      .filter((entry) => scope !== "family" || entry.familyId === familyId)
+      .map((entry) => ({ section, entry, locked: !!section.locked || !!entry.locked })),
+  );
 }
 
 /**
@@ -658,23 +679,32 @@ export function selectResearchTargets(data, { scope, sectionId, familyId }) {
  * editor open on what is already in force.
  */
 export function summarizeResearchTargets(targets, { allowedSkills = null } = {}) {
-  const open = targets.filter(target => !target.locked);
+  const open = targets.filter((target) => !target.locked);
   if (!open.length) return { dc: { mode: "keep" }, skills: { mode: "keep" } };
   const allowed = allowedSkills
-    ? (allowedSkills instanceof Set ? allowedSkills : new Set(allowedSkills))
+    ? allowedSkills instanceof Set
+      ? allowedSkills
+      : new Set(allowedSkills)
     : null;
-  const only = values => (values.size === 1 ? [...values][0] : undefined);
+  const only = (values) => (values.size === 1 ? [...values][0] : undefined);
   const dc = only(new Set(open.map(({ entry }) => entry.research?.dc ?? null)));
-  const skills = only(new Set(open.map(({ entry }) => {
-    const raw = entry.research?.skills ?? [];
-    const active = allowed ? raw.filter(skill => allowed.has(skill)) : raw;
-    return JSON.stringify([...active].sort());
-  })));
+  const skills = only(
+    new Set(
+      open.map(({ entry }) => {
+        const raw = entry.research?.skills ?? [];
+        const active = allowed ? raw.filter((skill) => allowed.has(skill)) : raw;
+        return JSON.stringify([...active].sort());
+      }),
+    ),
+  );
   return {
     dc: dc === undefined ? { mode: "mixed" } : dc === null ? { mode: "auto" } : { mode: "set", value: dc },
-    skills: skills === undefined ? { mode: "mixed" }
-      : skills === "[]" ? { mode: "auto" }
-      : { mode: "set", values: JSON.parse(skills) }
+    skills:
+      skills === undefined
+        ? { mode: "mixed" }
+        : skills === "[]"
+          ? { mode: "auto" }
+          : { mode: "set", values: JSON.parse(skills) },
   };
 }
 
@@ -687,7 +717,7 @@ function handleBulkUpdateResearch(state, command, { now, allowedSkills }) {
     throw new Error("Research DC must be an integer between 0 and 100, or null for automatic");
   }
   const allowed = allowedSkills instanceof Set ? allowedSkills : new Set(allowedSkills ?? RESEARCH_SKILLS);
-  if (hasSkills && (!Array.isArray(patch.skills) || patch.skills.some(skill => !allowed.has(skill)))) {
+  if (hasSkills && (!Array.isArray(patch.skills) || patch.skills.some((skill) => !allowed.has(skill)))) {
     throw new Error("Invalid research skills");
   }
   if (!hasDc && !hasSkills) return TOUCHED_NONE;
@@ -696,9 +726,13 @@ function handleBulkUpdateResearch(state, command, { now, allowedSkills }) {
     if (locked) continue;
     const research = {
       dc: hasDc ? patch.dc : entry.research.dc,
-      skills: hasSkills ? [...new Set(patch.skills)] : entry.research.skills
+      skills: hasSkills ? [...new Set(patch.skills)] : entry.research.skills,
     };
-    if (research.dc === entry.research.dc && JSON.stringify(research.skills) === JSON.stringify(entry.research.skills)) continue;
+    if (
+      research.dc === entry.research.dc &&
+      JSON.stringify(research.skills) === JSON.stringify(entry.research.skills)
+    )
+      continue;
     entry.research = research;
     section.updatedAt = now();
     changed = true;
@@ -708,7 +742,7 @@ function handleBulkUpdateResearch(state, command, { now, allowedSkills }) {
 
 function handleSetCreatureLock(state, command, { now }) {
   const section = findSection(state.data, command.sectionId);
-  const entry = section?.creatures.find(item => item.uuid === command.uuid);
+  const entry = section?.creatures.find((item) => item.uuid === command.uuid);
   if (!entry) return TOUCHED_NONE;
   const locked = typeof command.locked === "boolean" ? command.locked : !entry.locked;
   if (entry.locked === locked) return TOUCHED_NONE;
@@ -719,12 +753,10 @@ function handleSetCreatureLock(state, command, { now }) {
 
 function handleMoveCreature(state, command, { now }) {
   const section = findSection(state.data, command.sectionId);
-  const entry = section?.creatures.find(item => item.uuid === command.uuid);
+  const entry = section?.creatures.find((item) => item.uuid === command.uuid);
   if (!entry || section.locked || entry.locked) return TOUCHED_NONE;
 
-  const target = command.targetSectionId
-    ? findSection(state.data, command.targetSectionId)
-    : section;
+  const target = command.targetSectionId ? findSection(state.data, command.targetSectionId) : section;
   if (!target || target.locked) return TOUCHED_NONE;
   const family = command.targetFamilyId ? findFamily(target, command.targetFamilyId) : null;
 
@@ -735,8 +767,8 @@ function handleMoveCreature(state, command, { now }) {
     return TOUCHED_DATA;
   }
 
-  if (target.creatures.some(item => item.uuid === entry.uuid)) return TOUCHED_NONE;
-  section.creatures = section.creatures.filter(item => item.uuid !== entry.uuid);
+  if (target.creatures.some((item) => item.uuid === entry.uuid)) return TOUCHED_NONE;
+  section.creatures = section.creatures.filter((item) => item.uuid !== entry.uuid);
   target.creatures.push({ ...entry, familyId: family?.id ?? null });
   section.updatedAt = now();
   target.updatedAt = now();
@@ -750,7 +782,10 @@ function handleMoveCreature(state, command, { now }) {
  * what is missing — see {@link planSnapshotImport} for how sections match.
  */
 function handleImportSnapshot(state, command, { now, generateId }) {
-  const { sections, imported } = importSnapshot(state.data.sections, command.payload, command.mode, { now, generateId });
+  const { sections, imported } = importSnapshot(state.data.sections, command.payload, command.mode, {
+    now,
+    generateId,
+  });
   if (!imported) return TOUCHED_NONE;
   state.data.sections = sections;
   return TOUCHED_DATA;
@@ -827,7 +862,7 @@ function handleRecordResearch(state, command, { now }) {
     dc: safeInt(command.dc, 0),
     success: !!command.success,
     skill: String(command.skill ?? ""),
-    at: now()
+    at: now(),
   };
   if (command.success) {
     record.tier = clampKnownTier(record.tier + 1, MIN_RESEARCH_TIER);
@@ -849,8 +884,9 @@ function handleRecordResearch(state, command, { now }) {
 function handleShareKnowledge(state, command, { now, isPlayerUser }) {
   const fromUserId = String(command.userId ?? "");
   const uuid = String(command.uuid ?? "");
-  const targets = [...new Set(toArray(command.toUserIds ?? command.toUserId))]
-    .filter(id => id && id !== fromUserId && isPlayerUser(id));
+  const targets = [...new Set(toArray(command.toUserIds ?? command.toUserId))].filter(
+    (id) => id && id !== fromUserId && isPlayerUser(id),
+  );
   if (!fromUserId || !uuid || !targets.length) return TOUCHED_NONE;
   if (isCreatureLocked(state.data, uuid)) return TOUCHED_NONE;
   assertMayView(state.data, uuid, fromUserId, !!command.isGM);
@@ -874,8 +910,8 @@ function handleShareKnowledge(state, command, { now, isPlayerUser }) {
 }
 
 function ensureKnowledgeRecord(knowledge, userId, uuid) {
-  const bucket = knowledge.users[userId] ??= {};
-  return bucket[uuid] ??= normalizeKnowledgeRecord({});
+  const bucket = (knowledge.users[userId] ??= {});
+  return (bucket[uuid] ??= normalizeKnowledgeRecord({}));
 }
 
 // ── Comment handlers ──
@@ -893,20 +929,22 @@ function handleAddComment(state, command, { now, generateId }) {
   const channel = COMMENT_CHANNELS.includes(command.channel) ? command.channel : "private";
   if (channel === "gm" && !command.isGM) throw new BestiaryCommandError("BESTIARY.Errors.GmChannel");
 
-  state.social.comments.push(normalizeComment({
-    id: generateId(),
-    uuid,
-    authorId,
-    channel,
-    shared: channel === "gm" ? !!command.shared : false,
-    text,
-    createdAt: now()
-  }));
+  state.social.comments.push(
+    normalizeComment({
+      id: generateId(),
+      uuid,
+      authorId,
+      channel,
+      shared: channel === "gm" ? !!command.shared : false,
+      text,
+      createdAt: now(),
+    }),
+  );
   return TOUCHED_SOCIAL;
 }
 
 function handleUpdateComment(state, command, { now }) {
-  const comment = state.social.comments.find(item => item.id === command.commentId);
+  const comment = state.social.comments.find((item) => item.id === command.commentId);
   if (!comment || isCreatureLocked(state.data, comment.uuid)) return TOUCHED_NONE;
   if (!canEditComment(comment, { id: command.userId, isGM: command.isGM })) {
     throw new BestiaryCommandError("BESTIARY.Errors.NotYourNote");
@@ -930,17 +968,17 @@ function handleUpdateComment(state, command, { now }) {
 }
 
 function handleDeleteComment(state, command) {
-  const comment = state.social.comments.find(item => item.id === command.commentId);
+  const comment = state.social.comments.find((item) => item.id === command.commentId);
   if (!comment || isCreatureLocked(state.data, comment.uuid)) return TOUCHED_NONE;
   if (!canEditComment(comment, { id: command.userId, isGM: command.isGM })) {
     throw new BestiaryCommandError("BESTIARY.Errors.NotYourNote");
   }
-  state.social.comments = state.social.comments.filter(item => item.id !== command.commentId);
+  state.social.comments = state.social.comments.filter((item) => item.id !== command.commentId);
   return TOUCHED_SOCIAL;
 }
 
 function handleToggleCommentPin(state, command) {
-  const comment = state.social.comments.find(item => item.id === command.commentId);
+  const comment = state.social.comments.find((item) => item.id === command.commentId);
   if (!comment || isCreatureLocked(state.data, comment.uuid)) return TOUCHED_NONE;
   comment.pinned = !comment.pinned;
   return TOUCHED_SOCIAL;
@@ -953,7 +991,7 @@ function cloneState(state) {
   return {
     data: normalizeBestiaryData(source.data),
     knowledge: normalizeKnowledge(source.knowledge),
-    social: normalizeSocial(source.social)
+    social: normalizeSocial(source.social),
   };
 }
 
@@ -982,7 +1020,7 @@ function toArray(value) {
 export const SHARING_WINDOWS = Object.freeze(["always", "outOfCombat", "afterRest"]);
 export const SHARING_BLOCK_KEYS = Object.freeze({
   inCombat: "BESTIARY.Share.InCombat",
-  needsRest: "BESTIARY.Share.NeedsRest"
+  needsRest: "BESTIARY.Share.NeedsRest",
 });
 
 /**

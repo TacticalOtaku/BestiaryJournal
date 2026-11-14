@@ -11,27 +11,27 @@ no right to make rejects with a `BestiaryCommandError`; its `key` is a localisat
 
 ## Windows
 
-| Call | What it does |
-| --- | --- |
-| `open()`, `close()`, `toggle()` | The library window. |
+| Call                                      | What it does                                                                                                                     |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `open()`, `close()`, `toggle()`           | The library window.                                                                                                              |
 | `openCreature(uuid, { sectionId, rail })` | A creature's card. `rail` is `"knowledge"`, `"comments"` or `"config"`. Warns and returns nothing when the user may not open it. |
-| `openCollection(sectionRef)` | A collection's window, or `null` when there is no such collection. |
-| `openKnowledgeBoard(sectionRef?)` | GM: the party knowledge board, on one collection or on all of them. |
+| `openCollection(sectionRef)`              | A collection's window, or `null` when there is no such collection.                                                               |
+| `openKnowledgeBoard(sectionRef?)`         | GM: the party knowledge board, on one collection or on all of them.                                                              |
 
 ## Reading
 
-| Call | Returns |
-| --- | --- |
-| `isInBestiary(uuid)` | Whether the actor has an entry in any collection. |
-| `canView(uuid)` | Whether the current user may open the creature. |
+| Call                                   | Returns                                                               |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| `isInBestiary(uuid)`                   | Whether the actor has an entry in any collection.                     |
+| `canView(uuid)`                        | Whether the current user may open the creature.                       |
 | `getTier(uuid, userId = game.user.id)` | The user's tier: `0` unknown, `1` rumours, `2` studied, `3` mastered. |
 
 ## Changing (GM)
 
-| Call | What it does |
-| --- | --- |
+| Call                                   | What it does                                                                                                                    |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `grantKnowledge(uuids, userIds, tier)` | Sets `tier` for one creature or an array, for one user id, an array, or `"party"` (every player). Locked creatures are skipped. |
-| `addToCollection(uuid, sectionRef)` | Adds the actor to the collection. `{ changed: false }` when it is already there, the collection is locked or either is missing. |
+| `addToCollection(uuid, sectionRef)`    | Adds the actor to the collection. `{ changed: false }` when it is already there, the collection is locked or either is missing. |
 
 Both resolve to `{ changed, stores }` as the GM applied them.
 

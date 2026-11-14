@@ -4,7 +4,7 @@ import {
   MIN_RESEARCH_TIER,
   isGmTier,
   itemTierKey,
-  resolveCreatureResearch
+  resolveCreatureResearch,
 } from "../core/research-model.js";
 import { playerEntryContexts } from "../core/knowledge-lens.js";
 import {
@@ -15,30 +15,32 @@ import {
   getKnowledgeRecord,
   getUserTier,
   isCreatureLocked,
-  selectEntryContext
+  selectEntryContext,
 } from "../core/bestiary-domain.js";
 import { getBestiaryData, getBestiaryKnowledge, getBestiarySocial } from "../foundry/bestiary-store.js";
 import { reportCommandError, runCommand } from "../foundry/command-feedback.js";
-import {
-  buildEntryTierMatrix,
-  knowledgeLensFor,
-  localizedTierChoices
-} from "../foundry/creature-display.js";
+import { buildEntryTierMatrix, knowledgeLensFor, localizedTierChoices } from "../foundry/creature-display.js";
 import { postCreatureToChat } from "./creature-cards.js";
-import { buildCommentThreads, editComment, postComment, removeComment, toggleCommentPin } from "./comments.js";
+import {
+  buildCommentThreads,
+  editComment,
+  postComment,
+  removeComment,
+  toggleCommentPin,
+} from "./comments.js";
 import {
   buildKnowledgeRoster,
   isSharingEnabled,
   openShareDialog,
   resetKnowledge,
-  setKnowledgeTier
+  setKnowledgeTier,
 } from "./knowledge-ui.js";
 import {
   describeTier,
   isResearchRollEnabled,
   researchActors,
   runResearchCheck,
-  skillLabel
+  skillLabel,
 } from "../foundry/research.js";
 import { allowedResearchSkills } from "../foundry/research-skills.js";
 import {
@@ -47,13 +49,9 @@ import {
   getFavoriteCreatureUuids,
   setPreferredCommentChannel,
   setPreviewUserId,
-  toggleFavoriteCreature
+  toggleFavoriteCreature,
 } from "../foundry/client-preferences.js";
-import {
-  getPlayerUsers,
-  localize,
-  resolveUuid
-} from "../foundry/foundry-runtime.js";
+import { getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtime.js";
 import { BestiaryEntryEditor } from "./entry-editor.js";
 import { buildStatblock, buildTierSteps } from "./creature-statblock.js";
 import { animateDisclosure, playApplicationEntrance } from "./ui-effects.js";
@@ -64,7 +62,6 @@ import { log } from "../core/logger.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class BestiaryCreatureView extends HandlebarsApplicationMixin(ApplicationV2) {
-
   static _instances = new Set();
 
   static DEFAULT_OPTIONS = {
@@ -74,33 +71,77 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     window: { title: "BESTIARY.Creature", icon: "fa-solid fa-dragon", resizable: true, minimizable: true },
     position: { width: 1180, height: 820 },
     actions: {
-      openSheet: function () { this._onOpenSheet(); },
-      expandItem: function (event, target) { this._onExpandItem(event, target); },
-      toggleSection: function (event, target) { this._onToggleSection(event, target); },
-      toggleFavorite: function () { this._onToggleFavorite(); },
-      sendToChat: function () { this._onSendToChat(); },
-      setRail: function (event, target) { this._onSetRail(event, target); },
-      setCommentChannel: function (event, target) { this._onSetCommentChannel(event, target); },
-      submitComment: function () { return this._onSubmitComment(); },
-      cancelEdit: function () { this._onCancelEdit(); },
-      editComment: function (event, target) { this._onEditComment(event, target); },
-      deleteComment: function (event, target) { this._onDeleteComment(event, target); },
-      pinComment: function (event, target) { this._onPinComment(event, target); },
-      toggleCommentShared: function (event, target) { this._onToggleCommentShared(event, target); },
-      shareCreature: function () { this._onShareCreature(); },
-      runResearch: function (event, target) { this._onRunResearch(event, target); },
-      bumpTier: function (event, target) { this._onBumpTier(event, target); },
-      setPartyTier: function (event, target) { this._onSetPartyTier(event, target); },
-      resetTiers: function () { this._onResetTiers(); },
-      toggleLock: function () { this._onToggleLock(); },
-      openEntryEditor: function () { this._onOpenEntryEditor(); },
-      resetBlockTiers: function () { this._onResetBlockTiers(); },
-      clearPreview: function () { this._onSetPreview(""); }
-    }
+      openSheet: function () {
+        this._onOpenSheet();
+      },
+      expandItem: function (event, target) {
+        this._onExpandItem(event, target);
+      },
+      toggleSection: function (event, target) {
+        this._onToggleSection(event, target);
+      },
+      toggleFavorite: function () {
+        this._onToggleFavorite();
+      },
+      sendToChat: function () {
+        this._onSendToChat();
+      },
+      setRail: function (event, target) {
+        this._onSetRail(event, target);
+      },
+      setCommentChannel: function (event, target) {
+        this._onSetCommentChannel(event, target);
+      },
+      submitComment: function () {
+        return this._onSubmitComment();
+      },
+      cancelEdit: function () {
+        this._onCancelEdit();
+      },
+      editComment: function (event, target) {
+        this._onEditComment(event, target);
+      },
+      deleteComment: function (event, target) {
+        this._onDeleteComment(event, target);
+      },
+      pinComment: function (event, target) {
+        this._onPinComment(event, target);
+      },
+      toggleCommentShared: function (event, target) {
+        this._onToggleCommentShared(event, target);
+      },
+      shareCreature: function () {
+        this._onShareCreature();
+      },
+      runResearch: function (event, target) {
+        this._onRunResearch(event, target);
+      },
+      bumpTier: function (event, target) {
+        this._onBumpTier(event, target);
+      },
+      setPartyTier: function (event, target) {
+        this._onSetPartyTier(event, target);
+      },
+      resetTiers: function () {
+        this._onResetTiers();
+      },
+      toggleLock: function () {
+        this._onToggleLock();
+      },
+      openEntryEditor: function () {
+        this._onOpenEntryEditor();
+      },
+      resetBlockTiers: function () {
+        this._onResetBlockTiers();
+      },
+      clearPreview: function () {
+        this._onSetPreview("");
+      },
+    },
   };
 
   static PARTS = {
-    creature: { template: "modules/bestiary-journal/templates/creature-view.hbs" }
+    creature: { template: "modules/bestiary-journal/templates/creature-view.hbs" },
   };
 
   constructor(options = {}) {
@@ -110,7 +151,13 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     this.sectionId = options.sectionId ?? null;
     this._expandedItems = new Set();
     // A stat block reads open: what the creature does is shown, the long lists stay folded.
-    this._expandedSections = new Set(["features", "actions", "bonusActions", "reactions", "legendaryActions"]);
+    this._expandedSections = new Set([
+      "features",
+      "actions",
+      "bonusActions",
+      "reactions",
+      "legendaryActions",
+    ]);
     this._rail = ["knowledge", "comments", "config"].includes(options.rail) ? options.rail : "knowledge";
     this._commentChannel = null;
     this._commentDraft = "";
@@ -133,7 +180,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     return {
       real,
       effective: { id: previewId, isGM: false },
-      previewUser: user ? { id: user.id, name: user.name } : null
+      previewUser: user ? { id: user.id, name: user.name } : null,
     };
   }
 
@@ -153,21 +200,23 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const social = getBestiarySocial();
 
     const contexts = getEntryContexts(data, this.actorUuid);
-    const context = selectEntryContext(data, this.actorUuid, effective, this.sectionId)
-      ?? (real.isGM ? contexts.find(item => item.section.id === this.sectionId) ?? contexts[0] : null);
+    const context =
+      selectEntryContext(data, this.actorUuid, effective, this.sectionId) ??
+      (real.isGM ? (contexts.find((item) => item.section.id === this.sectionId) ?? contexts[0]) : null);
     this.sectionId = context?.section.id ?? this.sectionId ?? null;
     const entry = context?.entry ?? { image: {}, research: {}, blockTiers: {}, itemTiers: {} };
 
     const lens = knowledgeLensFor({ data, knowledge }, effective, this.actorUuid);
     const { tier } = lens;
     // A player opening the card has now seen what they know of it.
-    if (!real.isGM) markSeen(this.actorUuid, tier).catch(error => log.warn("Could not mark a creature as seen", error));
+    if (!real.isGM)
+      markSeen(this.actorUuid, tier).catch((error) => log.warn("Could not mark a creature as seen", error));
 
     const statblock = buildStatblock(creatureData, lens, entry, {
       // While previewing as a player, hidden content has to disappear the way it
       // does for them — otherwise the preview is not a preview.
       isGM: real.isGM && !previewUser,
-      expanded: { sections: this._expandedSections, items: this._expandedItems }
+      expanded: { sections: this._expandedSections, items: this._expandedItems },
     });
     const { creature } = statblock;
     const locked = isCreatureLocked(data, this.actorUuid);
@@ -175,7 +224,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const lockDisabled = !context || (!!context.section.locked && !entryLocked);
     const lockReason = context?.section.locked
       ? localize("BESTIARY.Lock.CollectionLocked")
-      : contexts.some(item => item.section.locked || (item.entry !== entry && item.entry.locked))
+      : contexts.some((item) => item.section.locked || (item.entry !== entry && item.entry.locked))
         ? localize("BESTIARY.Lock.InheritedLock")
         : "";
     const entryLockLabel = localize(entryLocked ? "BESTIARY.Lock.UnlockEntry" : "BESTIARY.Lock.LockEntry");
@@ -187,8 +236,9 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       error: false,
       ...statblock,
 
-      collections: getCreatureCollections(data, this.actorUuid, effective)
-        .map(collection => (effective.isGM || creature.knowsName ? collection : { ...collection, familyName: "" })),
+      collections: getCreatureCollections(data, this.actorUuid, effective).map((collection) =>
+        effective.isGM || creature.knowsName ? collection : { ...collection, familyName: "" },
+      ),
       locked,
       entryLocked,
       lockDisabled,
@@ -226,7 +276,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       isRailKnowledge: this._rail === "knowledge",
       isRailComments: this._rail === "comments",
       isRailConfig: this._rail === "config",
-      isFavorite: getFavoriteCreatureUuids().has(this.actorUuid)
+      isFavorite: getFavoriteCreatureUuids().has(this.actorUuid),
     };
   }
 
@@ -235,7 +285,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const current = getPreviewUserId();
     return [
       { id: "", name: localize("BESTIARY.Preview.AsGm"), selected: !current },
-      ...getPlayerUsers().map(user => ({ ...user, selected: user.id === current }))
+      ...getPlayerUsers().map((user) => ({ ...user, selected: user.id === current })),
     ];
   }
 
@@ -245,9 +295,9 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const { tier } = lens;
     // The same check the GM judges the roll by, whichever collection the card was opened from.
     const config = resolveCreatureResearch(
-      playerEntryContexts(data, this.actorUuid).map(context => context.entry),
+      playerEntryContexts(data, this.actorUuid).map((context) => context.entry),
       creature,
-      { allowedSkills: allowedResearchSkills() }
+      { allowedSkills: allowedResearchSkills() },
     );
     const knowsDc = lens.knowsDc(config);
     const knowsSkill = lens.knowsSkill(config);
@@ -255,12 +305,13 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     this._researchSkill = config.skills[0];
     const record = getKnowledgeRecord(getBestiaryKnowledge(), viewer.id, this.actorUuid);
     const actors = researchActors(game.users.get(viewer.id));
-    const canRoll = !isPreview
-      && isResearchRollEnabled()
-      && !locked
-      && tier < MAX_RESEARCH_TIER
-      && !record?.blocked
-      && actors.length > 0;
+    const canRoll =
+      !isPreview &&
+      isResearchRollEnabled() &&
+      !locked &&
+      tier < MAX_RESEARCH_TIER &&
+      !record?.blocked &&
+      actors.length > 0;
     return {
       enabled: isResearchRollEnabled(),
       canRoll,
@@ -269,17 +320,17 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       dc: knowsDc ? config.dc : "?",
       isMaxed: tier >= MAX_RESEARCH_TIER,
       nextTierLabel: describeTier(Math.min(tier + 1, MAX_RESEARCH_TIER)).label,
-      skills: knowsSkill ? config.skills.map(skill => ({ value: skill, label: skillLabel(skill) })) : [],
+      skills: knowsSkill ? config.skills.map((skill) => ({ value: skill, label: skillLabel(skill) })) : [],
       skillHidden: !knowsSkill,
-      actors: actors.map(actor => ({ id: actor.id, name: actor.name, img: actor.img })),
+      actors: actors.map((actor) => ({ id: actor.id, name: actor.name, img: actor.img })),
       noActors: actors.length === 0,
       isPreview,
       lastRoll: record?.lastRoll
         ? game.i18n.format(knowsDc ? "BESTIARY.Research.LastAttempt" : "BESTIARY.Research.LastAttemptNoDc", {
             total: record.lastRoll.total,
-            dc: record.lastRoll.dc
+            dc: record.lastRoll.dc,
           })
-        : ""
+        : "",
     };
   }
 
@@ -288,9 +339,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     let preferred = this._commentChannel ?? getPreferredCommentChannel();
     if (preferred === "gm" && !viewer.isGM) preferred = "private";
     if (!channels?.length) return preferred;
-    return channels.some(channel => channel.key === preferred)
-      ? preferred
-      : channels[0].key;
+    return channels.some((channel) => channel.key === preferred) ? preferred : channels[0].key;
   }
 
   // ── Rendering hooks ──
@@ -323,7 +372,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
 
   _activateItemKeyboard() {
     for (const item of this.element.querySelectorAll(".creature-item[data-item-key]")) {
-      item.addEventListener("keydown", event => {
+      item.addEventListener("keydown", (event) => {
         if (event.target !== item) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -337,11 +386,11 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const input = this.element.querySelector(".comment-composer-input");
     if (!input) return;
     input.value = this._commentDraft;
-    input.addEventListener("input", event => {
+    input.addEventListener("input", (event) => {
       this._commentDraft = event.currentTarget.value;
       this._commentDraftRevision++;
     });
-    input.addEventListener("keydown", event => {
+    input.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
         this._onSubmitComment();
@@ -353,17 +402,21 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     if (!game.user.isGM) return;
 
     for (const select of this.element.querySelectorAll("[data-item-tier]")) {
-      select.addEventListener("change", event => this._onSetItemTier(event.currentTarget));
+      select.addEventListener("change", (event) => this._onSetItemTier(event.currentTarget));
     }
     for (const select of this.element.querySelectorAll("[data-block-tier]")) {
-      select.addEventListener("change", event => this._onSetBlockTier(event.currentTarget));
+      select.addEventListener("change", (event) => this._onSetBlockTier(event.currentTarget));
     }
     for (const select of this.element.querySelectorAll("[data-user-tier]")) {
-      select.addEventListener("change", event => {
-        setKnowledgeTier(this.actorUuid, event.currentTarget.dataset.userTier, Number(event.currentTarget.value));
+      select.addEventListener("change", (event) => {
+        setKnowledgeTier(
+          this.actorUuid,
+          event.currentTarget.dataset.userTier,
+          Number(event.currentTarget.value),
+        );
       });
     }
-    this.element.querySelector(".preview-as-select")?.addEventListener("change", event => {
+    this.element.querySelector(".preview-as-select")?.addEventListener("change", (event) => {
       this._onSetPreview(event.currentTarget.value);
     });
   }
@@ -413,10 +466,10 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     if (this._commentPending) return;
     const text = (this._commentDraft ?? "").trim();
     if (!text) return;
-    const channel = this.element.querySelector(".comment-channel-tabs .is-active")?.dataset.channel
-      ?? this._activeCommentChannel({ id: game.user.id, isGM: game.user.isGM });
-    const shared = channel === "gm"
-      && !!this.element.querySelector(".comment-share-toggle")?.checked;
+    const channel =
+      this.element.querySelector(".comment-channel-tabs .is-active")?.dataset.channel ??
+      this._activeCommentChannel({ id: game.user.id, isGM: game.user.isGM });
+    const shared = channel === "gm" && !!this.element.querySelector(".comment-share-toggle")?.checked;
 
     if (this._editingCommentId && text === this._editingOriginal) {
       this._onCancelEdit();
@@ -439,8 +492,12 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       }
       // Acknowledgement belongs to the submitted draft, not whatever the user
       // has typed, selected for editing, or moved to another channel since.
-      if (revision === this._commentDraftRevision && draft === this._commentDraft
-        && editingId === this._editingCommentId && draftChannel === this._commentChannel) {
+      if (
+        revision === this._commentDraftRevision &&
+        draft === this._commentDraft &&
+        editingId === this._editingCommentId &&
+        draftChannel === this._commentChannel
+      ) {
         this._editingCommentId = null;
         this._commentDraft = "";
       }
@@ -487,7 +544,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       yes: { label: localize("BESTIARY.Comments.Delete") },
       no: { label: localize("BESTIARY.Cancel") },
       content: `<p>${localize("BESTIARY.Comments.ConfirmDelete")}</p>`,
-      rejectClose: false
+      rejectClose: false,
     });
     if (!confirmed) return;
     if (this._editingCommentId === commentId) this._onCancelEdit({ render: false });
@@ -503,7 +560,9 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   async _onToggleCommentShared(event, target) {
     const row = target.closest("[data-comment-id]");
     if (!row) return;
-    await editComment(row.dataset.commentId, { shared: row.dataset.shared !== "true" }).catch(reportCommandError);
+    await editComment(row.dataset.commentId, { shared: row.dataset.shared !== "true" }).catch(
+      reportCommandError,
+    );
   }
 
   // ── Knowledge ──
@@ -512,14 +571,13 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     await openShareDialog({
       uuid: this.actorUuid,
       creatureName: this._title,
-      knowledge: getBestiaryKnowledge()
+      knowledge: getBestiaryKnowledge(),
     });
   }
 
   async _onRunResearch(event, target) {
     if (this._researchPending) return;
-    const actorId = this.element.querySelector(".research-actor-select")?.value
-      ?? target.dataset.actorId;
+    const actorId = this.element.querySelector(".research-actor-select")?.value ?? target.dataset.actorId;
     const skill = this.element.querySelector(".research-skill-select")?.value || this._researchSkill;
     const actor = game.actors?.get(actorId) ?? researchActors()[0];
 
@@ -546,7 +604,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   async _onSetPartyTier(event, target) {
     if (!game.user.isGM) return;
     const tier = Number(target.dataset.tier);
-    const userIds = getPlayerUsers().map(user => user.id);
+    const userIds = getPlayerUsers().map((user) => user.id);
     if (!userIds.length) return;
     await setKnowledgeTier(this.actorUuid, userIds, tier);
   }
@@ -558,7 +616,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       yes: { label: localize("BESTIARY.Knowledge.Reset") },
       no: { label: localize("BESTIARY.Cancel") },
       content: `<p>${localize("BESTIARY.Knowledge.ConfirmReset")}</p>`,
-      rejectClose: false
+      rejectClose: false,
     });
     if (!confirmed) return;
     await resetKnowledge(this.actorUuid);
@@ -570,47 +628,57 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const patch = {
       itemTiers: {
         [itemTierKey(select.dataset.blockKey, select.dataset.itemId)]:
-          select.value === "" ? null : Number(select.value)
-      }
+          select.value === "" ? null : Number(select.value),
+      },
     };
-    await runCommand({
-      type: BESTIARY_COMMANDS.UPDATE_CREATURE_ENTRY,
-      sectionId: this.sectionId,
-      uuid: this.actorUuid,
-      patch
-    }, { unchanged: "BESTIARY.Lock.Blocked" });
+    await runCommand(
+      {
+        type: BESTIARY_COMMANDS.UPDATE_CREATURE_ENTRY,
+        sectionId: this.sectionId,
+        uuid: this.actorUuid,
+        patch,
+      },
+      { unchanged: "BESTIARY.Lock.Blocked" },
+    );
   }
 
   async _onSetBlockTier(select) {
-    await runCommand({
-      type: BESTIARY_COMMANDS.UPDATE_CREATURE_ENTRY,
-      sectionId: this.sectionId,
-      uuid: this.actorUuid,
-      patch: { blockTiers: { [select.dataset.blockTier]: Number(select.value) } }
-    }, { unchanged: "BESTIARY.Lock.Blocked" });
+    await runCommand(
+      {
+        type: BESTIARY_COMMANDS.UPDATE_CREATURE_ENTRY,
+        sectionId: this.sectionId,
+        uuid: this.actorUuid,
+        patch: { blockTiers: { [select.dataset.blockTier]: Number(select.value) } },
+      },
+      { unchanged: "BESTIARY.Lock.Blocked" },
+    );
   }
 
   async _onResetBlockTiers() {
-    const result = await runCommand({
-      type: BESTIARY_COMMANDS.UPDATE_CREATURE_ENTRY,
-      sectionId: this.sectionId,
-      uuid: this.actorUuid,
-      patch: { blockTiers: {}, replaceBlockTiers: true, itemTiers: {}, replaceItemTiers: true }
-    }, { unchanged: "BESTIARY.Lock.Blocked" });
+    const result = await runCommand(
+      {
+        type: BESTIARY_COMMANDS.UPDATE_CREATURE_ENTRY,
+        sectionId: this.sectionId,
+        uuid: this.actorUuid,
+        patch: { blockTiers: {}, replaceBlockTiers: true, itemTiers: {}, replaceItemTiers: true },
+      },
+      { unchanged: "BESTIARY.Lock.Blocked" },
+    );
     if (result?.changed) ui.notifications.info(localize("BESTIARY.Tier.ResetDone"));
   }
 
   async _onToggleLock() {
     if (!game.user.isGM || !this.sectionId) return;
-    const context = getEntryContexts(getBestiaryData(), this.actorUuid)
-      .find(item => item.section.id === this.sectionId);
+    const context = getEntryContexts(getBestiaryData(), this.actorUuid).find(
+      (item) => item.section.id === this.sectionId,
+    );
     const entry = context?.entry;
     if (!entry || (context.section.locked && !entry.locked)) return;
     await runCommand({
       type: BESTIARY_COMMANDS.SET_CREATURE_LOCK,
       sectionId: this.sectionId,
       uuid: this.actorUuid,
-      locked: !entry?.locked
+      locked: !entry?.locked,
     });
   }
 
@@ -633,9 +701,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const itemElement = target.closest("[data-item-key]");
     const itemKey = itemElement?.dataset.itemKey;
     if (!itemKey) return;
-    this._expandedItems.has(itemKey)
-      ? this._expandedItems.delete(itemKey)
-      : this._expandedItems.add(itemKey);
+    this._expandedItems.has(itemKey) ? this._expandedItems.delete(itemKey) : this._expandedItems.add(itemKey);
     this._toggleItemElement(itemElement, this._expandedItems.has(itemKey));
   }
 
@@ -670,7 +736,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   /** Re-renders without throwing the reader back to the top of any pane. */
   async _refreshPreservingScroll() {
     const selectors = [".creature-detail-wrapper", ".rail-body"];
-    const offsets = selectors.map(selector => this.element?.querySelector(selector)?.scrollTop ?? 0);
+    const offsets = selectors.map((selector) => this.element?.querySelector(selector)?.scrollTop ?? 0);
     await this.render();
     selectors.forEach((selector, index) => {
       const next = this.element?.querySelector(selector);
@@ -686,7 +752,11 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const changed = payload.changed ?? {};
     const concernsThis = !Array.isArray(payload.uuids) || payload.uuids.includes(this.actorUuid);
     // `settings`: a world option changed which actions the card may offer; `creatures`: the actor itself changed.
-    if (changed.data || changed.settings || ((changed.knowledge || changed.social || changed.creatures) && concernsThis)) {
+    if (
+      changed.data ||
+      changed.settings ||
+      ((changed.knowledge || changed.social || changed.creatures) && concernsThis)
+    ) {
       await this._refreshPreservingScroll();
     }
   }

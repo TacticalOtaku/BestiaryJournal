@@ -25,9 +25,7 @@
       "name": "TacticalOtaku"
     }
   ],
-  "esmodules": [
-    "scripts/main.js"
-  ],
+  "esmodules": ["scripts/main.js"],
   "styles": [
     "styles/tokens.css",
     "styles/frame.css",

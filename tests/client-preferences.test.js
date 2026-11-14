@@ -6,9 +6,9 @@ import { migrateClientPreferencesToUser } from "../scripts/foundry/client-prefer
 function memoryStorage(entries = {}) {
   const data = new Map(Object.entries(entries));
   return {
-    getItem: key => (data.has(key) ? data.get(key) : null),
-    removeItem: key => data.delete(key),
-    has: key => data.has(key)
+    getItem: (key) => (data.has(key) ? data.get(key) : null),
+    removeItem: (key) => data.delete(key),
+    has: (key) => data.has(key),
   };
 }
 
@@ -22,8 +22,8 @@ function fakeSettings(initial = {}, { failOnSet = false } = {}) {
         if (failOnSet) throw new Error("offline");
         writes.push([key, value]);
         values[key] = value;
-      }
-    }
+      },
+    },
   };
   return { values, writes };
 }
@@ -31,7 +31,7 @@ function fakeSettings(initial = {}, { failOnSet = false } = {}) {
 test("local favorites move to the user and the local copy is dropped", async () => {
   const { values } = fakeSettings();
   const storage = memoryStorage({
-    "bestiary-journal.favoriteCreatures": JSON.stringify(["Actor.a", "Actor.b"])
+    "bestiary-journal.favoriteCreatures": JSON.stringify(["Actor.a", "Actor.b"]),
   });
 
   await migrateClientPreferencesToUser(storage);
@@ -43,7 +43,7 @@ test("local favorites move to the user and the local copy is dropped", async () 
 test("a second browser merges into what the user already has", async () => {
   const { values } = fakeSettings({ favoriteCreatures: ["Actor.a"] });
   const storage = memoryStorage({
-    "bestiary-journal.favoriteCreatures": JSON.stringify(["Actor.a", "Actor.c"])
+    "bestiary-journal.favoriteCreatures": JSON.stringify(["Actor.a", "Actor.c"]),
   });
 
   await migrateClientPreferencesToUser(storage);
@@ -54,7 +54,7 @@ test("a second browser merges into what the user already has", async () => {
 test("nothing is written when the local copy adds nothing new", async () => {
   const { writes } = fakeSettings({ collapsedFamilies: ["sec:fam"] });
   const storage = memoryStorage({
-    "bestiary-journal.collapsedFamilies": JSON.stringify(["sec:fam"])
+    "bestiary-journal.collapsedFamilies": JSON.stringify(["sec:fam"]),
   });
 
   await migrateClientPreferencesToUser(storage);
@@ -66,7 +66,7 @@ test("nothing is written when the local copy adds nothing new", async () => {
 test("a failed write keeps the local copy for the next attempt", async () => {
   fakeSettings({}, { failOnSet: true });
   const storage = memoryStorage({
-    "bestiary-journal.favoriteCreatures": JSON.stringify(["Actor.a"])
+    "bestiary-journal.favoriteCreatures": JSON.stringify(["Actor.a"]),
   });
 
   await migrateClientPreferencesToUser(storage);

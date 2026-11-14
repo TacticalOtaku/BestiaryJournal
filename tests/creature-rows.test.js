@@ -6,13 +6,13 @@ import { GM_TIER } from "../scripts/core/research-model.js";
 globalThis.Hooks = { on: () => {}, callAll: () => {} };
 globalThis.game = {
   settings: { get: () => ({}) },
-  i18n: { localize: key => key, has: () => false, format: key => key }
+  i18n: { localize: (key) => key, has: () => false, format: (key) => key },
 };
 globalThis.CONFIG = { DND5E: {} };
 // The creature cache binds its Foundry hooks on import, so the stand-ins have to exist first.
 const { UNIDENTIFIED_ID, buildCreatureRows, summarizeRows } = await import("../scripts/ui/creature-rows.js");
 
-const creature = name => ({
+const creature = (name) => ({
   name,
   img: "",
   creatureType: "Beast",
@@ -21,7 +21,7 @@ const creature = name => ({
   cr: 1,
   ac: { value: 13 },
   hp: { value: 11, max: 11 },
-  speeds: {}
+  speeds: {},
 });
 const forest = {
   id: "forest",
@@ -30,28 +30,47 @@ const forest = {
   families: [{ id: "fam-wolves", name: "Wolves" }],
   creatures: [
     { uuid: "Actor.wolf", familyId: "fam-wolves", addedAt: 10, image: {} },
-    { uuid: "Actor.ghost", label: "Old ghost", addedAt: 20, image: {} }
-  ]
+    { uuid: "Actor.ghost", label: "Old ghost", addedAt: 20, image: {} },
+  ],
 };
 const caves = {
   id: "caves",
   name: "Caves",
   sort: 2,
   families: [],
-  creatures: [{ uuid: "Actor.wolf", addedAt: 30, image: {} }, { uuid: "Actor.bat", addedAt: 5, image: {} }]
+  creatures: [
+    { uuid: "Actor.wolf", addedAt: 30, image: {} },
+    { uuid: "Actor.bat", addedAt: 5, image: {} },
+  ],
 };
 const data = { sections: [forest, caves] };
-const knowledge = { users: { anna: { "Actor.wolf": { tier: 1 } }, boris: { "Actor.wolf": { tier: 2 }, "Actor.bat": { tier: 1 } } } };
+const knowledge = {
+  users: {
+    anna: { "Actor.wolf": { tier: 1 } },
+    boris: { "Actor.wolf": { tier: 2 }, "Actor.bat": { tier: 1 } },
+  },
+};
 const players = [{ id: "anna" }, { id: "boris" }];
 // Actor.ghost was deleted: no creature data.
-const creatures = new Map([["Actor.wolf", creature("Wolf")], ["Actor.bat", creature("Bat")]]);
+const creatures = new Map([
+  ["Actor.wolf", creature("Wolf")],
+  ["Actor.bat", creature("Bat")],
+]);
 
 const inputs = (viewer, overrides = {}) => ({
-  data, knowledge, worldTiers: {}, viewer, players, seenTiers: {}, favorites: new Set(), creatures, ...overrides
+  data,
+  knowledge,
+  worldTiers: {},
+  viewer,
+  players,
+  seenTiers: {},
+  favorites: new Set(),
+  creatures,
+  ...overrides,
 });
 const gm = { id: "gm", isGM: true };
 const anna = { id: "anna", isGM: false };
-const byUuid = rows => Object.fromEntries(rows.map(row => [row.uuid, row]));
+const byUuid = (rows) => Object.fromEntries(rows.map((row) => [row.uuid, row]));
 
 test("a player who cannot name a creature sees it as unidentified, never in its family", () => {
   const rows = buildCreatureRows([forest], inputs({ id: "carl", isGM: false }));
@@ -80,7 +99,9 @@ test("a creature in two collections is one library row naming both, added when i
 });
 
 test("the GM's library lists every creature its collections count", () => {
-  const each = new Set([forest, caves].flatMap(section => buildCreatureRows([section], inputs(gm)).map(row => row.uuid)));
+  const each = new Set(
+    [forest, caves].flatMap((section) => buildCreatureRows([section], inputs(gm)).map((row) => row.uuid)),
+  );
   assert.equal(buildCreatureRows([forest, caves], inputs(gm)).length, each.size);
 });
 
@@ -101,5 +122,8 @@ test("a creature is new until the player has seen it at their current tier", () 
 
 test("named creatures come first", () => {
   const rows = buildCreatureRows([caves], inputs(anna));
-  assert.deepEqual(rows.map(row => row.knowsName), [true, false]);
+  assert.deepEqual(
+    rows.map((row) => row.knowsName),
+    [true, false],
+  );
 });

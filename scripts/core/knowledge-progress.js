@@ -6,12 +6,15 @@ import { MAX_RESEARCH_TIER, MIN_RESEARCH_TIER, RESEARCH_TIERS } from "./research
  */
 export function tierProgress(tiers) {
   const counts = RESEARCH_TIERS.map(() => 0);
-  for (const tier of tiers) counts[Math.max(MIN_RESEARCH_TIER, Math.min(MAX_RESEARCH_TIER, Number(tier) || 0))] += 1;
+  for (const tier of tiers)
+    counts[Math.max(MIN_RESEARCH_TIER, Math.min(MAX_RESEARCH_TIER, Number(tier) || 0))] += 1;
   return {
     total: tiers.length,
     known: tiers.length - counts[MIN_RESEARCH_TIER],
-    segments: RESEARCH_TIERS.map((definition, index) => ({ key: definition.key, count: counts[index] }))
-      .filter(segment => segment.count > 0)
+    segments: RESEARCH_TIERS.map((definition, index) => ({
+      key: definition.key,
+      count: counts[index],
+    })).filter((segment) => segment.count > 0),
   };
 }
 

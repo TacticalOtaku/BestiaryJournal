@@ -15,7 +15,7 @@ const EXPORT_FORMAT = 1;
 export function buildSnapshot({ sectionIds = [], includeSocial = false } = {}) {
   const state = getBestiaryState();
   const sections = sectionIds.length
-    ? state.data.sections.filter(section => sectionIds.includes(section.id))
+    ? state.data.sections.filter((section) => sectionIds.includes(section.id))
     : state.data.sections;
 
   const snapshot = {
@@ -24,10 +24,10 @@ export function buildSnapshot({ sectionIds = [], includeSocial = false } = {}) {
     exportedAt: Date.now(),
     world: game.world?.id ?? "",
     system: game.system?.id ?? "",
-    sections: foundry.utils.deepClone(sections)
+    sections: foundry.utils.deepClone(sections),
   };
   if (includeSocial) {
-    const uuids = new Set(sections.flatMap(section => section.creatures.map(entry => entry.uuid)));
+    const uuids = new Set(sections.flatMap((section) => section.creatures.map((entry) => entry.uuid)));
     const knowledge = { revision: state.knowledge.revision, users: {} };
     for (const [userId, records] of Object.entries(state.knowledge.users)) {
       const kept = Object.fromEntries(Object.entries(records).filter(([uuid]) => uuids.has(uuid)));
@@ -35,7 +35,7 @@ export function buildSnapshot({ sectionIds = [], includeSocial = false } = {}) {
     }
     snapshot.archive = {
       knowledge,
-      comments: state.social.comments.filter(comment => uuids.has(comment.uuid))
+      comments: state.social.comments.filter((comment) => uuids.has(comment.uuid)),
     };
   }
   return snapshot;
@@ -50,17 +50,19 @@ export function exportBestiary({ sectionIds = [], includeSocial = false, filenam
   const snapshot = buildSnapshot({ sectionIds, includeSocial });
   const stamp = new Date().toISOString().slice(0, 10);
   downloadSnapshot(snapshot, filename ?? `bestiary-${game.world?.id ?? "world"}-${stamp}.json`);
-  ui.notifications.info(game.i18n.format("BESTIARY.Transfer.Exported", {
-    count: snapshot.sections.length
-  }));
+  ui.notifications.info(
+    game.i18n.format("BESTIARY.Transfer.Exported", {
+      count: snapshot.sections.length,
+    }),
+  );
   return snapshot;
 }
 
 /** Exports a single creature entry as a one-section snapshot. */
 export function exportCreatureEntry(sectionId, uuid) {
   const state = getBestiaryState();
-  const section = state.data.sections.find(item => item.id === sectionId);
-  const entry = section?.creatures.find(item => item.uuid === uuid);
+  const section = state.data.sections.find((item) => item.id === sectionId);
+  const entry = section?.creatures.find((item) => item.uuid === uuid);
   if (!section || !entry) return null;
 
   const snapshot = {
@@ -69,11 +71,13 @@ export function exportCreatureEntry(sectionId, uuid) {
     exportedAt: Date.now(),
     world: game.world?.id ?? "",
     system: game.system?.id ?? "",
-    sections: [{
-      ...foundry.utils.deepClone(section),
-      creatures: [foundry.utils.deepClone(entry)],
-      families: section.families.filter(family => family.id === entry.familyId)
-    }]
+    sections: [
+      {
+        ...foundry.utils.deepClone(section),
+        creatures: [foundry.utils.deepClone(entry)],
+        families: section.families.filter((family) => family.id === entry.familyId),
+      },
+    ],
   };
   const slug = (entry.label || uuid).replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase();
   downloadSnapshot(snapshot, `bestiary-entry-${slug}.json`);
@@ -107,18 +111,24 @@ export async function importBestiaryFromFile() {
     return false;
   }
 
-  const creatureCount = payload.sections
-    .reduce((total, section) => total + (section.creatures?.length ?? 0), 0);
+  const creatureCount = payload.sections.reduce(
+    (total, section) => total + (section.creatures?.length ?? 0),
+    0,
+  );
   const counts = {
     sections: formatCount("BESTIARY.Count.Collections", payload.sections.length),
-    creatures: formatCount("BESTIARY.Count.Creatures", creatureCount)
+    creatures: formatCount("BESTIARY.Count.Creatures", creatureCount),
   };
   const data = getBestiaryData();
   const mergePlan = planSnapshotImport(data, payload, "merge");
   const replacePlan = planSnapshotImport(data, payload, "replace");
 
   const mode = await foundry.applications.api.DialogV2.wait({
-    window: { title: localize("BESTIARY.Transfer.ImportTitle"), icon: "fa-solid fa-file-import", resizable: true },
+    window: {
+      title: localize("BESTIARY.Transfer.ImportTitle"),
+      icon: "fa-solid fa-file-import",
+      resizable: true,
+    },
     classes: ["bestiary-journal", "bestiary-app", "bestiary-dialog"],
     position: { width: 520 },
     content: `
@@ -128,11 +138,20 @@ export async function importBestiaryFromFile() {
         <p class="bestiary-import-note">${localize("BESTIARY.Transfer.ImportNote")}</p>
       </section>`,
     buttons: [
-      { action: "merge", icon: "fa-solid fa-code-merge", label: localize("BESTIARY.Transfer.ModeMerge"), default: true },
-      { action: "replace", icon: "fa-solid fa-arrows-rotate", label: localize("BESTIARY.Transfer.ModeReplace") },
-      { action: "cancel", icon: "fa-solid fa-xmark", label: localize("BESTIARY.Cancel") }
+      {
+        action: "merge",
+        icon: "fa-solid fa-code-merge",
+        label: localize("BESTIARY.Transfer.ModeMerge"),
+        default: true,
+      },
+      {
+        action: "replace",
+        icon: "fa-solid fa-arrows-rotate",
+        label: localize("BESTIARY.Transfer.ModeReplace"),
+      },
+      { action: "cancel", icon: "fa-solid fa-xmark", label: localize("BESTIARY.Cancel") },
     ],
-    rejectClose: false
+    rejectClose: false,
   });
 
   if (!mode || mode === "cancel") return false;
@@ -142,16 +161,19 @@ export async function importBestiaryFromFile() {
       yes: { label: localize("BESTIARY.Transfer.ModeReplace") },
       no: { label: localize("BESTIARY.Cancel") },
       content: `<p>${localize("BESTIARY.Transfer.ReplaceWarning")}</p>${describePlan("BESTIARY.Transfer.PlanReplace", replacePlan)}`,
-      rejectClose: false
+      rejectClose: false,
     });
     if (!confirmed) return false;
   }
 
-  const result = await runCommand({
-    type: BESTIARY_COMMANDS.IMPORT_SNAPSHOT,
-    payload: { sections: payload.sections },
-    mode
-  }, { unchanged: "BESTIARY.Transfer.NothingChanged" });
+  const result = await runCommand(
+    {
+      type: BESTIARY_COMMANDS.IMPORT_SNAPSHOT,
+      payload: { sections: payload.sections },
+      mode,
+    },
+    { unchanged: "BESTIARY.Transfer.NothingChanged" },
+  );
   if (!result?.changed) return false;
   ui.notifications.info(game.i18n.format("BESTIARY.Transfer.Imported", counts));
   return true;
@@ -159,20 +181,23 @@ export async function importBestiaryFromFile() {
 
 /** A short, escaped list of what an import will touch. */
 function describePlan(titleKey, plan) {
-  const escape = value => foundry.utils.escapeHTML(String(value));
+  const escape = (value) => foundry.utils.escapeHTML(String(value));
   const rows = [
     ["BESTIARY.Transfer.PlanMerged", plan.merged],
     ["BESTIARY.Transfer.PlanCreated", plan.created],
     ["BESTIARY.Transfer.PlanRemoved", plan.removed],
-    ["BESTIARY.Transfer.PlanLocked", plan.locked]
-  ].filter(([, names]) => names.length)
-    .map(([key, names]) => `<li><strong>${escape(localize(key))}:</strong> ${names.map(escape).join(", ")}</li>`);
+    ["BESTIARY.Transfer.PlanLocked", plan.locked],
+  ]
+    .filter(([, names]) => names.length)
+    .map(
+      ([key, names]) => `<li><strong>${escape(localize(key))}:</strong> ${names.map(escape).join(", ")}</li>`,
+    );
   if (!rows.length) return "";
   return `<p class="bestiary-import-plan-title">${escape(localize(titleKey))}</p><ul class="bestiary-import-plan">${rows.join("")}</ul>`;
 }
 
 function pickJsonFile() {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "application/json,.json";
@@ -180,7 +205,7 @@ function pickJsonFile() {
     // Kept in the document like Foundry's own pickers: in the desktop app a
     // detached one left text fields deaf to the keyboard after the system dialog.
     document.body.append(input);
-    const finish = file => {
+    const finish = (file) => {
       input.remove();
       window.focus();
       resolve(file);

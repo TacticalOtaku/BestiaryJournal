@@ -11,7 +11,10 @@
   color: var(--color-text-primary, inherit);
   cursor: pointer;
   font-size: 0.85rem;
-  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
 }
 
 .bestiary-sidebar-btn:hover {
@@ -55,7 +58,9 @@
     --bj-tier-studied: #63b3c2;
     --bj-tier-mastered: #ddb659;
   }
-  .bestiary-chat-card img.is-silhouette { filter: brightness(0) invert(1) opacity(.35); }
+  .bestiary-chat-card img.is-silhouette {
+    filter: brightness(0) invert(1) opacity(0.35);
+  }
 }
 
 .bestiary-chat-card,
@@ -80,10 +85,18 @@
   padding: 10px 12px 10px 13px;
 }
 
-.bestiary-chat-card[data-tier="unknown"] { --bj-chat-edge: var(--bj-tier-unknown); }
-.bestiary-chat-card[data-tier="rumors"] { --bj-chat-edge: var(--bj-tier-rumors); }
-.bestiary-chat-card[data-tier="studied"] { --bj-chat-edge: var(--bj-tier-studied); }
-.bestiary-chat-card[data-tier="mastered"] { --bj-chat-edge: var(--bj-tier-mastered); }
+.bestiary-chat-card[data-tier="unknown"] {
+  --bj-chat-edge: var(--bj-tier-unknown);
+}
+.bestiary-chat-card[data-tier="rumors"] {
+  --bj-chat-edge: var(--bj-tier-rumors);
+}
+.bestiary-chat-card[data-tier="studied"] {
+  --bj-chat-edge: var(--bj-tier-studied);
+}
+.bestiary-chat-card[data-tier="mastered"] {
+  --bj-chat-edge: var(--bj-tier-mastered);
+}
 
 .bestiary-chat-card img {
   width: 52px;
@@ -95,7 +108,9 @@
   object-fit: cover;
 }
 
-.bestiary-chat-card > div { min-width: 0; }
+.bestiary-chat-card > div {
+  min-width: 0;
+}
 .bestiary-chat-kicker {
   display: block;
   margin: 0 0 2px;
@@ -113,7 +128,9 @@
   font-weight: 700;
   line-height: 1.2;
 }
-.bestiary-chat-card p { margin: 5px 0 0; }
+.bestiary-chat-card p {
+  margin: 5px 0 0;
+}
 
 .bestiary-creature-link {
   display: inline-flex;
@@ -124,7 +141,10 @@
   font-weight: 600;
 }
 
-.bestiary-creature-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+.bestiary-creature-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 .bestiary-creature-link.is-disabled {
   opacity: 0.55;
@@ -132,9 +152,15 @@
   text-decoration: line-through;
 }
 
-.bestiary-research-card { padding: 9px 12px 10px 14px; }
-.bestiary-research-card.is-success { --bj-chat-edge: var(--bj-chat-positive); }
-.bestiary-research-card.is-failure { --bj-chat-edge: var(--bj-chat-danger); }
+.bestiary-research-card {
+  padding: 9px 12px 10px 14px;
+}
+.bestiary-research-card.is-success {
+  --bj-chat-edge: var(--bj-chat-positive);
+}
+.bestiary-research-card.is-failure {
+  --bj-chat-edge: var(--bj-chat-danger);
+}
 .bestiary-research-card strong {
   display: block;
   color: var(--bj-chat-muted);
@@ -143,8 +169,15 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.bestiary-research-card p { margin: 5px 0 0; font-size: 0.86rem; line-height: 1.45; }
-.bestiary-research-outcome { color: var(--bj-chat-edge); font-weight: 700; }
+.bestiary-research-card p {
+  margin: 5px 0 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+.bestiary-research-outcome {
+  color: var(--bj-chat-edge);
+  font-weight: 700;
+}
 
 /* ── Enriched content inside creature cards ── */
 
@@ -168,9 +201,13 @@
 }
 
 .creature-item-description p:first-child,
-.creature-biography-content p:first-child { margin-top: 0; }
+.creature-biography-content p:first-child {
+  margin-top: 0;
+}
 .creature-item-description p:last-child,
-.creature-biography-content p:last-child { margin-bottom: 0; }
+.creature-biography-content p:last-child {
+  margin-bottom: 0;
+}
 
 .creature-item-description a.content-link,
 .creature-biography-content a.content-link,
@@ -180,12 +217,21 @@
 }
 
 .creature-item-description table,
-.creature-biography-content table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
-.creature-item-description th, .creature-item-description td,
-.creature-biography-content th, .creature-biography-content td {
+.creature-biography-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.creature-item-description th,
+.creature-item-description td,
+.creature-biography-content th,
+.creature-biography-content td {
   padding: 5px 8px;
   border: 1px solid var(--suite-border);
 }
 
 /* An unknown creature posted to chat shows as a silhouette, like in the card. */
-.bestiary-chat-card img.is-silhouette { filter: brightness(0) opacity(.45); background: rgb(0 0 0 / 6%); }
+.bestiary-chat-card img.is-silhouette {
+  filter: brightness(0) opacity(0.45);
+  background: rgb(0 0 0 / 6%);
+}

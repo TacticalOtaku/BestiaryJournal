@@ -12,7 +12,7 @@ function setupOutcome({
   includeCustomSkills = false,
   skillId = "his",
   researchSkills = null,
-  customSkills = {}
+  customSkills = {},
 } = {}) {
   const values = {
     bestiaryData: {
@@ -20,60 +20,73 @@ function setupOutcome({
         {
           id: "s1",
           name: "Caves",
-          creatures: [{ uuid: UUID, ...(researchSkills ? { research: { skills: researchSkills } } : {}) }]
-        }
-      ]
+          creatures: [{ uuid: UUID, ...(researchSkills ? { research: { skills: researchSkills } } : {}) }],
+        },
+      ],
     },
     bestiaryKnowledge: {},
     tierBlockConfig: { name: 1, cr: 1 },
     researchRollEnabled: true,
     researchSingleAttempt: false,
-    includeCustomSkills
+    includeCustomSkills,
   };
   const users = [
     { id: "gm", name: "GM", isGM: true },
     { id: "p1", name: "Researcher", isGM: false },
-    { id: "p2", name: "Other player", isGM: false }
+    { id: "p2", name: "Other player", isGM: false },
   ];
   const message = {
-    getFlag: (scope) => scope === "dnd5e"
-      ? { type: "skill", skillId }
-      : { uuid: UUID, consumed: false },
+    getFlag: (scope) => (scope === "dnd5e" ? { type: "skill", skillId } : { uuid: UUID, consumed: false }),
     setFlag: async () => {},
     rolls: [{ total: 30 }],
     author: { id: "p1" },
     speaker: { actor: "hero" },
     timestamp: Date.now(),
     whisper,
-    blind
+    blind,
   };
   const outcomes = [];
   globalThis.game = {
-    users: { contents: users, get: id => users.find(user => user.id === id), filter: fn => users.filter(fn) },
+    users: {
+      contents: users,
+      get: (id) => users.find((user) => user.id === id),
+      filter: (fn) => users.filter(fn),
+    },
     settings: { get: (scope, key) => values[key] },
     messages: new Map([["roll", message]]),
-    actors: new Map([["hero", { name: "Hero", testUserPermission: user => user.id === "p1" }]]),
+    actors: new Map([["hero", { name: "Hero", testUserPermission: (user) => user.id === "p1" }]]),
     i18n: {
-      localize: key => key,
+      localize: (key) => key,
       has: () => false,
-      format: (key, data) => `${data.actor}: ${data.creature}; ${data.skill} ${data.total}${key === "BESTIARY.Research.ChatBody" ? `; DC ${data.dc}` : ""}`
-    }
+      format: (key, data) =>
+        `${data.actor}: ${data.creature}; ${data.skill} ${data.total}${key === "BESTIARY.Research.ChatBody" ? `; DC ${data.dc}` : ""}`,
+    },
   };
   globalThis.CONFIG = { DND5E: { skills: customSkills } };
-  globalThis.fromUuid = async () => ({ name: "Secret Goblin", system: { details: { cr: 2, type: { value: "humanoid" } } } });
-  globalThis.ChatMessage = { create: async data => outcomes.push(data) };
+  globalThis.fromUuid = async () => ({
+    name: "Secret Goblin",
+    system: { details: { cr: 2, type: { value: "humanoid" } } },
+  });
+  globalThis.ChatMessage = { create: async (data) => outcomes.push(data) };
   globalThis.document = {
-    createElement: tag => ({
-      textContent: "", children: [],
-      append(...children) { this.children.push(...children); },
-      get outerHTML() { return `<${tag}>${this.textContent}${this.children.map(child => child.outerHTML).join("")}</${tag}>`; }
-    })
+    createElement: (tag) => ({
+      textContent: "",
+      children: [],
+      append(...children) {
+        this.children.push(...children);
+      },
+      get outerHTML() {
+        return `<${tag}>${this.textContent}${this.children.map((child) => child.outerHTML).join("")}</${tag}>`;
+      },
+    }),
   };
 
   return async () => {
     const prepared = await prepareResearchCommand({ uuid: UUID, messageId: "roll" }, users[1]);
     // Finalization runs after persistence: the requester just earned Rumors.
-    values.bestiaryKnowledge = { users: { p1: { [UUID]: { tier: 1 } }, p2: { [UUID]: { tier: partyTier } } } };
+    values.bestiaryKnowledge = {
+      users: { p1: { [UUID]: { tier: 1 } }, p2: { [UUID]: { tier: partyTier } } },
+    };
     await prepared.finalize({ changed: true });
     return outcomes[0];
   };
@@ -120,7 +133,7 @@ test("a custom skill outcome formats the custom skill label from CONFIG.DND5E.sk
     includeCustomSkills: true,
     skillId: "mec",
     researchSkills: ["mec"],
-    customSkills: { mec: { label: "Механика" } }
+    customSkills: { mec: { label: "Механика" } },
   })();
   assert.match(outcome.content, /Механика 30/);
   assert.match(outcome.content, /Secret Goblin/);

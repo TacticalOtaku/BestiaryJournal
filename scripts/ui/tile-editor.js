@@ -9,7 +9,6 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
  * the two share the same shape (name, cover, hidden), so they share one form.
  */
 export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2) {
-
   static DEFAULT_OPTIONS = {
     id: "bestiary-tile-editor-{id}",
     classes: ["bestiary-journal", "bestiary-app", "bestiary-tile-editor"],
@@ -17,32 +16,47 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
     window: { title: "BESTIARY.CreateSection", icon: "fa-solid fa-plus-circle", resizable: false },
     position: { width: 520, height: "auto" },
     form: {
-      handler: function (event, form, formData) { return this._onFormSubmit(event, form, formData); },
+      handler: function (event, form, formData) {
+        return this._onFormSubmit(event, form, formData);
+      },
       submitOnChange: false,
       // Closed by the handler once the change is saved, so a refused save keeps what was typed.
-      closeOnSubmit: false
+      closeOnSubmit: false,
     },
     actions: {
-      pickImage: function (event, target) { this._onPickImage(event, target); },
-      clearImage: function () { this._onClearImage(); }
-    }
+      pickImage: function (event, target) {
+        this._onPickImage(event, target);
+      },
+      clearImage: function () {
+        this._onClearImage();
+      },
+    },
   };
 
   static PARTS = {
-    form: { template: "modules/bestiary-journal/templates/tile-editor.hbs" }
+    form: { template: "modules/bestiary-journal/templates/tile-editor.hbs" },
   };
 
   constructor(options = {}) {
     const mode = options.mode === "family" ? "family" : "section";
     const isEdit = !!options.tileData;
     const uniqueId = options.uniqueId ?? foundry.utils.randomID(16);
-    super(foundry.utils.mergeObject({ ...options, uniqueId }, {
-      window: {
-        title: isEdit
-          ? (mode === "family" ? "BESTIARY.Families.Edit" : "BESTIARY.EditSection")
-          : (mode === "family" ? "BESTIARY.Families.Create" : "BESTIARY.CreateSection")
-      }
-    }));
+    super(
+      foundry.utils.mergeObject(
+        { ...options, uniqueId },
+        {
+          window: {
+            title: isEdit
+              ? mode === "family"
+                ? "BESTIARY.Families.Edit"
+                : "BESTIARY.EditSection"
+              : mode === "family"
+                ? "BESTIARY.Families.Create"
+                : "BESTIARY.CreateSection",
+          },
+        },
+      ),
+    );
     this.mode = mode;
     this.sectionId = options.sectionId ?? null;
     this.tileData = options.tileData ?? null;
@@ -58,7 +72,7 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
       isHidden: this.tileData?.hidden ?? false,
       nameLabel: this.mode === "family" ? "BESTIARY.Families.Name" : "BESTIARY.SectionName",
       imageLabel: this.mode === "family" ? "BESTIARY.Families.Image" : "BESTIARY.SectionImage",
-      hint: this.mode === "family" ? "BESTIARY.Families.Hint" : "BESTIARY.CollectionsHint"
+      hint: this.mode === "family" ? "BESTIARY.Families.Hint" : "BESTIARY.CollectionsHint",
     };
   }
 
@@ -66,7 +80,7 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
     openFilePicker({
       type: "image",
       current: this._selectedImage,
-      callback: path => this._applyImage(path)
+      callback: (path) => this._applyImage(path),
     });
   }
 
@@ -81,8 +95,7 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
       preview.src = this._selectedImage;
       preview.classList.toggle("is-empty", !this._selectedImage);
     }
-    this.element.querySelector(".tile-editor-preview")
-      ?.classList.toggle("is-empty", !this._selectedImage);
+    this.element.querySelector(".tile-editor-preview")?.classList.toggle("is-empty", !this._selectedImage);
     const input = this.element.querySelector('input[name="image"]');
     if (input) input.value = this._selectedImage;
     const clear = this.element.querySelector('[data-action="clearImage"]');
@@ -94,7 +107,7 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
     const patch = {
       name: String(data.name ?? "").trim(),
       image: data.image || "",
-      hidden: !!data.hidden
+      hidden: !!data.hidden,
     };
     // `required` lets a name of spaces through.
     if (!patch.name) {
@@ -104,24 +117,28 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
 
     let result;
     if (this.mode === "family") {
-      result = await runCommand(this.tileData
-        ? {
-            type: BESTIARY_COMMANDS.UPDATE_FAMILY,
-            sectionId: this.sectionId,
-            familyId: this.tileData.id,
-            patch
-          }
-        : {
-            type: BESTIARY_COMMANDS.CREATE_FAMILY,
-            sectionId: this.sectionId,
-            family: patch
-          },
-      { unchanged: "BESTIARY.Lock.Blocked" });
+      result = await runCommand(
+        this.tileData
+          ? {
+              type: BESTIARY_COMMANDS.UPDATE_FAMILY,
+              sectionId: this.sectionId,
+              familyId: this.tileData.id,
+              patch,
+            }
+          : {
+              type: BESTIARY_COMMANDS.CREATE_FAMILY,
+              sectionId: this.sectionId,
+              family: patch,
+            },
+        { unchanged: "BESTIARY.Lock.Blocked" },
+      );
     } else {
-      result = await runCommand(this.tileData
-        ? { type: BESTIARY_COMMANDS.UPDATE_SECTION, sectionId: this.tileData.id, patch }
-        : { type: BESTIARY_COMMANDS.CREATE_SECTION, section: patch },
-      { unchanged: "BESTIARY.Lock.Blocked" });
+      result = await runCommand(
+        this.tileData
+          ? { type: BESTIARY_COMMANDS.UPDATE_SECTION, sectionId: this.tileData.id, patch }
+          : { type: BESTIARY_COMMANDS.CREATE_SECTION, section: patch },
+        { unchanged: "BESTIARY.Lock.Blocked" },
+      );
     }
     if (result?.changed) await this.close();
   }

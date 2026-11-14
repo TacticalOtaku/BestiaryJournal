@@ -23,13 +23,24 @@ export function registerEncounterReveal(isAuthority) {
     const data = getBestiaryData();
     const knowledge = getBestiaryKnowledge();
     const players = getPlayerUsers();
-    const uuids = new Set(combat.combatants.filter(combatant => combatant.actor?.type === "npc").map(combatantUuid)
-      .filter(uuid => uuid && getEntryContexts(data, uuid).length));
+    const uuids = new Set(
+      combat.combatants
+        .filter((combatant) => combatant.actor?.type === "npc")
+        .map(combatantUuid)
+        .filter((uuid) => uuid && getEntryContexts(data, uuid).length),
+    );
     for (const uuid of uuids) {
-      const userIds = players.filter(user => getUserTier(knowledge, user.id, uuid) < ENCOUNTER_TIER).map(user => user.id);
+      const userIds = players
+        .filter((user) => getUserTier(knowledge, user.id, uuid) < ENCOUNTER_TIER)
+        .map((user) => user.id);
       if (!userIds.length) continue;
-      runCommand({ type: BESTIARY_COMMANDS.SET_KNOWLEDGE, uuids: [uuid], userIds, tier: ENCOUNTER_TIER, source: "encounter" })
-        .catch(error => log.warn(`Could not reveal ${uuid} on encounter`, error));
+      runCommand({
+        type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
+        uuids: [uuid],
+        userIds,
+        tier: ENCOUNTER_TIER,
+        source: "encounter",
+      }).catch((error) => log.warn(`Could not reveal ${uuid} on encounter`, error));
     }
   });
 }

@@ -12,16 +12,46 @@ export const NEVER_TIER = 4;
 export const GM_TIER = 99;
 
 export const RESEARCH_TIERS = Object.freeze([
-  { value: 0, key: "unknown", label: "BESTIARY.Tier.Unknown", hint: "BESTIARY.Tier.UnknownHint", icon: "fa-circle-question" },
-  { value: 1, key: "rumors", label: "BESTIARY.Tier.Rumors", hint: "BESTIARY.Tier.RumorsHint", icon: "fa-comments" },
-  { value: 2, key: "studied", label: "BESTIARY.Tier.Studied", hint: "BESTIARY.Tier.StudiedHint", icon: "fa-book-open" },
-  { value: 3, key: "mastered", label: "BESTIARY.Tier.Mastered", hint: "BESTIARY.Tier.MasteredHint", icon: "fa-crown" }
+  {
+    value: 0,
+    key: "unknown",
+    label: "BESTIARY.Tier.Unknown",
+    hint: "BESTIARY.Tier.UnknownHint",
+    icon: "fa-circle-question",
+  },
+  {
+    value: 1,
+    key: "rumors",
+    label: "BESTIARY.Tier.Rumors",
+    hint: "BESTIARY.Tier.RumorsHint",
+    icon: "fa-comments",
+  },
+  {
+    value: 2,
+    key: "studied",
+    label: "BESTIARY.Tier.Studied",
+    hint: "BESTIARY.Tier.StudiedHint",
+    icon: "fa-book-open",
+  },
+  {
+    value: 3,
+    key: "mastered",
+    label: "BESTIARY.Tier.Mastered",
+    hint: "BESTIARY.Tier.MasteredHint",
+    icon: "fa-crown",
+  },
 ]);
 
 /** Selectable values in every tier picker, including the GM-only option. */
 export const TIER_CHOICES = Object.freeze([
   ...RESEARCH_TIERS,
-  { value: NEVER_TIER, key: "never", label: "BESTIARY.Tier.Never", hint: "BESTIARY.Tier.NeverHint", icon: "fa-eye-slash" }
+  {
+    value: NEVER_TIER,
+    key: "never",
+    label: "BESTIARY.Tier.Never",
+    hint: "BESTIARY.Tier.NeverHint",
+    icon: "fa-eye-slash",
+  },
 ]);
 
 /**
@@ -67,24 +97,49 @@ export const DISPLAY_BLOCKS = Object.freeze([
   { key: "spells", label: "BESTIARY.Spellcasting", group: "resources", tier: 3 },
   { key: "inventory", label: "BESTIARY.Inventory", group: "resources", tier: 3 },
 
-  { key: "biography", label: "BESTIARY.Biography", group: "lore", tier: 3 }
+  { key: "biography", label: "BESTIARY.Biography", group: "lore", tier: 3 },
 ]);
 
 export const DISPLAY_GROUPS = Object.freeze([
-  { key: "identity", label: "BESTIARY.Group.Identity", hint: "BESTIARY.Group.IdentityHint", icon: "fa-id-card" },
-  { key: "vitals", label: "BESTIARY.Group.Vitals", hint: "BESTIARY.Group.VitalsHint", icon: "fa-heart-pulse" },
+  {
+    key: "identity",
+    label: "BESTIARY.Group.Identity",
+    hint: "BESTIARY.Group.IdentityHint",
+    icon: "fa-id-card",
+  },
+  {
+    key: "vitals",
+    label: "BESTIARY.Group.Vitals",
+    hint: "BESTIARY.Group.VitalsHint",
+    icon: "fa-heart-pulse",
+  },
   { key: "core", label: "BESTIARY.Group.Core", hint: "BESTIARY.Group.CoreHint", icon: "fa-dumbbell" },
-  { key: "perception", label: "BESTIARY.Group.Perception", hint: "BESTIARY.Group.PerceptionHint", icon: "fa-eye" },
-  { key: "defense", label: "BESTIARY.Group.Defense", hint: "BESTIARY.Group.DefenseHint", icon: "fa-shield-halved" },
+  {
+    key: "perception",
+    label: "BESTIARY.Group.Perception",
+    hint: "BESTIARY.Group.PerceptionHint",
+    icon: "fa-eye",
+  },
+  {
+    key: "defense",
+    label: "BESTIARY.Group.Defense",
+    hint: "BESTIARY.Group.DefenseHint",
+    icon: "fa-shield-halved",
+  },
   { key: "combat", label: "BESTIARY.Group.Combat", hint: "BESTIARY.Group.CombatHint", icon: "fa-khanda" },
-  { key: "resources", label: "BESTIARY.Group.Resources", hint: "BESTIARY.Group.ResourcesHint", icon: "fa-bag-shopping" },
-  { key: "lore", label: "BESTIARY.Group.Lore", hint: "BESTIARY.Group.LoreHint", icon: "fa-feather-pointed" }
+  {
+    key: "resources",
+    label: "BESTIARY.Group.Resources",
+    hint: "BESTIARY.Group.ResourcesHint",
+    icon: "fa-bag-shopping",
+  },
+  { key: "lore", label: "BESTIARY.Group.Lore", hint: "BESTIARY.Group.LoreHint", icon: "fa-feather-pointed" },
 ]);
 
-const BLOCK_BY_KEY = new Map(DISPLAY_BLOCKS.map(block => [block.key, block]));
+const BLOCK_BY_KEY = new Map(DISPLAY_BLOCKS.map((block) => [block.key, block]));
 
 export function defaultBlockTiers() {
-  return Object.fromEntries(DISPLAY_BLOCKS.map(block => [block.key, block.tier]));
+  return Object.fromEntries(DISPLAY_BLOCKS.map((block) => [block.key, block.tier]));
 }
 
 export function clampTier(value, fallback = MIN_RESEARCH_TIER) {
@@ -106,7 +161,7 @@ export function isGmTier(tier) {
 
 export function getTierDefinition(tier) {
   if (isGmTier(tier)) return TIER_CHOICES[TIER_CHOICES.length - 1];
-  return TIER_CHOICES.find(choice => choice.value === clampTier(tier)) ?? RESEARCH_TIERS[0];
+  return TIER_CHOICES.find((choice) => choice.value === clampTier(tier)) ?? RESEARCH_TIERS[0];
 }
 
 /**
@@ -167,16 +222,41 @@ export function isItemVisible(blockKey, itemId, viewerTier, blockTiers, itemTier
 
 /** Default investigation skill, guessed from the creature type. */
 const TYPE_SKILL = {
-  beast: "nat", plant: "nat", monstrosity: "nat", ooze: "nat",
-  aberration: "arc", construct: "arc", dragon: "arc", elemental: "arc",
-  fey: "arc", giant: "arc",
-  celestial: "rel", fiend: "rel", undead: "rel",
-  humanoid: "his"
+  beast: "nat",
+  plant: "nat",
+  monstrosity: "nat",
+  ooze: "nat",
+  aberration: "arc",
+  construct: "arc",
+  dragon: "arc",
+  elemental: "arc",
+  fey: "arc",
+  giant: "arc",
+  celestial: "rel",
+  fiend: "rel",
+  undead: "rel",
+  humanoid: "his",
 };
 
 export const STANDARD_DND5E_SKILLS = Object.freeze([
-  "acr", "ani", "arc", "ath", "dec", "his", "ins", "itm", "inv",
-  "med", "nat", "prc", "prf", "per", "rel", "slt", "ste", "sur"
+  "acr",
+  "ani",
+  "arc",
+  "ath",
+  "dec",
+  "his",
+  "ins",
+  "itm",
+  "inv",
+  "med",
+  "nat",
+  "prc",
+  "prf",
+  "per",
+  "rel",
+  "slt",
+  "ste",
+  "sur",
 ]);
 
 export const RESEARCH_SKILLS = Object.freeze(["nat", "arc", "rel", "his", "inv", "sur", "med", "prc"]);
@@ -221,16 +301,19 @@ export function resolveResearchConfig(entry, creature, { allowedSkills = RESEARC
   const allowed = allowedSkills instanceof Set ? allowedSkills : new Set(allowedSkills ?? RESEARCH_SKILLS);
   const configured = entry?.research ?? {};
   const explicit = Array.isArray(configured.skills)
-    ? configured.skills.filter(skill => allowed.has(skill))
+    ? configured.skills.filter((skill) => allowed.has(skill))
     : [];
   const skills = explicit.length ? explicit : [suggestResearchSkill(creature?.creatureTypeKey)];
-  const hasDc = configured.dc !== null && configured.dc !== undefined && configured.dc !== ""
-    && Number.isFinite(Number(configured.dc));
+  const hasDc =
+    configured.dc !== null &&
+    configured.dc !== undefined &&
+    configured.dc !== "" &&
+    Number.isFinite(Number(configured.dc));
   return {
     dc: hasDc ? Number(configured.dc) : suggestResearchDc(creature?.cr),
     skills,
     isDcExplicit: hasDc,
-    isSkillsExplicit: explicit.length > 0
+    isSkillsExplicit: explicit.length > 0,
   };
 }
 
@@ -240,12 +323,14 @@ export function resolveResearchConfig(entry, creature, { allowedSkills = RESEARC
  * them, since a skill derived from the type would give the type away.
  */
 export function resolveCreatureResearch(entries, creature, options = {}) {
-  const configs = (entries.length ? entries : [null]).map(entry => resolveResearchConfig(entry, creature, options));
+  const configs = (entries.length ? entries : [null]).map((entry) =>
+    resolveResearchConfig(entry, creature, options),
+  );
   const easiest = configs.reduce((lowest, config) => (config.dc < lowest.dc ? config : lowest));
   return {
     dc: easiest.dc,
     isDcExplicit: easiest.isDcExplicit,
-    skills: [...new Set(configs.flatMap(config => config.skills))],
-    isSkillsExplicit: configs.every(config => config.isSkillsExplicit)
+    skills: [...new Set(configs.flatMap((config) => config.skills))],
+    isSkillsExplicit: configs.every((config) => config.isSkillsExplicit),
   };
 }

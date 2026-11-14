@@ -11,16 +11,20 @@ function motionLevel(element) {
 
 /** AIM's cursor light: a card marked .bestiary-spot glows softly under the pointer (the CSS hides it with motion off). */
 let spotFrame = 0;
-document.addEventListener("pointermove", event => {
-  const card = event.target.closest?.(".bestiary-spot");
-  if (!card || spotFrame) return;
-  spotFrame = requestAnimationFrame(() => {
-    spotFrame = 0;
-    const box = card.getBoundingClientRect();
-    card.style.setProperty("--mx", `${event.clientX - box.left}px`);
-    card.style.setProperty("--my", `${event.clientY - box.top}px`);
-  });
-}, { passive: true });
+document.addEventListener(
+  "pointermove",
+  (event) => {
+    const card = event.target.closest?.(".bestiary-spot");
+    if (!card || spotFrame) return;
+    spotFrame = requestAnimationFrame(() => {
+      spotFrame = 0;
+      const box = card.getBoundingClientRect();
+      card.style.setProperty("--mx", `${event.clientX - box.left}px`);
+      card.style.setProperty("--my", `${event.clientY - box.top}px`);
+    });
+  },
+  { passive: true },
+);
 
 /** Entrances are ornament: only at the full level. */
 export function playApplicationEntrance(application, selector) {
@@ -48,13 +52,24 @@ export function animateDisclosure(element, expanded) {
   const endHeight = expanded ? element.scrollHeight : 0;
   element.style.overflow = "hidden";
 
-  const animation = element.animate([
-    { height: `${startHeight}px`, opacity: expanded ? 0 : 1, transform: expanded ? "translateY(-4px)" : "translateY(0)" },
-    { height: `${endHeight}px`, opacity: expanded ? 1 : 0, transform: expanded ? "translateY(0)" : "translateY(-4px)" }
-  ], {
-    duration: expanded ? 280 : 210,
-    easing: "cubic-bezier(.22, 1, .36, 1)"
-  });
+  const animation = element.animate(
+    [
+      {
+        height: `${startHeight}px`,
+        opacity: expanded ? 0 : 1,
+        transform: expanded ? "translateY(-4px)" : "translateY(0)",
+      },
+      {
+        height: `${endHeight}px`,
+        opacity: expanded ? 1 : 0,
+        transform: expanded ? "translateY(0)" : "translateY(-4px)",
+      },
+    ],
+    {
+      duration: expanded ? 280 : 210,
+      easing: "cubic-bezier(.22, 1, .36, 1)",
+    },
+  );
 
   disclosureAnimations.set(element, animation);
   animation.onfinish = () => {
@@ -85,7 +100,12 @@ export function showContextMenu(event, items) {
   menu.setAttribute("role", "menu");
   // It lives on <body>, outside any window: it borrows the look of the window it was opened from.
   const origin = event.target?.closest?.(".bestiary-app");
-  if (origin) Object.assign(menu.dataset, { theme: origin.dataset.theme, accent: origin.dataset.accent, motion: origin.dataset.motion });
+  if (origin)
+    Object.assign(menu.dataset, {
+      theme: origin.dataset.theme,
+      accent: origin.dataset.accent,
+      motion: origin.dataset.motion,
+    });
   else stampTheme(menu);
   const list = document.createElement("ol");
   list.className = "context-items";
@@ -115,7 +135,7 @@ export function showContextMenu(event, items) {
       item.callback?.();
     };
     row.addEventListener("click", activate);
-    row.addEventListener("keydown", keyEvent => {
+    row.addEventListener("keydown", (keyEvent) => {
       if (keyEvent.key === "Enter" || keyEvent.key === " ") {
         keyEvent.preventDefault();
         activate();
@@ -132,10 +152,10 @@ export function showContextMenu(event, items) {
   menu.style.left = `${Math.max(8, Math.min(event.clientX, window.innerWidth - bounds.width - 8))}px`;
   menu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - bounds.height - 8))}px`;
 
-  const onPointerDown = pointer => {
+  const onPointerDown = (pointer) => {
     if (!menu.contains(pointer.target)) close();
   };
-  const onKeyDown = keyEvent => {
+  const onKeyDown = (keyEvent) => {
     if (keyEvent.key !== "Escape") return;
     keyEvent.preventDefault();
     keyEvent.stopPropagation();

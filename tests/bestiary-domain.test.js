@@ -13,7 +13,7 @@ import {
   selectComments,
   selectEntryContext,
   selectVisibleCreatureEntries,
-  sharingBlockReason
+  sharingBlockReason,
 } from "../scripts/core/bestiary-domain.js";
 
 let counter = 0;
@@ -29,7 +29,7 @@ function sectionFixture(overrides = {}) {
     name: "Forest",
     families: [{ id: "fam1", name: "Wolves" }],
     creatures: [{ uuid: "Actor.wolf", familyId: "fam1" }],
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -39,7 +39,7 @@ function run(state, command) {
 
 test("normalizes pre-0.2 data without families or entry settings", () => {
   const data = normalizeBestiaryData({
-    sections: [{ id: "a", name: "Old", creatures: [{ uuid: "Actor.x", hidden: true }] }]
+    sections: [{ id: "a", name: "Old", creatures: [{ uuid: "Actor.x", hidden: true }] }],
   });
   const [section] = data.sections;
   assert.deepEqual(section.families, []);
@@ -62,7 +62,7 @@ test("deleting a family releases its creatures instead of removing them", () => 
   const result = run(state, {
     type: BESTIARY_COMMANDS.DELETE_FAMILY,
     sectionId: "sec1",
-    familyId: "fam1"
+    familyId: "fam1",
   });
   const section = result.state.data.sections[0];
   assert.equal(section.families.length, 0);
@@ -73,13 +73,13 @@ test("deleting a family releases its creatures instead of removing them", () => 
 test("moving a creature to another collection carries its settings over", () => {
   const state = stateWith([
     sectionFixture({ creatures: [{ uuid: "Actor.wolf", familyId: "fam1", blockTiers: { hp: 3 } }] }),
-    { id: "sec2", name: "Caves", families: [], creatures: [] }
+    { id: "sec2", name: "Caves", families: [], creatures: [] },
   ]);
   const result = run(state, {
     type: BESTIARY_COMMANDS.MOVE_CREATURE,
     sectionId: "sec1",
     uuid: "Actor.wolf",
-    targetSectionId: "sec2"
+    targetSectionId: "sec2",
   });
   const [from, to] = result.state.data.sections;
   assert.equal(from.creatures.length, 0);
@@ -92,14 +92,18 @@ test("assigning knowledge targets userIds, never the acting user", () => {
   const state = stateWith([sectionFixture()]);
   // The store stamps `userId` with whoever issued the command; it must not be
   // mistaken for the assignment target.
-  const result = applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
-    uuid: "Actor.wolf",
-    userIds: ["p1"],
-    userId: "gm",
-    isGM: true,
-    tier: 2
-  }, deps);
+  const result = applyBestiaryCommand(
+    state,
+    {
+      type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
+      uuid: "Actor.wolf",
+      userIds: ["p1"],
+      userId: "gm",
+      isGM: true,
+      tier: 2,
+    },
+    deps,
+  );
 
   assert.equal(getUserTier(result.state.knowledge, "p1", "Actor.wolf"), 2);
   assert.equal(getUserTier(result.state.knowledge, "gm", "Actor.wolf"), 0, "the GM must not be assigned");
@@ -108,22 +112,41 @@ test("assigning knowledge targets userIds, never the acting user", () => {
 
 test("assigning knowledge without userIds changes nothing", () => {
   const state = stateWith([sectionFixture()]);
-  const result = applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
-    uuid: "Actor.wolf", userId: "gm", isGM: true, tier: 3
-  }, deps);
+  const result = applyBestiaryCommand(
+    state,
+    {
+      type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
+      uuid: "Actor.wolf",
+      userId: "gm",
+      isGM: true,
+      tier: 3,
+    },
+    deps,
+  );
   assert.equal(result.changedAny, false);
   assert.equal(getUserTier(result.state.knowledge, "gm", "Actor.wolf"), 0);
 });
 
 test("resetting knowledge is scoped by userIds, not the acting user", () => {
   let state = stateWith([sectionFixture()]);
-  state = run(state, { type: BESTIARY_COMMANDS.SET_KNOWLEDGE, uuid: "Actor.wolf", userIds: ["p1", "p2"], tier: 2 }).state;
+  state = run(state, {
+    type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
+    uuid: "Actor.wolf",
+    userIds: ["p1", "p2"],
+    tier: 2,
+  }).state;
 
-  const result = applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.RESET_KNOWLEDGE,
-    uuid: "Actor.wolf", userIds: ["p1"], userId: "gm", isGM: true
-  }, deps);
+  const result = applyBestiaryCommand(
+    state,
+    {
+      type: BESTIARY_COMMANDS.RESET_KNOWLEDGE,
+      uuid: "Actor.wolf",
+      userIds: ["p1"],
+      userId: "gm",
+      isGM: true,
+    },
+    deps,
+  );
   assert.equal(getUserTier(result.state.knowledge, "p1", "Actor.wolf"), 0);
   assert.equal(getUserTier(result.state.knowledge, "p2", "Actor.wolf"), 2);
 });
@@ -136,7 +159,7 @@ test("a locked entry freezes knowledge and comments for everyone", () => {
     type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
     uuid: "Actor.wolf",
     userIds: ["p1"],
-    tier: 3
+    tier: 3,
   });
   assert.equal(knowledge.changedAny, false, "the lock, not a missing target, blocks this");
 
@@ -145,7 +168,7 @@ test("a locked entry freezes knowledge and comments for everyone", () => {
     uuid: "Actor.wolf",
     userId: "p1",
     channel: "party",
-    text: "Weak to fire"
+    text: "Weak to fire",
   });
   assert.equal(comment.changedAny, false);
 });
@@ -158,47 +181,82 @@ test("a locked section locks the entries inside it", () => {
 test("a successful research roll raises the tier by exactly one step", () => {
   let state = stateWith([sectionFixture()]);
   for (const expected of [1, 2, 3, 3]) {
-    state = applyBestiaryCommand(state, {
-      type: BESTIARY_COMMANDS.RECORD_RESEARCH,
-      uuid: "Actor.wolf",
-      userId: "p1",
-      success: true,
-      total: 18,
-      dc: 12,
-      skill: "nat"
-    }, deps).state;
+    state = applyBestiaryCommand(
+      state,
+      {
+        type: BESTIARY_COMMANDS.RECORD_RESEARCH,
+        uuid: "Actor.wolf",
+        userId: "p1",
+        success: true,
+        total: 18,
+        dc: 12,
+        skill: "nat",
+      },
+      deps,
+    ).state;
     assert.equal(getUserTier(state.knowledge, "p1", "Actor.wolf"), expected);
   }
 });
 
 test("a failed roll only blocks retries when the world asks for one attempt", () => {
   const state = stateWith([sectionFixture()]);
-  const lenient = applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.RECORD_RESEARCH,
-    uuid: "Actor.wolf", userId: "p1", success: false, total: 4, dc: 12
-  }, deps).state;
+  const lenient = applyBestiaryCommand(
+    state,
+    {
+      type: BESTIARY_COMMANDS.RECORD_RESEARCH,
+      uuid: "Actor.wolf",
+      userId: "p1",
+      success: false,
+      total: 4,
+      dc: 12,
+    },
+    deps,
+  ).state;
   assert.equal(lenient.knowledge.users.p1["Actor.wolf"].blocked, false);
   assert.equal(lenient.knowledge.users.p1["Actor.wolf"].attempts, 1);
 
-  const strict = applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.RECORD_RESEARCH,
-    uuid: "Actor.wolf", userId: "p1", success: false, total: 4, dc: 12, singleAttempt: true
-  }, deps).state;
+  const strict = applyBestiaryCommand(
+    state,
+    {
+      type: BESTIARY_COMMANDS.RECORD_RESEARCH,
+      uuid: "Actor.wolf",
+      userId: "p1",
+      success: false,
+      total: 4,
+      dc: 12,
+      singleAttempt: true,
+    },
+    deps,
+  ).state;
   assert.equal(strict.knowledge.users.p1["Actor.wolf"].blocked, true);
 });
 
 test("sharing is capped at the sender's tier and never lowers the recipient", () => {
   let state = stateWith([sectionFixture()]);
-  state = run(state, { type: BESTIARY_COMMANDS.SET_KNOWLEDGE, uuid: "Actor.wolf", userIds: ["p1"], tier: 2 }).state;
-  state = run(state, { type: BESTIARY_COMMANDS.SET_KNOWLEDGE, uuid: "Actor.wolf", userIds: ["p3"], tier: 3 }).state;
-
-  state = applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.SHARE_KNOWLEDGE,
+  state = run(state, {
+    type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
     uuid: "Actor.wolf",
-    userId: "p1",
-    toUserIds: ["p2", "p3"],
-    tier: 3
-  }, deps).state;
+    userIds: ["p1"],
+    tier: 2,
+  }).state;
+  state = run(state, {
+    type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
+    uuid: "Actor.wolf",
+    userIds: ["p3"],
+    tier: 3,
+  }).state;
+
+  state = applyBestiaryCommand(
+    state,
+    {
+      type: BESTIARY_COMMANDS.SHARE_KNOWLEDGE,
+      uuid: "Actor.wolf",
+      userId: "p1",
+      toUserIds: ["p2", "p3"],
+      tier: 3,
+    },
+    deps,
+  ).state;
 
   assert.equal(getUserTier(state.knowledge, "p2", "Actor.wolf"), 2, "capped at the sender's tier");
   assert.equal(getUserTier(state.knowledge, "p3", "Actor.wolf"), 3, "already knew more, left alone");
@@ -208,20 +266,35 @@ test("sharing is capped at the sender's tier and never lowers the recipient", ()
 
 test("a player who knows nothing cannot share", () => {
   const state = stateWith([sectionFixture()]);
-  const result = applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.SHARE_KNOWLEDGE,
-    uuid: "Actor.wolf", userId: "p1", toUserIds: ["p2"]
-  }, deps);
+  const result = applyBestiaryCommand(
+    state,
+    {
+      type: BESTIARY_COMMANDS.SHARE_KNOWLEDGE,
+      uuid: "Actor.wolf",
+      userId: "p1",
+      toUserIds: ["p2"],
+    },
+    deps,
+  );
   assert.equal(result.changedAny, false);
 });
 
 test("comment channels reach exactly the intended readers", () => {
   let state = stateWith([sectionFixture()]);
   const post = (userId, channel, text, isGM = false, shared = false) => {
-    state = applyBestiaryCommand(state, {
-      type: BESTIARY_COMMANDS.ADD_COMMENT,
-      uuid: "Actor.wolf", userId, channel, text, isGM, shared
-    }, deps).state;
+    state = applyBestiaryCommand(
+      state,
+      {
+        type: BESTIARY_COMMANDS.ADD_COMMENT,
+        uuid: "Actor.wolf",
+        userId,
+        channel,
+        text,
+        isGM,
+        shared,
+      },
+      deps,
+    ).state;
   };
 
   post("gm", "gm", "Secret weakness", true, false);
@@ -233,45 +306,93 @@ test("comment channels reach exactly the intended readers", () => {
   const p1View = selectComments(state.social, "Actor.wolf", { id: "p1", isGM: false });
   const p2View = selectComments(state.social, "Actor.wolf", { id: "p2", isGM: false });
 
-  assert.deepEqual(gmView.map(c => c.text).sort(), ["Everyone sees this", "Public rumor", "Secret weakness"]);
-  assert.deepEqual(p1View.map(c => c.text).sort(), ["Everyone sees this", "My own note", "Public rumor"]);
-  assert.deepEqual(p2View.map(c => c.text).sort(), ["Everyone sees this", "Public rumor"]);
+  assert.deepEqual(gmView.map((c) => c.text).sort(), [
+    "Everyone sees this",
+    "Public rumor",
+    "Secret weakness",
+  ]);
+  assert.deepEqual(p1View.map((c) => c.text).sort(), ["Everyone sees this", "My own note", "Public rumor"]);
+  assert.deepEqual(p2View.map((c) => c.text).sort(), ["Everyone sees this", "Public rumor"]);
 });
 
 test("a player cannot post into the GM channel", () => {
   const state = stateWith([sectionFixture()]);
-  assert.throws(() => applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.ADD_COMMENT,
-    uuid: "Actor.wolf", userId: "p1", channel: "gm", text: "sneaky", isGM: false
-  }, deps), { key: "BESTIARY.Errors.GmChannel" });
+  assert.throws(
+    () =>
+      applyBestiaryCommand(
+        state,
+        {
+          type: BESTIARY_COMMANDS.ADD_COMMENT,
+          uuid: "Actor.wolf",
+          userId: "p1",
+          channel: "gm",
+          text: "sneaky",
+          isGM: false,
+        },
+        deps,
+      ),
+    { key: "BESTIARY.Errors.GmChannel" },
+  );
 });
 
 test("only the author or a GM may edit a comment", () => {
   let state = stateWith([sectionFixture()]);
-  state = applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.ADD_COMMENT,
-    uuid: "Actor.wolf", userId: "p1", channel: "party", text: "mine"
-  }, deps).state;
+  state = applyBestiaryCommand(
+    state,
+    {
+      type: BESTIARY_COMMANDS.ADD_COMMENT,
+      uuid: "Actor.wolf",
+      userId: "p1",
+      channel: "party",
+      text: "mine",
+    },
+    deps,
+  ).state;
   const commentId = state.social.comments[0].id;
 
-  assert.throws(() => applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.UPDATE_COMMENT,
-    commentId, userId: "p2", isGM: false, patch: { text: "hijacked" }
-  }, deps), { key: "BESTIARY.Errors.NotYourNote" });
+  assert.throws(
+    () =>
+      applyBestiaryCommand(
+        state,
+        {
+          type: BESTIARY_COMMANDS.UPDATE_COMMENT,
+          commentId,
+          userId: "p2",
+          isGM: false,
+          patch: { text: "hijacked" },
+        },
+        deps,
+      ),
+    { key: "BESTIARY.Errors.NotYourNote" },
+  );
 
-  const author = applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.UPDATE_COMMENT,
-    commentId, userId: "p1", isGM: false, patch: { text: "edited" }
-  }, deps);
+  const author = applyBestiaryCommand(
+    state,
+    {
+      type: BESTIARY_COMMANDS.UPDATE_COMMENT,
+      commentId,
+      userId: "p1",
+      isGM: false,
+      patch: { text: "edited" },
+    },
+    deps,
+  );
   assert.equal(author.state.social.comments[0].text, "edited");
 });
 
 test("private comments stay private even from the GM", () => {
   let state = stateWith([sectionFixture()]);
-  state = applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.ADD_COMMENT,
-    uuid: "Actor.wolf", userId: "p1", channel: "private", text: "hidden"
-  }, deps).state;
+  state = applyBestiaryCommand(
+    state,
+    {
+      type: BESTIARY_COMMANDS.ADD_COMMENT,
+      uuid: "Actor.wolf",
+      userId: "p1",
+      channel: "private",
+      text: "hidden",
+    },
+    deps,
+  ).state;
   const gmView = selectComments(state.social, "Actor.wolf", { id: "gm", isGM: true });
   assert.deepEqual(gmView, []);
 });
@@ -280,7 +401,12 @@ test("a creature in several collections is read through the first one on display
   // Stored Forest first, but the GM reordered Caves to the top.
   const state = stateWith([
     sectionFixture({ sort: 100 }),
-    sectionFixture({ id: "sec2", name: "Caves", sort: 0, creatures: [{ uuid: "Actor.wolf", blockTiers: { name: 3 } }] })
+    sectionFixture({
+      id: "sec2",
+      name: "Caves",
+      sort: 0,
+      creatures: [{ uuid: "Actor.wolf", blockTiers: { name: 3 } }],
+    }),
   ]);
   const viewer = { id: "p1", isGM: false };
   assert.equal(selectEntryContext(state.data, "Actor.wolf", viewer).section.id, "sec2");
@@ -298,18 +424,20 @@ test("merging an import keeps existing entries and adds the missing ones", () =>
     type: BESTIARY_COMMANDS.IMPORT_SNAPSHOT,
     mode: "merge",
     payload: {
-      sections: [{
-        id: "sec1",
-        name: "Forest",
-        families: [{ id: "fam2", name: "Bears" }],
-        creatures: [{ uuid: "Actor.wolf" }, { uuid: "Actor.bear", familyId: "fam2" }]
-      }]
-    }
+      sections: [
+        {
+          id: "sec1",
+          name: "Forest",
+          families: [{ id: "fam2", name: "Bears" }],
+          creatures: [{ uuid: "Actor.wolf" }, { uuid: "Actor.bear", familyId: "fam2" }],
+        },
+      ],
+    },
   });
   const section = result.state.data.sections[0];
   assert.equal(section.creatures.length, 2);
   assert.equal(section.families.length, 2);
-  assert.equal(section.creatures.find(entry => entry.uuid === "Actor.bear").familyId, "fam2");
+  assert.equal(section.creatures.find((entry) => entry.uuid === "Actor.bear").familyId, "fam2");
 });
 
 test("replacing an import wipes the previous structure", () => {
@@ -317,7 +445,7 @@ test("replacing an import wipes the previous structure", () => {
   const result = run(state, {
     type: BESTIARY_COMMANDS.IMPORT_SNAPSHOT,
     mode: "replace",
-    payload: { sections: [{ id: "other", name: "Swamp", creatures: [] }] }
+    payload: { sections: [{ id: "other", name: "Swamp", creatures: [] }] },
   });
   assert.equal(result.state.data.sections.length, 1);
   assert.equal(result.state.data.sections[0].name, "Swamp");
@@ -327,7 +455,10 @@ test("each store bumps its own revision only", () => {
   const state = stateWith([sectionFixture()]);
   const result = run(state, {
     type: BESTIARY_COMMANDS.ADD_COMMENT,
-    uuid: "Actor.wolf", userId: "p1", channel: "party", text: "note"
+    uuid: "Actor.wolf",
+    userId: "p1",
+    channel: "party",
+    text: "note",
   });
   assert.equal(result.changed.social, true);
   assert.equal(result.changed.data, false);
@@ -345,80 +476,154 @@ test("sharing waits for the end of a fight and, after a rest only when the world
   assert.equal(sharingBlockReason({ mode: "outOfCombat", inCombat: false }), null);
   assert.equal(sharingBlockReason({ mode: "bogus", inCombat: true }), "inCombat");
   assert.equal(sharingBlockReason({ mode: "afterRest", inCombat: false }), "needsRest");
-  assert.equal(sharingBlockReason({ mode: "afterRest", inCombat: false, restedAt: 5, foughtAt: 9 }), "needsRest");
+  assert.equal(
+    sharingBlockReason({ mode: "afterRest", inCombat: false, restedAt: 5, foughtAt: 9 }),
+    "needsRest",
+  );
   assert.equal(sharingBlockReason({ mode: "afterRest", inCombat: false, restedAt: 10, foughtAt: 9 }), null);
-  assert.equal(sharingBlockReason({ mode: "afterRest", inCombat: true, restedAt: 10, foughtAt: 9 }), "inCombat");
+  assert.equal(
+    sharingBlockReason({ mode: "afterRest", inCombat: true, restedAt: 10, foughtAt: 9 }),
+    "inCombat",
+  );
 });
 
 // ── Who may run a command ──
 
 const player = { userId: "p1", isGM: false };
 const share = { type: BESTIARY_COMMANDS.SHARE_KNOWLEDGE, uuid: "Actor.wolf", toUserIds: ["p2"], tier: 1 };
-const knowing = () => stateWith([sectionFixture()], {
-  knowledge: { users: { p1: { "Actor.wolf": { tier: 2 } } } }
-});
-const sharingAs = facts => ({ ...deps, isPlayerUser: () => true, sharingFacts: () => facts });
+const knowing = () =>
+  stateWith([sectionFixture()], {
+    knowledge: { users: { p1: { "Actor.wolf": { tier: 2 } } } },
+  });
+const sharingAs = (facts) => ({ ...deps, isPlayerUser: () => true, sharingFacts: () => facts });
 
 test("a player running any GM command is refused, whatever the command", () => {
   const state = stateWith([sectionFixture()]);
-  for (const type of Object.values(BESTIARY_COMMANDS).filter(type => !PLAYER_COMMANDS.has(type))) {
-    assert.throws(() => applyBestiaryCommand(state, { type, ...player }, deps), { key: "BESTIARY.Errors.GmOnly" }, type);
+  for (const type of Object.values(BESTIARY_COMMANDS).filter((type) => !PLAYER_COMMANDS.has(type))) {
+    assert.throws(
+      () => applyBestiaryCommand(state, { type, ...player }, deps),
+      { key: "BESTIARY.Errors.GmOnly" },
+      type,
+    );
   }
 });
 
 test("a player shares only while the world and the moment allow it", () => {
   const command = { ...share, ...player };
-  assert.throws(() => applyBestiaryCommand(knowing(), command, sharingAs({ allowed: false, mode: "always" })),
-    { key: "BESTIARY.Errors.SharingDisabled" });
-  assert.throws(() => applyBestiaryCommand(knowing(), command, sharingAs({ allowed: true, mode: "outOfCombat", inCombat: true })),
-    { key: "BESTIARY.Share.InCombat" });
-  assert.throws(() => applyBestiaryCommand(knowing(), command, sharingAs({ allowed: true, mode: "afterRest", restedAt: 1, foughtAt: 2 })),
-    { key: "BESTIARY.Share.NeedsRest" });
-  const shared = applyBestiaryCommand(knowing(), command, sharingAs({ allowed: true, mode: "afterRest", restedAt: 3, foughtAt: 2 }));
+  assert.throws(
+    () => applyBestiaryCommand(knowing(), command, sharingAs({ allowed: false, mode: "always" })),
+    { key: "BESTIARY.Errors.SharingDisabled" },
+  );
+  assert.throws(
+    () =>
+      applyBestiaryCommand(
+        knowing(),
+        command,
+        sharingAs({ allowed: true, mode: "outOfCombat", inCombat: true }),
+      ),
+    { key: "BESTIARY.Share.InCombat" },
+  );
+  assert.throws(
+    () =>
+      applyBestiaryCommand(
+        knowing(),
+        command,
+        sharingAs({ allowed: true, mode: "afterRest", restedAt: 1, foughtAt: 2 }),
+      ),
+    { key: "BESTIARY.Share.NeedsRest" },
+  );
+  const shared = applyBestiaryCommand(
+    knowing(),
+    command,
+    sharingAs({ allowed: true, mode: "afterRest", restedAt: 3, foughtAt: 2 }),
+  );
   assert.equal(getUserTier(shared.state.knowledge, "p2", "Actor.wolf"), 1);
 });
 
 test("the sharing rules bind players, not the GM", () => {
   const gmShare = { ...share, userId: "gm", isGM: true };
   let asked = false;
-  applyBestiaryCommand(knowing(), gmShare, { ...deps, sharingFacts: () => { asked = true; return { allowed: false }; } });
+  applyBestiaryCommand(knowing(), gmShare, {
+    ...deps,
+    sharingFacts: () => {
+      asked = true;
+      return { allowed: false };
+    },
+  });
   assert.equal(asked, false);
 });
 
 test("a player cannot delete someone else's note or pin one", () => {
   let state = stateWith([sectionFixture()]);
-  state = applyBestiaryCommand(state, {
-    type: BESTIARY_COMMANDS.ADD_COMMENT, uuid: "Actor.wolf", userId: "p2", isGM: false, channel: "party", text: "theirs"
-  }, deps).state;
+  state = applyBestiaryCommand(
+    state,
+    {
+      type: BESTIARY_COMMANDS.ADD_COMMENT,
+      uuid: "Actor.wolf",
+      userId: "p2",
+      isGM: false,
+      channel: "party",
+      text: "theirs",
+    },
+    deps,
+  ).state;
   const commentId = state.social.comments[0].id;
-  assert.throws(() => applyBestiaryCommand(state, { type: BESTIARY_COMMANDS.DELETE_COMMENT, commentId, ...player }, deps),
-    { key: "BESTIARY.Errors.NotYourNote" });
-  assert.throws(() => applyBestiaryCommand(state, { type: BESTIARY_COMMANDS.TOGGLE_COMMENT_PIN, commentId, ...player }, deps),
-    { key: "BESTIARY.Errors.GmOnly" });
+  assert.throws(
+    () => applyBestiaryCommand(state, { type: BESTIARY_COMMANDS.DELETE_COMMENT, commentId, ...player }, deps),
+    { key: "BESTIARY.Errors.NotYourNote" },
+  );
+  assert.throws(
+    () =>
+      applyBestiaryCommand(state, { type: BESTIARY_COMMANDS.TOGGLE_COMMENT_PIN, commentId, ...player }, deps),
+    { key: "BESTIARY.Errors.GmOnly" },
+  );
 });
 
 test("a player cannot research, share or note a creature they cannot open", () => {
-  const hidden = () => stateWith([sectionFixture({ creatures: [{ uuid: "Actor.wolf", hidden: true }] })], {
-    knowledge: { users: { p1: { "Actor.wolf": { tier: 2 } } } }
-  });
+  const hidden = () =>
+    stateWith([sectionFixture({ creatures: [{ uuid: "Actor.wolf", hidden: true }] })], {
+      knowledge: { users: { p1: { "Actor.wolf": { tier: 2 } } } },
+    });
   const commands = [
     { type: BESTIARY_COMMANDS.RECORD_RESEARCH, uuid: "Actor.wolf", total: 20, dc: 10, success: true },
     share,
-    { type: BESTIARY_COMMANDS.ADD_COMMENT, uuid: "Actor.wolf", channel: "party", text: "seen it" }
+    { type: BESTIARY_COMMANDS.ADD_COMMENT, uuid: "Actor.wolf", channel: "party", text: "seen it" },
   ];
   for (const command of commands) {
-    assert.throws(() => applyBestiaryCommand(hidden(), { ...command, ...player }, sharingAs({ allowed: true, mode: "always" })),
-      { key: "BESTIARY.Errors.NoAccess" }, command.type);
+    assert.throws(
+      () =>
+        applyBestiaryCommand(
+          hidden(),
+          { ...command, ...player },
+          sharingAs({ allowed: true, mode: "always" }),
+        ),
+      { key: "BESTIARY.Errors.NoAccess" },
+      command.type,
+    );
   }
 });
 
 test("a command that finds nothing left to change stays quiet", () => {
-  const gone = applyBestiaryCommand(stateWith([sectionFixture()]), {
-    type: BESTIARY_COMMANDS.DELETE_COMMENT, commentId: "deleted-meanwhile", ...player
-  }, deps);
+  const gone = applyBestiaryCommand(
+    stateWith([sectionFixture()]),
+    {
+      type: BESTIARY_COMMANDS.DELETE_COMMENT,
+      commentId: "deleted-meanwhile",
+      ...player,
+    },
+    deps,
+  );
   assert.equal(gone.changedAny, false);
-  const locked = applyBestiaryCommand(stateWith([sectionFixture({ locked: true })]), {
-    type: BESTIARY_COMMANDS.ADD_COMMENT, uuid: "Actor.wolf", channel: "party", text: "too late", ...player
-  }, deps);
+  const locked = applyBestiaryCommand(
+    stateWith([sectionFixture({ locked: true })]),
+    {
+      type: BESTIARY_COMMANDS.ADD_COMMENT,
+      uuid: "Actor.wolf",
+      channel: "party",
+      text: "too late",
+      ...player,
+    },
+    deps,
+  );
   assert.equal(locked.changedAny, false);
 });

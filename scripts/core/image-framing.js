@@ -36,11 +36,7 @@ export function buildImageView(entry, creature, { silhouette = false } = {}) {
     position,
     isSilhouette: !!silhouette,
     imageStyle: `object-fit:${fit};object-position:${position};`,
-    frameClass: [
-      "bestiary-frame",
-      `is-${fit}`,
-      silhouette ? "is-silhouette" : ""
-    ].filter(Boolean).join(" ")
+    frameClass: ["bestiary-frame", `is-${fit}`, silhouette ? "is-silhouette" : ""].filter(Boolean).join(" "),
   };
 }
 

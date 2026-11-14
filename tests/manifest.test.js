@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { isPackagedFile } from "../tools/package-files.mjs";
 
 const root = new URL("../", import.meta.url);
 const readJson = async (path) => JSON.parse(await readFile(new URL(path, root), "utf8"));
@@ -24,13 +25,27 @@ test("compatibility is bounded to the verified core generation", async () => {
 
 test("relationships use only keys Foundry understands", async () => {
   const { relationships = {} } = await readJson("module.json");
-  for (const key of Object.keys(relationships)) assert.ok(RELATIONSHIP_KEYS.includes(key), `relationships.${key}`);
+  for (const key of Object.keys(relationships))
+    assert.ok(RELATIONSHIP_KEYS.includes(key), `relationships.${key}`);
 });
 
 test("every listed file exists and both languages ship", async () => {
   const manifest = await readJson("module.json");
-  const files = [...manifest.esmodules, ...(manifest.styles ?? []), ...manifest.languages.map((language) => language.path)];
+  const files = [
+    ...manifest.esmodules,
+    ...(manifest.styles ?? []),
+    ...manifest.languages.map((language) => language.path),
+  ];
   for (const file of files) assert.ok(existsSync(new URL(file, root)), file);
   assert.deepEqual(manifest.languages.map((language) => language.lang).sort(), ["en", "ru"]);
-  assert.ok(manifest.languages.every((language) => language.path.startsWith("lang/")), "languages live in lang/");
+  assert.ok(
+    manifest.languages.every((language) => language.path.startsWith("lang/")),
+    "languages live in lang/",
+  );
+});
+
+test("packaging and deploy filters exclude macOS .DS_Store files", () => {
+  assert.equal(isPackagedFile(".DS_Store"), false);
+  assert.equal(isPackagedFile("scripts/.DS_Store"), false);
+  assert.equal(isPackagedFile("scripts/main.js"), true);
 });

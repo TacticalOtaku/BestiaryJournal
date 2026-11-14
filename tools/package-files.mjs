@@ -4,10 +4,12 @@
  */
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+export const IGNORED_PACKAGE_FILES = new Set([".DS_Store"]);
 
 export const PACKAGE_ENTRIES = [
   "module.json",
@@ -21,6 +23,11 @@ export const PACKAGE_ENTRIES = [
   "templates",
   "assets",
 ];
+
+/** OS metadata files (such as Finder `.DS_Store`) stay out of built archives and local deploys. */
+export function isPackagedFile(path) {
+  return !IGNORED_PACKAGE_FILES.has(basename(path));
+}
 
 export function presentEntries() {
   return PACKAGE_ENTRIES.filter((entry) => existsSync(join(root, entry)));

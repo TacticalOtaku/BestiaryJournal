@@ -20,8 +20,8 @@ export function getCreatureData(uuid, { enrich = false } = {}) {
   const key = cacheKey(uuid, enrich);
   if (!cache.has(key)) {
     const pending = resolveUuid(uuid)
-      .then(actor => (actor ? extractCreatureData(actor, { enrich }) : null))
-      .catch(error => {
+      .then((actor) => (actor ? extractCreatureData(actor, { enrich }) : null))
+      .catch((error) => {
         cache.delete(key);
         throw error;
       });
@@ -32,15 +32,17 @@ export function getCreatureData(uuid, { enrich = false } = {}) {
 
 /** Resolves many creatures at once instead of one after another. */
 export async function getCreatureDataMany(uuids) {
-  const settled = await Promise.allSettled(uuids.map(uuid => getCreatureData(uuid)));
-  return new Map(uuids.map((uuid, index) => {
-    const outcome = settled[index];
-    if (outcome.status === "rejected") {
-      log.warn(`Could not resolve actor UUID ${uuid}`, outcome.reason);
-      return [uuid, null];
-    }
-    return [uuid, outcome.value];
-  }));
+  const settled = await Promise.allSettled(uuids.map((uuid) => getCreatureData(uuid)));
+  return new Map(
+    uuids.map((uuid, index) => {
+      const outcome = settled[index];
+      if (outcome.status === "rejected") {
+        log.warn(`Could not resolve actor UUID ${uuid}`, outcome.reason);
+        return [uuid, null];
+      }
+      return [uuid, outcome.value];
+    }),
+  );
 }
 
 export function invalidateCreature(uuid) {
@@ -67,9 +69,14 @@ function invalidate(document) {
   }
 }
 for (const hook of [
-  "updateActor", "deleteActor",
-  "createItem", "updateItem", "deleteItem",
-  "createActiveEffect", "updateActiveEffect", "deleteActiveEffect"
+  "updateActor",
+  "deleteActor",
+  "createItem",
+  "updateItem",
+  "deleteItem",
+  "createActiveEffect",
+  "updateActiveEffect",
+  "deleteActiveEffect",
 ]) {
   Hooks.on(hook, invalidate);
 }
