@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.3
+
+### Added
+
+- World setting **Include custom skills** (`includeCustomSkills`, GM-only, off by default): dynamically discovers all non-standard skills registered in `CONFIG.DND5E.skills` (for modules such as SystemCustomizer) and adds them to entry editors, bulk research configuration, creature research panels, and GM roll verification.
+- Long custom skill names wrap cleanly inside entry editor and bulk research skill grids.
+
+### Fixed and Changed
+
+- Disabling **Include custom skills** excludes custom skills from editors, bulk updates, and GM roll judgement (falling back to the automatic type skill if no standard skills remain) while keeping saved custom skill picks intact in creature data.
+- Excluded `.DS_Store` from `.gitignore`, release zip builds (`tools/package.mjs`), and local Foundry deploys (`tools/deploy.mjs`).
+- Added `DensityHint` for `uiDensity` symmetry, removed unused `BESTIARY.Creatures`, included `tools/live-check.js` in `npm run validate`, aligned `docs/architecture.md` CSS/layer documentation, cleaned `.prettierignore`, and formatted the repository with Prettier.
+
+### Validation and compatibility
+
+- 167 automated tests pass, together with ESLint, Prettier, and project/manifest validation.
+- Compatible with Foundry VTT 14.367 (v14) and dnd5e 5.3.3+. Custom skill discovery is verified in unit tests via mocked `CONFIG.DND5E.skills`.
+
 ## 0.4.2
 
 ### Artwork and usability
