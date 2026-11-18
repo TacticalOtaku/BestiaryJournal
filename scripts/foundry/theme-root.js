@@ -1,4 +1,4 @@
-import { effectiveMotion, normalizeAccent, resolveTheme } from "../core/theme.js";
+import { effectiveMotion, normalizeAccent, normalizeCoverSize, resolveTheme } from "../core/theme.js";
 import { log } from "../core/logger.js";
 
 const MODULE_ID = "bestiary-journal";
@@ -37,6 +37,7 @@ export function stampTheme(element) {
   element.dataset.accent = normalizeAccent(accent);
   element.dataset.tooltipClass = "bestiary-tooltip";
   element.dataset.density = game.settings.get(MODULE_ID, "uiDensity");
+  element.dataset.coverSize = normalizeCoverSize(game.settings.get(MODULE_ID, "uiCoverSize"));
   element.dataset.motion = effectiveMotion(game.settings.get(MODULE_ID, "uiMotion"), {
     reducedMotion: globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
     performanceLow: document.body.classList.contains("performance-low"),

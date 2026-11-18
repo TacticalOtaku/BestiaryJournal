@@ -51,7 +51,12 @@
       "Density": "Плотность",
       "DensityHint": "Отступы в библиотеке, списках коллекций и карточках существ.",
       "Density_comfortable": "Обычно",
-      "Density_compact": "Компактно"
+      "Density_compact": "Компактно",
+      "CoverSize": "Обложки коллекций",
+      "CoverSizeHint": "Размер карточек коллекций в библиотеке на этом устройстве.",
+      "CoverSize_small": "Малые",
+      "CoverSize_medium": "Средние",
+      "CoverSize_large": "Крупные"
     },
     "CreateSection": "Создать коллекцию",
     "EditSection": "Редактировать коллекцию",

@@ -299,10 +299,23 @@
   font-size: 0.84rem;
 }
 
+.bestiary-app {
+  --collection-card-min: 204px;
+  --collection-grid-gap: 16px;
+}
+.bestiary-app[data-cover-size="small"] {
+  --collection-card-min: 156px;
+  --collection-grid-gap: 12px;
+}
+.bestiary-app[data-cover-size="large"] {
+  --collection-card-min: 300px;
+  --collection-grid-gap: 20px;
+}
+
 .collection-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--collection-card-min)), 1fr));
+  gap: var(--collection-grid-gap);
 }
 .collection-card {
   position: relative;
@@ -319,6 +332,9 @@
     transform var(--suite-normal) var(--suite-ease),
     box-shadow var(--suite-normal);
 }
+.collection-card:not(.collection-card-new) {
+  container: collection-card / inline-size;
+}
 .collection-card:hover {
   transform: translateY(-3px);
   box-shadow: var(--suite-shadow);
@@ -326,7 +342,7 @@
 .collection-cover {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 1 / 1;
   flex: 0 0 auto;
 }
 .collection-card-copy {
@@ -694,6 +710,39 @@
 }
 .collection-progress > .is-mastered {
   background: var(--tier-mastered);
+}
+
+@container collection-card (max-width: 230px) {
+  .collection-card-copy {
+    padding: 10px 12px 12px;
+  }
+  .collection-card-copy h3 {
+    font-size: 0.96rem;
+    line-height: 1.25;
+  }
+  .collection-card-copy p {
+    margin-top: 4px;
+    gap: 2px 4px;
+    font-size: 0.73rem;
+    line-height: 1.35;
+  }
+  .collection-progress {
+    margin-top: 6px;
+  }
+  .collection-card-placeholder {
+    font-size: 2.3rem;
+  }
+  .collection-card-flags {
+    top: 7px;
+    left: 7px;
+    gap: 4px;
+  }
+  .collection-menu-button {
+    top: 7px;
+    right: 7px;
+    width: 26px;
+    height: 26px;
+  }
 }
 
 /* Party notes: one ruled feed across every creature, newest first; the creature opens on its notes. */

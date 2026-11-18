@@ -9,6 +9,7 @@ export const THEMES = Object.freeze(["auto", "night", "parchment", "aim"]);
 export const ACCENTS = Object.freeze(["brass", "embers", "arcane", "forest", "frost", "rose"]);
 export const MOTION_LEVELS = Object.freeze(["full", "reduced", "off"]);
 export const DENSITIES = Object.freeze(["comfortable", "compact"]);
+export const COVER_SIZES = Object.freeze(["small", "medium", "large"]);
 
 /** «Авто» follows Foundry's colour scheme; anything unknown falls back to night. */
 export function resolveTheme(choice, schemeIsLight) {
@@ -18,6 +19,10 @@ export function resolveTheme(choice, schemeIsLight) {
 
 export function normalizeAccent(name) {
   return ACCENTS.includes(name) ? name : ACCENTS[0];
+}
+
+export function normalizeCoverSize(size) {
+  return COVER_SIZES.includes(size) ? size : "medium";
 }
 
 /**

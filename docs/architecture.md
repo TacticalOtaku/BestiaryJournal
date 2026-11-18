@@ -73,8 +73,8 @@ skills of a creature in several collections resolve like reveal thresholds (`doc
 
 The windows share AIM: Actor Window's design system without copying its layouts. Tokens live on `.bestiary-app`
 in `styles/tokens.css`: «Ночь» is the default palette, `data-theme="parchment"` overrides every colour, and the six
-accents are named (`data-accent`), each with its own value per theme. The user picks theme and accent (scope `user`)
-and the motion level (scope `client`); «Авто» follows Foundry's colour scheme and «Как в AIM» borrows AIM's own
+accents are named (`data-accent`), each with its own value per theme. The user picks theme, accent and density
+(scope `user`), and collection cover size and motion level per device (scope `client`); «Авто» follows Foundry's colour
 theme and accent. `foundry/theme-root.js` stamps the attributes on render and restamps open windows when a choice,
 Foundry's scheme or AIM's settings change. The OS «reduce motion» caps the level at «off», Foundry's
 `performance-low` at «reduced». `tests/theme-contrast.test.js` keeps text and tier colours at 4.5:1 on every surface

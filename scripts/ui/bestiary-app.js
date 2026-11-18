@@ -8,7 +8,7 @@ import {
   toggleFavoriteCreature,
 } from "../foundry/client-preferences.js";
 import { buildCreatureRows, rowInputs, summarizeRows } from "./creature-rows.js";
-import { ACCENTS, DENSITIES, MOTION_LEVELS, THEMES } from "../core/theme.js";
+import { ACCENTS, COVER_SIZES, DENSITIES, MOTION_LEVELS, THEMES } from "../core/theme.js";
 import { MIN_RESEARCH_TIER } from "../core/research-model.js";
 import { localize, resolveUuid } from "../foundry/foundry-runtime.js";
 import { BestiaryTileEditor } from "./tile-editor.js";
@@ -370,6 +370,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       ),
       accents: choices("uiAccent", ACCENTS, "Accent"),
       densities: choices("uiDensity", DENSITIES, "Density"),
+      coverSizes: choices("uiCoverSize", COVER_SIZES, "CoverSize"),
       motions: choices("uiMotion", MOTION_LEVELS, "Motion"),
     };
   }

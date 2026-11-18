@@ -51,7 +51,12 @@
       "Density": "Density",
       "DensityHint": "Spacing inside the library, collection lists and creature cards.",
       "Density_comfortable": "Comfortable",
-      "Density_compact": "Compact"
+      "Density_compact": "Compact",
+      "CoverSize": "Collection covers",
+      "CoverSizeHint": "Size of collection covers in the library on this device.",
+      "CoverSize_small": "Small",
+      "CoverSize_medium": "Medium",
+      "CoverSize_large": "Large"
     },
     "CreateSection": "Create a collection",
     "EditSection": "Edit collection",

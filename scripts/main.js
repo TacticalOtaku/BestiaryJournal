@@ -20,7 +20,7 @@ import { announceKnowledge, startKnowledgeWatch } from "./foundry/knowledge-watc
 import { registerActorIntegration } from "./ui/actor-integration.js";
 import { createApi } from "./ui/api.js";
 import { BestiaryKnowledgeBoard } from "./ui/knowledge-board.js";
-import { ACCENTS, DENSITIES, MOTION_LEVELS, THEMES } from "./core/theme.js";
+import { ACCENTS, COVER_SIZES, DENSITIES, MOTION_LEVELS, THEMES } from "./core/theme.js";
 import { log, setDebugLogging } from "./core/logger.js";
 
 const MODULE_ID = "bestiary-journal";
@@ -268,6 +268,16 @@ function registerPreferences() {
     type: String,
     default: "comfortable",
     choices: lookChoices(DENSITIES, "Density"),
+    onChange: restampAll,
+  });
+  game.settings.register(MODULE_ID, "uiCoverSize", {
+    name: "BESTIARY.Settings.CoverSize",
+    hint: "BESTIARY.Settings.CoverSizeHint",
+    scope: "client",
+    config: false,
+    type: String,
+    default: "medium",
+    choices: lookChoices(COVER_SIZES, "CoverSize"),
     onChange: restampAll,
   });
   game.settings.register(MODULE_ID, "debug", {
