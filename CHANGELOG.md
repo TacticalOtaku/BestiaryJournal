@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.4
+
+### Added
+
+- Per-device **Collection covers** (`uiCoverSize`) selector inside the library's Look drawer with **Small**, **Medium** (default), and **Large** options, so each user can fit up to 5 covers per row or keep larger cards depending on their display size.
+- Container-responsive typography and spacing for narrow collection cards so titles, metadata, progress bars, and action buttons stay legible at dense grid widths.
+
+### Changed
+
+- Switched collection cover frames to a universal `1 / 1` aspect ratio with `object-fit: contain` over the blurred backdrop, keeping vertical book covers and wide illustrations uncropped without excessive horizontal padding.
+- Updated compact density (`uiDensity`) to tighten grid spacing cleanly instead of forcing a `270px` minimum collection card width.
+
+### Validation and compatibility
+
+- 168 automated tests pass, together with ESLint, Prettier, and manifest validation (`Foundry VTT 14.367` and `dnd5e 5.3.3`).
+
 ## 0.4.3
 
 ### Added
