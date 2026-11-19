@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.6
+
+### Fixed
+
+- **Encounter Reveal privacy**: Hidden combatants and hidden tokens (`combatant.hidden` or `combatant.token?.hidden`) no longer grant players Rumors when combat starts (`collectVisibleEncounterUuids`, covered by unit tests in `tests/encounter.test.js`).
+
+### Changed
+
+- **License & Docs**: Adopted **GNU GPL v3.0** (`GPL-3.0-only`), translated `README.md` into English while keeping `README.ru.md`, and added UI screenshots under `docs/screenshots/`.
+- **Manifest & Release Pipeline**: Switched `manifest` to `releases/latest/download/module.json`, added `readme`, `changelog`, `bugs`, `license`, and `media` metadata, added issue forms (`CONTRIBUTING.md`, `.github/ISSUE_TEMPLATE/`), and added `.github/workflows/release.yml`.
+
 ## 0.4.5
 
 ### Fixed

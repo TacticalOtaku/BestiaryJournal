@@ -2,7 +2,7 @@
   "id": "bestiary-journal",
   "title": "Bestiary Journal",
   "description": "A visually rich bestiary module with tile-based sections and detailed creature cards, inspired by AAA game bestiary designs.",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "compatibility": {
     "minimum": "14.367",
     "verified": "14.367",
@@ -57,9 +57,26 @@
   "flags": {},
   "url": "https://github.com/TacticalOtaku/BestiaryJournal",
   "manifest": "https://github.com/TacticalOtaku/BestiaryJournal/releases/latest/download/module.json",
-  "download": "https://github.com/TacticalOtaku/BestiaryJournal/releases/download/v0.4.5/bestiary-journal-v0.4.5.zip",
+  "download": "https://github.com/TacticalOtaku/BestiaryJournal/releases/download/v0.4.6/bestiary-journal-v0.4.6.zip",
   "readme": "https://github.com/TacticalOtaku/BestiaryJournal/blob/main/README.md",
   "changelog": "https://github.com/TacticalOtaku/BestiaryJournal/blob/main/CHANGELOG.md",
   "bugs": "https://github.com/TacticalOtaku/BestiaryJournal/issues",
-  "license": "https://github.com/TacticalOtaku/BestiaryJournal/blob/main/LICENSE"
+  "license": "https://github.com/TacticalOtaku/BestiaryJournal/blob/main/LICENSE",
+  "media": [
+    {
+      "type": "cover",
+      "url": "https://raw.githubusercontent.com/TacticalOtaku/BestiaryJournal/main/docs/screenshots/creature-card.png",
+      "caption": "Detailed creature card with research tiers, statblock, and per-section reveal controls"
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/TacticalOtaku/BestiaryJournal/main/docs/screenshots/library-creatures.png",
+      "caption": "Bestiary creature library with search, collections sidebar, and knowledge badges"
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/TacticalOtaku/BestiaryJournal/main/docs/screenshots/creature-parchment.png",
+      "caption": "Warm Parchment light theme on a creature entry card"
+    }
+  ]
 }

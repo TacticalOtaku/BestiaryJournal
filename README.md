@@ -7,13 +7,21 @@
 **A visual bestiary for Foundry VTT and D&D 5e with per-player knowledge tiers, creature collections, party notes, and GM authority.**
 
 [![Foundry VTT](https://img.shields.io/badge/Foundry_VTT-v14.367-2e8555?style=flat-square)](https://foundryvtt.com/)
-[![Version](https://img.shields.io/badge/version-0.4.5-d97706?style=flat-square)](https://github.com/TacticalOtaku/BestiaryJournal/releases/tag/v0.4.5)
+[![Version](https://img.shields.io/badge/version-0.4.6-d97706?style=flat-square)](https://github.com/TacticalOtaku/BestiaryJournal/releases/tag/v0.4.6)
 [![D&D 5e](https://img.shields.io/badge/D%26D_5e-v5.3.3-b91c1c?style=flat-square)](https://github.com/foundryvtt/dnd5e)
 [![License](https://img.shields.io/badge/License-GPLv3-2563eb?style=flat-square)](LICENSE)
 
 [Features](#-features) · [Entry Points](#-entry-points) · [Settings](#-settings) · [Installation](#-installation) · [Quick Start](#-quick-start) · [Development](#-development--feedback) · [Changelog](CHANGELOG.md)
 
 </div>
+
+---
+
+## 🖼️ Screenshots
+
+![Bestiary Journal creature card with research tiers and per-section reveal controls](docs/screenshots/creature-card.png)
+![Bestiary Journal creature library grid with collections sidebar and knowledge counts](docs/screenshots/library-creatures.png)
+![Bestiary Journal creature card in warm Parchment light theme](docs/screenshots/creature-parchment.png)
 
 ---
 
