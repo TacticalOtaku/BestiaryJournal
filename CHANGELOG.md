@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.4.5
+
+### Fixed
+
+- Prevented duplicate `change` event listeners when re-rendering `BestiaryEntryEditor` by moving outer form listener binding into `_onFirstRender`.
+- Enabled Foundry `PARTS.*.scrollable` scroll restoration across `BestiaryApp`, `BestiarySectionView`, `BestiaryCreatureView` (using the root empty-string selector `""` together with `.rail-body`), and `BestiaryKnowledgeBoard`, fixing scroll resets on creature card re-renders.
+- Scoped legacy `::-webkit-scrollbar` rules under `@supports not (scrollbar-color: auto)` so standard `scrollbar-color` and `scrollbar-width` take effect without dead fallback rules.
+- Updated `DialogV2.confirm` and `DialogV2.wait` prompts to open as true modal top-layer dialogs (`modal: true`) via a shared `confirmDialog` helper, and aligned `showContextMenu` / callers with Foundry v14 `{ label, visible, onClick }` menu entries.
+- Replaced mutating array `.sort()` calls in `sortByKnownName` and `[...arr].sort()` copies with non-mutating `.toSorted()`.
+
+### Accessibility and UI Polish
+
+- Connected editor `<label>` elements via unique window field `id`s, converted the skill checkbox group to `<fieldset>` / `<legend>`, wrapped search controls in `<search>` landmarks with screen-reader labels, and added `aria-label` to unlabeled icon buttons and `<select>` controls.
+- Separated `.creature-item-toggle` into its own `<button type="button" aria-expanded>` outside `<label class="item-tier-control">`, kept `aria-expanded` synced on section and family accordions, added `aria-pressed` sync to segmented controls, and upgraded `.rail-tabs` / `.comment-channel-tabs` to ARIA `tablist` / `tab` widgets with arrow-key navigation.
+- Upgraded `showContextMenu` to `<div role="menu">` with `popover="manual"`, `<button role="menuitem">` items, `ArrowUp`/`ArrowDown`/`Home`/`End` navigation, and focus restoration on `Escape` / `Tab`.
+- Added explicit `color-scheme` (`dark` / `light`) per theme, live `prefers-reduced-motion` `change` listener tracking, `:focus-within` / forced-colors focus outlines on wrapped controls, `scrollbar-gutter: stable`, `text-wrap` refinements, and cached `Intl.DateTimeFormat` formatting.
+
+### Validation and compatibility
+
+- 175 automated tests pass, together with ESLint, Prettier, manifest validation, and live Foundry VTT `14.367` QA verification.
+
 ## 0.4.4
 
 ### Added
