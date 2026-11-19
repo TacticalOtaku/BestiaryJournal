@@ -4,3 +4,6 @@ package-lock.json
 docs/
 lang/
 templates/
+AGENTS.md
+release-notes/
+.claude/

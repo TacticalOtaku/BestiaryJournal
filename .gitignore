@@ -5,3 +5,8 @@ dist/
 
 CLAUDE.md
 .claude/
+AGENTS.md
+docs/agents/
+docs/plans/
+docs/superpowers/
+release-notes/

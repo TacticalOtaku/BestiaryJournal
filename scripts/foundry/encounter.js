@@ -12,6 +12,19 @@ function combatantUuid(combatant) {
   return combatant.token?.baseActor?.uuid ?? combatant.actor?.uuid ?? null;
 }
 
+/** Visible NPC bestiary UUIDs in an encounter; hidden combatants and tokens never leak rumors. */
+export function collectVisibleEncounterUuids(combat, data) {
+  return new Set(
+    (combat?.combatants ?? [])
+      .filter(
+        (combatant) =>
+          combatant?.actor?.type === "npc" && !combatant.hidden && !combatant.token?.hidden,
+      )
+      .map(combatantUuid)
+      .filter((uuid) => uuid && getEntryContexts(data, uuid).length),
+  );
+}
+
 /**
  * «Знакомство в бою»: when a creature from the bestiary fights the party, every player who does not know it
  * yet hears rumours of it. A tier is only ever raised here, never lowered; the authoritative GM writes it.
@@ -23,12 +36,7 @@ export function registerEncounterReveal(isAuthority) {
     const data = getBestiaryData();
     const knowledge = getBestiaryKnowledge();
     const players = getPlayerUsers();
-    const uuids = new Set(
-      combat.combatants
-        .filter((combatant) => combatant.actor?.type === "npc")
-        .map(combatantUuid)
-        .filter((uuid) => uuid && getEntryContexts(data, uuid).length),
-    );
+    const uuids = collectVisibleEncounterUuids(combat, data);
     for (const uuid of uuids) {
       const userIds = players
         .filter((user) => getUserTier(knowledge, user.id, uuid) < ENCOUNTER_TIER)

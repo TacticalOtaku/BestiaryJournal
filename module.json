@@ -22,10 +22,13 @@
   },
   "authors": [
     {
-      "name": "TacticalOtaku"
+      "name": "TacticalOtaku",
+      "url": "https://github.com/TacticalOtaku"
     }
   ],
-  "esmodules": ["scripts/main.js"],
+  "esmodules": [
+    "scripts/main.js"
+  ],
   "styles": [
     "styles/tokens.css",
     "styles/frame.css",
@@ -53,6 +56,10 @@
   "socket": true,
   "flags": {},
   "url": "https://github.com/TacticalOtaku/BestiaryJournal",
-  "manifest": "https://raw.githubusercontent.com/TacticalOtaku/BestiaryJournal/main/module.json",
-  "download": "https://github.com/TacticalOtaku/BestiaryJournal/releases/download/v0.4.5/bestiary-journal-v0.4.5.zip"
+  "manifest": "https://github.com/TacticalOtaku/BestiaryJournal/releases/latest/download/module.json",
+  "download": "https://github.com/TacticalOtaku/BestiaryJournal/releases/download/v0.4.5/bestiary-journal-v0.4.5.zip",
+  "readme": "https://github.com/TacticalOtaku/BestiaryJournal/blob/main/README.md",
+  "changelog": "https://github.com/TacticalOtaku/BestiaryJournal/blob/main/CHANGELOG.md",
+  "bugs": "https://github.com/TacticalOtaku/BestiaryJournal/issues",
+  "license": "https://github.com/TacticalOtaku/BestiaryJournal/blob/main/LICENSE"
 }

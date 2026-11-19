@@ -1,175 +1,177 @@
 ﻿<div align="center">
 
+**English** · [Русский](README.ru.md)
+
 # 📖 Bestiary Journal
 
-**Визуальный бестиарий для Foundry VTT и D&D 5e с персональными ступенями знания, коллекциями существ, заметками и контролем мастера.**
+**A visual bestiary for Foundry VTT and D&D 5e with per-player knowledge tiers, creature collections, party notes, and GM authority.**
 
 [![Foundry VTT](https://img.shields.io/badge/Foundry_VTT-v14.367-2e8555?style=flat-square)](https://foundryvtt.com/)
 [![Version](https://img.shields.io/badge/version-0.4.5-d97706?style=flat-square)](https://github.com/TacticalOtaku/BestiaryJournal/releases/tag/v0.4.5)
 [![D&D 5e](https://img.shields.io/badge/D%26D_5e-v5.3.3-b91c1c?style=flat-square)](https://github.com/foundryvtt/dnd5e)
-[![License](https://img.shields.io/badge/License-MIT-2563eb?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/License-GPLv3-2563eb?style=flat-square)](LICENSE)
 
-[Возможности](#-возможности) · [Способы открытия](#-способы-открытия) · [Настройки](#-настройки) · [Установка](#-установка) · [Быстрый старт](#-быстрый-старт) · [Разработка](#-разработка) · [История изменений](CHANGELOG.md)
+[Features](#-features) · [Entry Points](#-entry-points) · [Settings](#-settings) · [Installation](#-installation) · [Quick Start](#-quick-start) · [Development](#-development--feedback) · [Changelog](CHANGELOG.md)
 
 </div>
 
 ---
 
-## ✨ Возможности
+## ✨ Features
 
-### 🧠 Ступени исследования и знания
+### 🧠 Research & Knowledge Tiers
 
-Знания о существе персональны для каждого игрока и разделены на четыре ступени:
+Creature knowledge is tracked per player across four progressive tiers:
 
-| Ступень         | Что открыто по умолчанию                                                                                                                                                     |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Неизвестно**  | Силуэт вместо портрета; название, тип и характеристики скрыты                                                                                                                |
-| **Слухи**       | Портрет, название, тип и размер                                                                                                                                              |
-| **Изучено**     | КД, хиты, ПО, скорость, характеристики, навыки, чувства, языки, сопротивления, особенности и действия                                                                        |
-| **Досконально** | Мировоззрение, опыт, иммунитеты, уязвимости, модификаторы урона, невосприимчивость к состояниям, бонусные и легендарные действия, реакции, заклинания, инвентарь и биография |
+| Tier         | Revealed by default                                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Unknown**  | Silhouette instead of portrait; name, creature type, and statistics hidden                                                                  |
+| **Rumors**   | Portrait, name, creature type, and size                                                                                                     |
+| **Studied**  | AC, HP, CR, speed, ability scores, skills, senses, languages, damage resistances, traits, and actions                                       |
+| **Mastered** | Alignment, XP, immunities, vulnerabilities, damage modifiers, condition immunities, bonus/legendary actions, reactions, spells, gear, and bio |
 
-- **Управление знаниями** — мастер задаёт ступень отдельным игрокам в карточке существа, всей партии одной кнопкой или массово через таблицу **«Знания отряда»**.
-- **Исследование броском** — игрок проверяет Природу, Магию, Религию, Восприятие или другой разрешённый навык прямо из карточки; успех повышает ступень на одну. Сложность берётся от ПО или задаётся мастером.
-- **Авторитет мастера** — броски проверяет активный клиент мастера (сверяет автора сообщения, владельца персонажа, навык, свежесть и однократность броска) и сам публикует итог в чат с учётом того, что знают получатели.
-- **Гибкие пороги** — состав каждой ступени настраивается глобально для мира и отдельно для каждого существа; отдельные действия, реакции и заклинания можно скрыть или привязать к своей ступени (вплоть до «Только мастеру»).
-- **Сквозная приватность и предпросмотр** — ступени действуют в библиотеке, коллекциях, фильтрах, поиске и карточках в чате; мастер может включить режим **«глазами игрока»**, чтобы увидеть карточку от лица конкретного участника.
+- **Knowledge management** — GMs set tiers for individual players in the creature card, grant knowledge to the whole party in one click, or manage the entire matrix via the **Party Knowledge** board.
+- **Research rolls** — Players roll Nature, Arcana, Religion, Perception, or another allowed skill directly from the creature card; success raises their tier by one. Research DC derives from CR or is set by the GM.
+- **GM authority** — Research rolls are judged by the active GM client (verifying message author, character ownership, skill eligibility, freshness, and single-use consumption) and posted to chat respecting what recipients know.
+- **Flexible reveal thresholds** — Customize which blocks appear at each tier globally and per creature; hide or lock individual actions, reactions, and spells down to **GM Only**.
+- **End-to-end privacy & preview** — Knowledge tiers filter the library, collections, filters, search, and chat cards; GMs can toggle **"Preview as player"** to inspect any card from a player's point of view.
 
-### 🔒 Точный контроль видимости и блокировки
+### 🔒 Visibility & Locking Controls
 
-- Скрытие отдельных **коллекций**, **семейств** и **существ** от игроков.
-- **Блокировка** коллекции или записи замораживает изменение ступеней и заметок, пока мастер не снимет замок.
-- Неопознанные существа без известного имени выносятся у игроков в отдельную группу, чтобы название семейства не выдавало их природу; подсказки сложности и навыков также не раскрывают скрытые ПО и тип.
+- Hide individual **collections**, **families**, or **creatures** from players.
+- **Locking** a collection or entry freezes tier changes and notes until unlocked by the GM.
+- Unidentified creatures whose names are unknown are grouped separately for players so family names do not spoil their nature; DC and skill hints also withhold hidden CR and creature type.
 
-### 💬 Заметки и 🤝 Обмен между игроками
+### 💬 Notes & 🤝 Knowledge Sharing
 
-- **Три канала заметок** на каждой карточке: **Мастер** (с переключателем видимости у каждой записи), **Партия** (общие для всех) и **Личные** (видны только автору, включая мастера). Поддерживаются ссылки `@UUID`, `@Check`, инлайн-броски и закрепление важных заметок.
-- **Лента «Заметки отряда»** в библиотеке собирает заметки обо всех доступных игроку существах.
-- **Обмен знаниями** позволяет игрокам делиться изученным существом в пределах собственной ступени (понизить чужое знание нельзя). Мастер выбирает, когда обмен разрешён: **Всегда**, **Вне боя** или **После отдыха** после последнего боя.
+- **Three note channels** on every creature card: **GM** (with a per-note visibility toggle), **Party** (shared), and **Personal** (visible only to its author, including GMs). Supports `@UUID`, `@Check`, inline rolls, and pinned notes.
+- **Party Notes feed** in the library gathers notes across all creatures accessible to the player.
+- **Knowledge sharing** lets players share studied details up to their own tier (never lowering another player's tier). GMs control when sharing is permitted: **Always**, **Out of combat**, or **After a rest** following the last combat.
 
-### 🗂 Коллекции, семейства, импорт и массовые проверки
+### 🗂 Collections, Families, Bulk Import & Research Config
 
-- **Коллекции и семейства** с перетаскиванием карточек между семействами, контекстным меню, фильтрами (семейство, тип, размер, ПО), сортировкой и переключением «плитка / список».
-- **Массовая настройка проверок** — изменение сложности и допустимых навыков сразу для коллекции, семейства или всего бестиария с сохранением заблокированных записей.
-- **Массовый импорт и перенос** — добавление NPC из актёров мира и компендиумов (с фильтрами и опцией копирования в мир), перетаскивание папок актёров прямо в коллекцию, а также экспорт/импорт структуры и знаний в JSON (`дополнить` или `заменить всё`).
+- **Collections & families** with drag-and-drop between families, context menus, filtering (family, type, size, CR), sorting, and tile/list switching.
+- **Bulk research configuration** — Update research DC and allowed skills across a collection, family, or the whole bestiary while preserving locked entries.
+- **Bulk import & portability** — Import NPCs from world actors and compendiums (with filters and optional world-actor copying), drop actor folders straight into a collection, and export/import structure & knowledge as JSON (`merge` or `replace all`).
 
-### 🎨 Интерфейс и иллюстрации
+### 🎨 Interface & Artwork
 
-- **Панель вида** в библиотеке (настройки пользователя и клиента): темы **«Ночь»**, **«Пергамент»**, **«Авто»** и **«Как в AIM»** (совместно с _AIM: Actor Window_), 6 акцентных цветов, 2 режима плотности (**«Обычно»** / **«Компактно»**), 3 размера обложек коллекций (**«Малые»** / **«Средние»** / **«Крупные»**) и управление анимациями (с учётом системной настройки уменьшения движения и режима низкой производительности Foundry).
-- **Встроенная типографика** — интерфейс на базе шрифта **Onest** (с поддержкой кириллицы) и **Palatino** для латинских заголовков.
-- **Аккуратное кадрирование и анимации** — плитки коллекций в универсальном квадратном формате показывают обложку целиком поверх мягкого размытого фона, с адаптивными подписями под изображением; портрет или токен существа можно кадрировать по точке фокуса. Анимированные изображения (GIF / WebP) оживают при наведении или фокусе с клавиатуры.
+- **Look drawer** inside the library (user & client preferences): **Night**, **Parchment**, **Auto**, and **Match AIM** (integrates with _AIM: Actor Window_), 6 accent colors, 2 density modes (**Comfortable** / **Compact**), 3 collection cover sizes (**Small** / **Medium** / **Large**), and motion levels respecting OS reduced-motion and Foundry low-performance mode.
+- **Bundled typography** — Built on **Onest** (Latin + Cyrillic) and **Palatino** for Latin display headings.
+- **Smart framing & animated art** — Square collection covers show the full artwork over a blurred backdrop with adaptive captions; creature portraits and tokens support focal-point cropping, and animated GIF/WebP art plays on hover or keyboard focus.
 
-### 🧭 Удобство для мастера и игроков
+### 🧭 Built for GMs & Players
 
-| Для мастера                                                               | Для игрока                                                |
-| ------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Таблица **«Знания отряда»** («существо × игрок»)                          | Метка **«новое»** и уведомления при росте ступени         |
-| Меню **«Бестиарий…»** в каталоге актёров, листе NPC (`⋮`) и на HUD токена | Персональный прогресс на обложках коллекций               |
-| Прогресс всей партии на обложках коллекций и **знакомство в бою**         | Отдельная группа **«Неопознанные»**, скрывающая семейство |
-| Справочные статблоки без лишних кнопок бросков за NPC                     | Отправка карточки в чат в рамках знаний всей партии       |
-
----
-
-## ⌨️ Способы открытия
-
-| Способ                | Где находится                                                                     |
-| --------------------- | --------------------------------------------------------------------------------- |
-| **Горячая клавиша**   | `Shift + B` по умолчанию (переназначается в _Configure Controls_)                 |
-| **Кнопка в журнале**  | Шапка вкладки **«Журналы»**                                                       |
-| **Меню актёра**       | Пункт **«Бестиарий…»** в каталоге актёров, в меню `⋮` листа NPC и на HUD токена   |
-| **Карточка в чате**   | Кнопка **«В чат»** в карточке или **«В чат (что знают игроки)»** в меню коллекции |
-| **Настройки модуля**  | _Configure Settings → Module Settings → Bestiary Journal_                         |
-| **Макрос или модуль** | Публичный API `game.bestiaryJournal` — см. [API.md](API.md)                       |
+| For Gamemasters                                                        | For Players                                           |
+| ---------------------------------------------------------------------- | ----------------------------------------------------- |
+| **Party Knowledge** board (`creature × player`)                        | **New** badge and notifications on tier advances      |
+| **Bestiary…** menu in Actor Directory, NPC sheet (`⋮`), and Token HUD | Personal progress bars on collection covers           |
+| Party-wide progress on covers & **Encounter Reveal** on combat start   | Separate **Unidentified** group hiding family spoilers |
+| Clean reference statblocks without NPC roll clutter                    | Share creature cards to chat capped by party knowledge |
 
 ---
 
-## ⚙️ Настройки
+## ⌨️ Entry Points
 
-### Настройки мира (только мастер)
+| Entry Point          | Where to find it                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| **Keybinding**       | `Shift + B` by default (rebindable under _Configure Controls_)                          |
+| **Journals sidebar** | Header button in the **Journals** tab                                                   |
+| **Actor actions**    | **Bestiary…** in the Actor Directory context menu, NPC sheet `⋮` menu, and Token HUD   |
+| **Chat cards**       | **Send to Chat** on a creature card or **Post Party Knowledge** from a collection menu  |
+| **Module Settings**  | _Configure Settings → Module Settings → Bestiary Journal_                               |
+| **Macros & modules** | Public API `game.bestiaryJournal` — see [API.md](API.md)                                |
 
-| Настройка                          | По умолчанию | Назначение                                                             |
-| ---------------------------------- | ------------ | ---------------------------------------------------------------------- |
-| **Разрешить обмен между игроками** | Вкл          | Разрешает или отключает передачу знаний между игроками                 |
-| **Когда игроки могут делиться**    | Вне боя      | `Всегда`, `Вне боя` или `После отдыха` после последнего боя            |
-| **Исследование броском**           | Вкл          | Разрешает повышать ступень проверкой навыка из карточки                |
-| **Одна попытка на существо**       | Выкл         | Блокирует повторную попытку после неудачи до сброса мастером           |
-| **Знакомство в бою**               | Выкл         | В начале боя с существом из бестиария выдаёт незнающим игрокам «Слухи» |
-| **Учитывать кастомные навыки**     | Выкл         | Добавляет нестандартные навыки из `CONFIG.DND5E.skills` к исследованию |
-| **Ступени исследования**           | —            | Меню настройки глобальных порогов для каждого блока карточки           |
+---
 
-### Клиентские настройки и оформление
+## ⚙️ Settings
 
-- **Отладочный журнал** (настройка клиента, выкл. по умолчанию) — подробные сообщения модуля в консоли браузера.
-- **Вид окон** — тема, акцент, плотность, размер обложек и уровень анимаций выбираются прямо в библиотеке через кнопку с палитрой.
+### World Settings (GM-only)
+
+| Setting                     | Default        | Purpose                                                                     |
+| --------------------------- | -------------- | --------------------------------------------------------------------------- |
+| **Allow player sharing**    | On             | Enable or disable knowledge sharing between players                         |
+| **When players can share**  | Out of combat  | `Always`, `Out of combat`, or `After a rest` following the last combat      |
+| **Research by roll**        | On             | Allow raising tiers via skill checks from creature cards                    |
+| **Single attempt per entry**| Off            | Lock retries after a failed research roll until reset by the GM             |
+| **Encounter reveal**        | Off            | Grant **Rumors** to uninformed players when fighting a visible bestiary NPC |
+| **Include custom skills**   | Off            | Include non-standard skills from `CONFIG.DND5E.skills` in research options  |
+| **Research tiers**          | —              | Configure global reveal thresholds per statblock section                    |
+
+### Client Settings & Appearance
+
+- **Debug logging** (client setting, off by default) — detailed diagnostics in the browser console.
+- **Window appearance** — theme, accent, density, cover size, and motion level are configured via the palette button in the library window.
 
 > [!NOTE]
-> **Архитектурное ограничение Foundry VTT**
-> Мировые настройки в Foundry синхронизируются со всеми клиентами. Интерфейс модуля показывает пользователю только положенное по ступени и правам, однако игрок с доступом к консоли браузера технически может прочитать мировые настройки `bestiaryKnowledge` и `bestiarySocial`, а также данные актёров мира. Не храните в заметках бестиария критичные спойлеры для игроков, намеренно ищущих их через консоль.
+> **Foundry VTT Architectural Note**
+> World settings in Foundry synchronize to connected clients. While the Bestiary Journal UI strictly hides unrevealed tiers and notes, a player inspecting raw world settings (`bestiaryKnowledge` / `bestiarySocial`) or world actors in the browser console could technically read underlying data. Avoid storing critical spoilers for console-inspecting players inside bestiary notes.
 
 ---
 
-## 📦 Установка
+## 📦 Installation
 
-### По URL манифеста (рекомендуется)
+### Via Manifest URL (Recommended)
 
-Вставьте ссылку в окно установки модулей Foundry VTT (_Add-on Modules → Install Module → Manifest URL_):
+In Foundry VTT Setup → **Add-on Modules** → **Install Module**, paste the Manifest URL:
 
 ```text
-https://raw.githubusercontent.com/TacticalOtaku/BestiaryJournal/main/module.json
+https://github.com/TacticalOtaku/BestiaryJournal/releases/latest/download/module.json
 ```
 
-### Ручная установка
+### Manual Installation
 
-1. Скачайте архив последнего релиза со страницы [Releases](https://github.com/TacticalOtaku/BestiaryJournal/releases) или клонируйте репозиторий.
-2. Распакуйте/поместите папку `bestiary-journal` в директорию модулей Foundry VTT:
+1. Download the latest release archive from [Releases](https://github.com/TacticalOtaku/BestiaryJournal/releases).
+2. Extract it into Foundry's modules directory as `bestiary-journal` (with `module.json` at its root):
    - **Windows**: `%LOCALAPPDATA%\FoundryVTT\Data\modules\bestiary-journal`
    - **Linux**: `~/.local/share/FoundryVTT/Data/modules/bestiary-journal`
    - **macOS**: `~/Library/Application Support/FoundryVTT/Data/modules/bestiary-journal`
-3. Перезапустите Foundry VTT и включите **Bestiary Journal** в настройках модулей мира.
+3. Restart Foundry VTT and enable **Bestiary Journal** in your world's module settings.
 
 ---
 
-## 🚀 Быстрый старт
+## 🚀 Quick Start
 
-1. Откройте бестиарий сочетанием `Shift + B` или кнопкой во вкладке **«Журналы»**.
-2. Создайте коллекцию и при необходимости добавьте семейства.
-3. Наполните её: перетащите NPC или папку актёров, либо откройте массовый импорт.
-4. Откройте карточку существа и на вкладке **«Ступени»** при необходимости переопределите пороги блоков.
-5. На вкладке **«Знание»** (или через **«Знания отряда»**) выдайте игрокам стартовые ступени либо оставьте исследование через проверки навыков.
+1. Open the bestiary with `Shift + B` or the **Journals** tab button.
+2. Create a collection and optionally organize families inside it.
+3. Populate it by dragging NPCs or actor folders, or using **Bulk Import**.
+4. Open a creature card and adjust block reveal thresholds on the **Tiers** tab if needed.
+5. Assign starting tiers on the **Knowledge** tab (or via **Party Knowledge**), or let players discover details through research rolls.
 
-### Обновление с версии `0.1.x`
+### Upgrading from `0.1.x`
 
-Миграция выполняется автоматически при первом входе активного мастера:
+An automatic migration runs once when an active GM enters the world, preserving backups before writing:
 
-- режим **«Настраиваемый»** переносится в переопределения ступеней (отключённые блоки становятся **«Только мастеру»**);
-- глобальный режим детализации (при включённом **«Только для ГМ»**) преобразуется в стартовые ступени для игроков.
-
-Перед записью сохраняется резервная копия для восстановления, а исходные поля не удаляются.
+- **Custom** detail mode maps to per-block reveal threshold overrides (**GM Only** for disabled blocks);
+- global detail settings (when **GM Only** was enabled) convert into per-player starting tiers.
 
 ---
 
-## 🛠️ Разработка
+## 🛠️ Development & Feedback
 
-Модуль не требует сборки и сторонних runtime-зависимостей; для локальных проверок нужен **Node.js 24+**.
+Requires **Node.js 24+** (zero build step or runtime dependencies):
 
 ```bash
 npm install
-npm run check    # ESLint, проверка манифеста/импортов/локалей и unit-тесты
-npm run deploy   # Копирование модуля в Foundry Data/modules/bestiary-journal
-npm run package  # Сборка ZIP-архива в dist/bestiary-journal-v<версия>.zip
-npm run release  # Полная проверка (check) + сборка релиза (package)
+npm run check    # ESLint, manifest/import/locale validation, and unit tests
+npm run deploy   # Copy module into Foundry Data/modules/bestiary-journal
+npm run package  # Build release archive into dist/bestiary-journal-v<version>.zip
+npm run release  # Run check + package
 ```
 
-| Документ                                     | Назначение                                                               |
-| -------------------------------------------- | ------------------------------------------------------------------------ |
-| [API.md](API.md)                             | Публичный API `game.bestiaryJournal` и хук `bestiaryJournalRefresh`      |
-| [CHANGELOG.md](CHANGELOG.md)                 | Подробная история изменений по версиям                                   |
-| [docs/architecture.md](docs/architecture.md) | Слои (`core`, `integrations`, `foundry`, `ui`), хранилища и поток команд |
-| [docs/live-check.md](docs/live-check.md)     | Чек-лист ручной проверки в работающем Foundry и `tools/live-check.js`    |
-| [GLOSSARY.md](GLOSSARY.md)                   | Глоссарий доменных терминов проекта                                      |
+| Document                                     | Purpose                                                               |
+| -------------------------------------------- | --------------------------------------------------------------------- |
+| [API.md](API.md)                             | Public API `game.bestiaryJournal` and `bestiaryJournalRefresh` hook   |
+| [CHANGELOG.md](CHANGELOG.md)                 | Detailed version history                                              |
+| [docs/architecture.md](docs/architecture.md) | Layers (`core`, `integrations`, `foundry`, `ui`), stores, and flow    |
+| [docs/live-check.md](docs/live-check.md)     | Manual Foundry QA checklist and `tools/live-check.js`                 |
+| [GLOSSARY.md](GLOSSARY.md)                   | Project domain glossary                                               |
+
+Pull Requests are disabled on this repository; bug reports and feature suggestions are welcome via [GitHub Issues](https://github.com/TacticalOtaku/BestiaryJournal/issues) (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
 ---
 
-## 📄 Лицензия
+## 📄 License
 
-Проект распространяется по лицензии [MIT](LICENSE).
-Шрифт интерфейса — [Onest](https://github.com/simpletype-ru/Onest) ([SIL Open Font License 1.1](assets/fonts/OFL-onest.txt)).
+Released under the **GNU General Public License v3.0** ([LICENSE](LICENSE)).
+Bundled UI font: [Onest](https://github.com/simpletype-ru/Onest) ([SIL Open Font License 1.1](assets/fonts/OFL-onest.txt)).
