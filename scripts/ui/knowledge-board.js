@@ -3,7 +3,7 @@ import { RESEARCH_TIERS } from "../core/research-model.js";
 import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store.js";
 import { runCommand } from "../foundry/command-feedback.js";
 import { getCreatureDataMany } from "../foundry/creature-cache.js";
-import { formatCount, getPlayerUsers, localize } from "../foundry/foundry-runtime.js";
+import { confirmDialog, formatCount, getPlayerUsers, localize } from "../foundry/foundry-runtime.js";
 import { playApplicationEntrance } from "./ui-effects.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -27,7 +27,10 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
   };
 
   static PARTS = {
-    main: { template: "modules/bestiary-journal/templates/knowledge-board.hbs" },
+    main: {
+      template: "modules/bestiary-journal/templates/knowledge-board.hbs",
+      scrollable: [".knowledge-board-table"],
+    },
   };
 
   constructor(options = {}) {
@@ -128,17 +131,15 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
     const uuids = (this._rows ?? []).filter((row) => !row.locked).map((row) => row.uuid);
     if (!uuids.length || !userIds.length) return;
     const tierLabel = localize(RESEARCH_TIERS[tier].label);
-    const confirmed = await foundry.applications.api.DialogV2.confirm({
-      window: { title: localize("BESTIARY.Board.Apply") },
+    const confirmed = await confirmDialog({
+      title: localize("BESTIARY.Board.Apply"),
+      yesLabel: localize("BESTIARY.Board.Apply"),
       content: `<p>${foundry.utils.escapeHTML(
         game.i18n.format("BESTIARY.Board.ConfirmBulk", {
           creatures: formatCount("BESTIARY.Count.Creatures", uuids.length),
           tier: tierLabel,
         }),
       )}</p>`,
-      yes: { label: localize("BESTIARY.Board.Apply") },
-      no: { label: localize("BESTIARY.Cancel") },
-      rejectClose: false,
     });
     if (!confirmed) return;
     await runCommand({ type: BESTIARY_COMMANDS.SET_KNOWLEDGE, uuids, userIds, tier, source: "gm" });

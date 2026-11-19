@@ -14,7 +14,7 @@ import {
 import { postCreatureToChat } from "./creature-cards.js";
 import { PARTY_VIEWER } from "../core/knowledge-lens.js";
 import { BestiaryKnowledgeBoard } from "./knowledge-board.js";
-import { formatCount, localize, resolveUuid } from "../foundry/foundry-runtime.js";
+import { confirmDialog, formatCount, localize, resolveUuid } from "../foundry/foundry-runtime.js";
 import { BestiaryTileEditor } from "./tile-editor.js";
 import { BestiaryEntryEditor } from "./entry-editor.js";
 import { BestiaryBulkImport } from "./bulk-import.js";
@@ -118,7 +118,10 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
   };
 
   static PARTS = {
-    section: { template: "modules/bestiary-journal/templates/section-view.hbs" },
+    section: {
+      template: "modules/bestiary-journal/templates/section-view.hbs",
+      scrollable: [".collection-results-scroll", ".library-collection-nav", ".filter-panel-scroll"],
+    },
   };
 
   constructor(options = {}) {
@@ -353,34 +356,34 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
 
     const items = [
       {
-        name: localize("BESTIARY.ViewCreature"),
+        label: localize("BESTIARY.ViewCreature"),
         icon: "fa-eye",
-        callback: () => this._openCreatureByUuid(uuid),
+        onClick: () => this._openCreatureByUuid(uuid),
       },
       {
-        name: localize("BESTIARY.OpenSheet"),
+        label: localize("BESTIARY.OpenSheet"),
         icon: "fa-arrow-up-right-from-square",
-        callback: () => this._openSheetByUuid(uuid),
+        onClick: () => this._openSheetByUuid(uuid),
       },
       {
-        name: localize("BESTIARY.SendToChatParty"),
+        label: localize("BESTIARY.SendToChatParty"),
         icon: "fa-message",
-        callback: () => this._sendToChatByUuid(uuid),
+        onClick: () => this._sendToChatByUuid(uuid),
       },
       {
-        name: localize("BESTIARY.Entry.Title"),
+        label: localize("BESTIARY.Entry.Title"),
         icon: "fa-sliders",
-        callback: () => this._openEntryEditorByUuid(uuid),
+        onClick: () => this._openEntryEditorByUuid(uuid),
       },
       {
-        name: localize(isHidden ? "BESTIARY.ShowToPlayers" : "BESTIARY.HideFromPlayers"),
+        label: localize(isHidden ? "BESTIARY.ShowToPlayers" : "BESTIARY.HideFromPlayers"),
         icon: isHidden ? "fa-eye" : "fa-eye-slash",
-        callback: () => this._toggleVisibilityByUuid(uuid),
+        onClick: () => this._toggleVisibilityByUuid(uuid),
       },
       {
-        name: localize(isLocked ? "BESTIARY.Lock.Unlock" : "BESTIARY.Lock.Lock"),
+        label: localize(isLocked ? "BESTIARY.Lock.Unlock" : "BESTIARY.Lock.Lock"),
         icon: isLocked ? "fa-lock-open" : "fa-lock",
-        callback: () => this._toggleLockByUuid(uuid, !isLocked),
+        onClick: () => this._toggleLockByUuid(uuid, !isLocked),
       },
     ];
 
@@ -388,29 +391,29 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       items.push({ separator: true });
       for (const family of families) {
         items.push({
-          name: game.i18n.format("BESTIARY.Families.MoveTo", { name: family.name }),
+          label: game.i18n.format("BESTIARY.Families.MoveTo", { name: family.name }),
           icon: "fa-folder-tree",
-          callback: () => this._moveToFamily(uuid, family.id),
+          onClick: () => this._moveToFamily(uuid, family.id),
         });
       }
       items.push({
-        name: localize("BESTIARY.Families.MoveToNone"),
+        label: localize("BESTIARY.Families.MoveToNone"),
         icon: "fa-folder-minus",
-        callback: () => this._moveToFamily(uuid, null),
+        onClick: () => this._moveToFamily(uuid, null),
       });
     }
 
     items.push({ separator: true });
     items.push({
-      name: localize("BESTIARY.Transfer.ExportEntry"),
+      label: localize("BESTIARY.Transfer.ExportEntry"),
       icon: "fa-file-export",
-      callback: () => exportCreatureEntry(this.sectionId, uuid),
+      onClick: () => exportCreatureEntry(this.sectionId, uuid),
     });
     items.push({
-      name: localize("BESTIARY.RemoveCreature"),
+      label: localize("BESTIARY.RemoveCreature"),
       icon: "fa-trash",
       danger: true,
-      callback: () => this._removeByUuid(uuid),
+      onClick: () => this._removeByUuid(uuid),
     });
     showContextMenu(event, items);
   }
@@ -495,7 +498,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     for (const container of this.element.querySelectorAll(".family-grid, .collection-list-body")) {
       [...container.children]
         .filter((child) => child.matches("[data-creature-entry]"))
-        .sort((a, b) => compareCollectionCards(a.dataset, b.dataset, this._sortMode))
+        .toSorted((a, b) => compareCollectionCards(a.dataset, b.dataset, this._sortMode))
         .forEach((child) => container.appendChild(child));
     }
 
@@ -584,7 +587,9 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     this.element.querySelector(".collection-grid-view")?.classList.toggle("is-hidden", mode !== "grid");
     this.element.querySelector(".collection-list-view")?.classList.toggle("is-hidden", mode !== "list");
     for (const button of this.element.querySelectorAll("[data-view-mode]")) {
-      button.classList.toggle("is-active", button.dataset.viewMode === mode);
+      const active = button.dataset.viewMode === mode;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
     }
   }
 
@@ -709,12 +714,10 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     event.stopPropagation();
     const familyId = target.closest("[data-family-id]")?.dataset.familyId;
     if (!familyId) return;
-    const confirmed = await foundry.applications.api.DialogV2.confirm({
-      window: { title: localize("BESTIARY.Families.Delete") },
-      yes: { label: localize("BESTIARY.Families.Delete") },
-      no: { label: localize("BESTIARY.Cancel") },
+    const confirmed = await confirmDialog({
+      title: localize("BESTIARY.Families.Delete"),
+      yesLabel: localize("BESTIARY.Families.Delete"),
       content: `<p>${localize("BESTIARY.Families.ConfirmDelete")}</p>`,
-      rejectClose: false,
     });
     if (!confirmed) return;
     await runCommand(
@@ -738,6 +741,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     // The same family appears in both the grid and the list; keep them in step.
     for (const element of this.element.querySelectorAll(`[data-family-group="${CSS.escape(familyId)}"]`)) {
       element.classList.toggle("is-collapsed", collapsed);
+      element.querySelector(".family-toggle")?.setAttribute("aria-expanded", String(!collapsed));
       const icon = element.querySelector(".family-chevron");
       icon?.classList.toggle("fa-chevron-down", !collapsed);
       icon?.classList.toggle("fa-chevron-right", collapsed);
@@ -872,12 +876,10 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       ui.notifications.warn(localize("BESTIARY.Lock.Blocked"));
       return;
     }
-    const confirmed = await foundry.applications.api.DialogV2.confirm({
-      window: { title: localize("BESTIARY.RemoveCreature") },
-      yes: { label: localize("BESTIARY.RemoveCreature") },
-      no: { label: localize("BESTIARY.Cancel") },
+    const confirmed = await confirmDialog({
+      title: localize("BESTIARY.RemoveCreature"),
+      yesLabel: localize("BESTIARY.RemoveCreature"),
       content: `<p>${localize("BESTIARY.ConfirmRemoveCreature")}</p>`,
-      rejectClose: false,
     });
     if (!confirmed) return;
     await runCommand(
@@ -927,10 +929,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       (!Array.isArray(payload.uuids) ||
         payload.uuids.some((uuid) => this.element?.querySelector(`[data-uuid="${CSS.escape(uuid)}"]`)));
     if (!changed.data && !changed.knowledge && !showsChangedCreature) return;
-    const scrollTop = this.element?.querySelector(".collection-results-scroll")?.scrollTop ?? 0;
     await this.render();
-    const scroller = this.element?.querySelector(".collection-results-scroll");
-    if (scroller) scroller.scrollTop = scrollTop;
   }
 
   async close(options) {

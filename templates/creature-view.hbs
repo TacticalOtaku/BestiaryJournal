@@ -20,21 +20,22 @@
         <div class="creature-topbar-right">
           {{#if isGM}}
             <label class="preview-as">
-              <i class="fa-solid fa-user-secret"></i>
+              <i class="fa-solid fa-user-secret" aria-hidden="true"></i>
+              <span class="sr-only">{{localize "BESTIARY.Preview.Banner"}}</span>
               <select class="preview-as-select">
                 {{#each previewOptions}}<option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>{{/each}}
               </select>
             </label>
             {{#if hasEntry}}
-              <button type="button" class="suite-icon-button" data-action="openEntryEditor" data-tooltip="{{localize 'BESTIARY.Entry.Title'}}"><i class="fa-solid fa-sliders"></i></button>
-              <button type="button" class="suite-icon-button {{#if entryLocked}}is-active{{/if}}" data-action="toggleLock" data-tooltip="{{lockLabel}}" aria-label="{{lockLabel}}" {{#if lockDisabled}}disabled{{/if}}><i class="fa-solid {{#if entryLocked}}fa-lock{{else}}fa-lock-open{{/if}}"></i></button>
+              <button type="button" class="suite-icon-button" data-action="openEntryEditor" data-tooltip="{{localize 'BESTIARY.Entry.Title'}}" aria-label="{{localize 'BESTIARY.Entry.Title'}}"><i class="fa-solid fa-sliders" aria-hidden="true"></i></button>
+              <button type="button" class="suite-icon-button {{#if entryLocked}}is-active{{/if}}" data-action="toggleLock" data-tooltip="{{lockLabel}}" aria-label="{{lockLabel}}" {{#if lockDisabled}}disabled{{/if}}><i class="fa-solid {{#if entryLocked}}fa-lock{{else}}fa-lock-open{{/if}}" aria-hidden="true"></i></button>
             {{/if}}
-            <button type="button" class="suite-icon-button" data-action="openSheet" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+            <button type="button" class="suite-icon-button" data-action="openSheet" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}" aria-label="{{localize 'BESTIARY.OpenSheet'}}"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></button>
           {{/if}}
-          <button type="button" class="suite-icon-button {{#if isFavorite}}is-active{{/if}}" data-action="toggleFavorite" data-tooltip="{{localize 'BESTIARY.ToggleFavorite'}}"><i class="{{#if isFavorite}}fas{{else}}far{{/if}} fa-star"></i></button>
-          <button type="button" class="suite-icon-button" data-action="sendToChat" data-tooltip="{{localize 'BESTIARY.SendToChat'}}"><i class="fa-regular fa-message"></i></button>
+          <button type="button" class="suite-icon-button {{#if isFavorite}}is-active{{/if}}" data-action="toggleFavorite" aria-pressed="{{#if isFavorite}}true{{else}}false{{/if}}" data-tooltip="{{localize 'BESTIARY.ToggleFavorite'}}" aria-label="{{localize 'BESTIARY.ToggleFavorite'}}"><i class="{{#if isFavorite}}fas{{else}}far{{/if}} fa-star" aria-hidden="true"></i></button>
+          <button type="button" class="suite-icon-button" data-action="sendToChat" data-tooltip="{{localize 'BESTIARY.SendToChat'}}" aria-label="{{localize 'BESTIARY.SendToChat'}}"><i class="fa-regular fa-message" aria-hidden="true"></i></button>
           {{#if shareEnabled}}
-            <button type="button" class="suite-primary-button is-compact" data-action="shareCreature"><i class="fa-solid fa-share-nodes"></i>{{localize "BESTIARY.Share.Button"}}</button>
+            <button type="button" class="suite-primary-button is-compact" data-action="shareCreature"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i>{{localize "BESTIARY.Share.Button"}}</button>
           {{/if}}
         </div>
       </header>
@@ -162,11 +163,11 @@
             <div class="creature-expanded-layout">
               {{#each contentSections}}
                 <section class="creature-items-accordion {{#if this.expanded}}is-expanded{{/if}} {{#if this.blockHiddenForPlayers}}is-gm-only{{/if}}" data-content-section="{{this.key}}">
-                  <button type="button" class="section-toggle" data-action="toggleSection" data-section-key="{{this.key}}">
-                    <span class="section-label"><i class="fa-solid {{this.icon}}"></i><strong>{{this.label}}</strong></span>
-                    {{#if this.blockHiddenForPlayers}}<em class="section-gm-flag"><i class="fa-solid fa-eye-slash"></i>{{localize "BESTIARY.Tier.GmOnly"}}</em>{{/if}}
+                  <button type="button" class="section-toggle" data-action="toggleSection" data-section-key="{{this.key}}" aria-expanded="{{#if this.expanded}}true{{else}}false{{/if}}">
+                    <span class="section-label"><i class="fa-solid {{this.icon}}" aria-hidden="true"></i><strong>{{this.label}}</strong></span>
+                    {{#if this.blockHiddenForPlayers}}<em class="section-gm-flag"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i>{{localize "BESTIARY.Tier.GmOnly"}}</em>{{/if}}
                     {{#if this.count}}<em>{{this.count}}</em>{{/if}}
-                    <i class="fa-solid section-chevron {{#if this.expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+                    <i class="fa-solid section-chevron {{#if this.expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}" aria-hidden="true"></i>
                   </button>
 
                   <div class="accordion-section-body {{#unless this.expanded}}is-collapsed{{/unless}}">
@@ -175,29 +176,31 @@
                     {{else}}
                       <div class="creature-items-list">
                         {{#each this.items}}
-                          <article class="creature-item {{#if this.expanded}}is-expanded{{/if}} {{#if this.hiddenForPlayers}}is-item-hidden{{/if}}" data-item-key="{{this.itemKey}}" data-action="expandItem" tabindex="0" aria-expanded="{{#if this.expanded}}true{{else}}false{{/if}}">
+                          <article class="creature-item {{#if this.expanded}}is-expanded{{/if}} {{#if this.hiddenForPlayers}}is-item-hidden{{/if}}" data-item-key="{{this.itemKey}}">
                             <div class="creature-item-header">
-                              <img class="item-icon" src="{{this.img}}" alt="" />
-                              <div class="item-heading">
-                                <strong>{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</strong>
-                                <div class="item-inline-meta">
-                                  {{#if this.primaryActivity.typeLabel}}<span>{{this.primaryActivity.typeLabel}}</span>{{/if}}
-                                  {{#if this.primaryActivity.attack}}<span>{{this.primaryActivity.attack}}</span>{{/if}}
-                                  {{#if this.primaryActivity.range}}<span>{{this.primaryActivity.range}}</span>{{/if}}
+                              <button type="button" class="creature-item-toggle" data-action="expandItem" aria-expanded="{{#if this.expanded}}true{{else}}false{{/if}}">
+                                <img class="item-icon" src="{{this.img}}" alt="" />
+                                <div class="item-heading">
+                                  <strong>{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</strong>
+                                  <div class="item-inline-meta">
+                                    {{#if this.primaryActivity.typeLabel}}<span>{{this.primaryActivity.typeLabel}}</span>{{/if}}
+                                    {{#if this.primaryActivity.attack}}<span>{{this.primaryActivity.attack}}</span>{{/if}}
+                                    {{#if this.primaryActivity.range}}<span>{{this.primaryActivity.range}}</span>{{/if}}
+                                  </div>
                                 </div>
-                              </div>
-                              {{#if this.primaryActivity.damage}}<span class="item-damage-chip">{{this.primaryActivity.damage}}</span>{{/if}}
+                                {{#if this.primaryActivity.damage}}<span class="item-damage-chip">{{this.primaryActivity.damage}}</span>{{/if}}
+                                <i class="fa-solid creature-item-chevron {{#if this.expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}" aria-hidden="true"></i>
+                              </button>
 
                               {{#if ../../isGM}}
                                 <label class="item-tier-control" data-tooltip="{{localize 'BESTIARY.Tier.ItemHint'}}">
-                                  <i class="fa-solid fa-eye"></i>
+                                  <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                                  <span class="sr-only">{{localize "BESTIARY.Tier.ItemHint"}}</span>
                                   <select data-item-tier data-block-key="{{this.blockKey}}" data-item-id="{{this.itemId}}" {{#if ../../locked}}disabled{{/if}}>
                                     {{#each this.tierChoices}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
                                   </select>
                                 </label>
                               {{/if}}
-
-                              <i class="fa-solid creature-item-chevron {{#if this.expanded}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
                             </div>
 
                             <div class="creature-item-body {{#unless this.expanded}}is-collapsed{{/unless}}">
@@ -238,15 +241,15 @@
         </div>
 
         <aside class="creature-rail">
-          <nav class="rail-tabs">
-            <button type="button" class="{{#if isRailKnowledge}}is-active{{/if}}" data-action="setRail" data-rail="knowledge"><i class="fa-solid fa-brain"></i>{{localize "BESTIARY.Knowledge.Tab"}}</button>
-            <button type="button" class="{{#if isRailComments}}is-active{{/if}}" data-action="setRail" data-rail="comments"><i class="fa-regular fa-comments"></i>{{localize "BESTIARY.Comments.Tab"}}{{#if comments.total}}<em>{{comments.total}}</em>{{/if}}</button>
+          <div class="rail-tabs" role="tablist" aria-label="{{localize 'BESTIARY.Creature'}}">
+            <button type="button" role="tab" aria-selected="{{#if isRailKnowledge}}true{{else}}false{{/if}}" tabindex="{{#if isRailKnowledge}}0{{else}}-1{{/if}}" class="{{#if isRailKnowledge}}is-active{{/if}}" data-action="setRail" data-rail="knowledge"><i class="fa-solid fa-brain" aria-hidden="true"></i>{{localize "BESTIARY.Knowledge.Tab"}}</button>
+            <button type="button" role="tab" aria-selected="{{#if isRailComments}}true{{else}}false{{/if}}" tabindex="{{#if isRailComments}}0{{else}}-1{{/if}}" class="{{#if isRailComments}}is-active{{/if}}" data-action="setRail" data-rail="comments"><i class="fa-regular fa-comments" aria-hidden="true"></i>{{localize "BESTIARY.Comments.Tab"}}{{#if comments.total}}<em>{{comments.total}}</em>{{/if}}</button>
             {{#if isGM}}
-              <button type="button" class="{{#if isRailConfig}}is-active{{/if}}" data-action="setRail" data-rail="config"><i class="fa-solid fa-layer-group"></i>{{localize "BESTIARY.Tier.Tab"}}</button>
+              <button type="button" role="tab" aria-selected="{{#if isRailConfig}}true{{else}}false{{/if}}" tabindex="{{#if isRailConfig}}0{{else}}-1{{/if}}" class="{{#if isRailConfig}}is-active{{/if}}" data-action="setRail" data-rail="config"><i class="fa-solid fa-layer-group" aria-hidden="true"></i>{{localize "BESTIARY.Tier.Tab"}}</button>
             {{/if}}
-          </nav>
+          </div>
 
-          <div class="rail-body bestiary-scrollable">
+          <div class="rail-body bestiary-scrollable" role="tabpanel">
             {{#if isRailKnowledge}}
               {{#if showRoster}}
                 <section class="rail-card">
@@ -333,13 +336,13 @@
 
             {{#if isRailComments}}
               <section class="rail-card comments-card">
-                <nav class="comment-channel-tabs">
+                <div class="comment-channel-tabs" role="tablist" aria-label="{{localize 'BESTIARY.Comments.Tab'}}">
                   {{#each comments.channels}}
-                    <button type="button" class="{{#if (bjEq this.key ../commentChannel)}}is-active{{/if}}" data-action="setCommentChannel" data-channel="{{this.key}}" data-tooltip="{{this.hint}}">
-                      <i class="fa-solid {{this.icon}}"></i>{{this.label}}{{#if this.count}}<em>{{this.count}}</em>{{/if}}
+                    <button type="button" role="tab" aria-selected="{{#if (bjEq this.key ../commentChannel)}}true{{else}}false{{/if}}" tabindex="{{#if (bjEq this.key ../commentChannel)}}0{{else}}-1{{/if}}" class="{{#if (bjEq this.key ../commentChannel)}}is-active{{/if}}" data-action="setCommentChannel" data-channel="{{this.key}}" data-tooltip="{{this.hint}}">
+                      <i class="fa-solid {{this.icon}}" aria-hidden="true"></i>{{this.label}}{{#if this.count}}<em>{{this.count}}</em>{{/if}}
                     </button>
                   {{/each}}
-                </nav>
+                </div>
 
                 {{#each comments.channels}}
                   {{#if (bjEq this.key ../commentChannel)}}
@@ -374,7 +377,7 @@
                     {{#if this.canPost}}
                       <div class="comment-composer">
                         {{#if @root.isEditingComment}}<p class="comment-editing-note"><i class="fa-solid fa-pen"></i>{{localize "BESTIARY.Comments.Editing"}}</p>{{/if}}
-                        <textarea class="comment-composer-input" rows="3" placeholder="{{localize 'BESTIARY.Comments.Placeholder'}}"></textarea>
+                        <textarea class="comment-composer-input" rows="3" placeholder="{{localize 'BESTIARY.Comments.Placeholder'}}" aria-label="{{localize 'BESTIARY.Comments.Placeholder'}}"></textarea>
                         <div class="comment-composer-actions">
                           {{#if @root.isEditingComment}}
                             <button type="button" class="suite-secondary-button" data-action="cancelEdit"><i class="fa-solid fa-xmark"></i>{{localize "BESTIARY.Comments.CancelEdit"}}</button>

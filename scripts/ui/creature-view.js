@@ -51,10 +51,10 @@ import {
   setPreviewUserId,
   toggleFavoriteCreature,
 } from "../foundry/client-preferences.js";
-import { getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtime.js";
+import { confirmDialog, getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtime.js";
 import { BestiaryEntryEditor } from "./entry-editor.js";
 import { buildStatblock, buildTierSteps } from "./creature-statblock.js";
-import { animateDisclosure, playApplicationEntrance } from "./ui-effects.js";
+import { activateTablistKeyboard, animateDisclosure, playApplicationEntrance } from "./ui-effects.js";
 import { bindArtwork } from "./artwork.js";
 import { markSeen } from "../foundry/knowledge-watch.js";
 import { log } from "../core/logger.js";
@@ -141,7 +141,10 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   };
 
   static PARTS = {
-    creature: { template: "modules/bestiary-journal/templates/creature-view.hbs" },
+    creature: {
+      template: "modules/bestiary-journal/templates/creature-view.hbs",
+      scrollable: ["", ".rail-body"],
+    },
   };
 
   constructor(options = {}) {
@@ -353,7 +356,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     this._activateCommentEditor();
     this._syncCommentSubmitState();
     this._activateGmControls();
-    this._activateItemKeyboard();
+    activateTablistKeyboard(this.element);
     playApplicationEntrance(this, ".creature-detail-view");
     this._disposeArtwork = bindArtwork(this.element);
   }
@@ -368,18 +371,6 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   _syncWindowTitle() {
     const title = this.window?.title;
     if (title instanceof HTMLElement) title.textContent = this.title;
-  }
-
-  _activateItemKeyboard() {
-    for (const item of this.element.querySelectorAll(".creature-item[data-item-key]")) {
-      item.addEventListener("keydown", (event) => {
-        if (event.target !== item) return;
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          this._onExpandItem(event, item);
-        }
-      });
-    }
   }
 
   _activateCommentEditor() {
@@ -434,11 +425,13 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     await this._refreshPreservingScroll();
   }
 
-  _onSetRail(event, target) {
+  async _onSetRail(event, target) {
     const rail = target.dataset.rail;
     if (!["knowledge", "comments", "config"].includes(rail)) return;
+    const isKeyboard = event?.detail === 0;
     this._rail = rail;
-    this.render();
+    await this.render();
+    if (isKeyboard) this.element?.querySelector(`.rail-tabs [data-rail="${rail}"]`)?.focus();
   }
 
   /** "Preview as" is one client preference, so every open card follows it. */
@@ -455,11 +448,13 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     const channel = target.dataset.channel;
     if (!["gm", "private", "party"].includes(channel)) return;
     if (channel === "gm" && !game.user.isGM) return;
+    const isKeyboard = event?.detail === 0;
     // Switching channels abandons an edit instead of silently carrying it over.
     if (this._editingCommentId) this._onCancelEdit({ render: false });
     this._commentChannel = channel;
     await setPreferredCommentChannel(channel);
-    this.render();
+    await this.render();
+    if (isKeyboard) this.element?.querySelector(`.comment-channel-tabs [data-channel="${channel}"]`)?.focus();
   }
 
   async _onSubmitComment() {
@@ -539,12 +534,10 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   async _onDeleteComment(event, target) {
     const commentId = target.closest("[data-comment-id]")?.dataset.commentId;
     if (!commentId) return;
-    const confirmed = await foundry.applications.api.DialogV2.confirm({
-      window: { title: localize("BESTIARY.Comments.Delete") },
-      yes: { label: localize("BESTIARY.Comments.Delete") },
-      no: { label: localize("BESTIARY.Cancel") },
+    const confirmed = await confirmDialog({
+      title: localize("BESTIARY.Comments.Delete"),
+      yesLabel: localize("BESTIARY.Comments.Delete"),
       content: `<p>${localize("BESTIARY.Comments.ConfirmDelete")}</p>`,
-      rejectClose: false,
     });
     if (!confirmed) return;
     if (this._editingCommentId === commentId) this._onCancelEdit({ render: false });
@@ -611,12 +604,10 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
 
   async _onResetTiers() {
     if (!game.user.isGM) return;
-    const confirmed = await foundry.applications.api.DialogV2.confirm({
-      window: { title: localize("BESTIARY.Knowledge.Reset") },
-      yes: { label: localize("BESTIARY.Knowledge.Reset") },
-      no: { label: localize("BESTIARY.Cancel") },
+    const confirmed = await confirmDialog({
+      title: localize("BESTIARY.Knowledge.Reset"),
+      yesLabel: localize("BESTIARY.Knowledge.Reset"),
       content: `<p>${localize("BESTIARY.Knowledge.ConfirmReset")}</p>`,
-      rejectClose: false,
     });
     if (!confirmed) return;
     await resetKnowledge(this.actorUuid);
@@ -716,9 +707,10 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
 
   _toggleItemElement(itemElement, expanded) {
     const body = itemElement?.querySelector(".creature-item-body");
+    const toggle = itemElement?.querySelector(".creature-item-toggle");
     const icon = itemElement?.querySelector(".creature-item-chevron");
     itemElement?.classList.toggle("is-expanded", expanded);
-    itemElement?.setAttribute("aria-expanded", String(expanded));
+    toggle?.setAttribute("aria-expanded", String(expanded));
     animateDisclosure(body, expanded);
     icon?.classList.toggle("fa-chevron-up", expanded);
     icon?.classList.toggle("fa-chevron-down", !expanded);
@@ -727,21 +719,16 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
   _toggleSectionElement(sectionKey, expanded) {
     const section = this.element?.querySelector(`[data-content-section="${sectionKey}"]`);
     section?.classList.toggle("is-expanded", expanded);
+    section?.querySelector(".section-toggle")?.setAttribute("aria-expanded", String(expanded));
     animateDisclosure(section?.querySelector(".accordion-section-body"), expanded);
     const icon = section?.querySelector(".section-chevron");
     icon?.classList.toggle("fa-chevron-up", expanded);
     icon?.classList.toggle("fa-chevron-down", !expanded);
   }
 
-  /** Re-renders without throwing the reader back to the top of any pane. */
-  async _refreshPreservingScroll() {
-    const selectors = [".creature-detail-wrapper", ".rail-body"];
-    const offsets = selectors.map((selector) => this.element?.querySelector(selector)?.scrollTop ?? 0);
-    await this.render();
-    selectors.forEach((selector, index) => {
-      const next = this.element?.querySelector(selector);
-      if (next) next.scrollTop = offsets[index];
-    });
+  /** Scroll offsets survive render via `PARTS.creature.scrollable`. */
+  _refreshPreservingScroll() {
+    return this.render();
   }
 
   /**

@@ -206,6 +206,7 @@
 .library-heading h1 {
   margin: 2px 0 0;
   font-size: clamp(1.6rem, 2.8vw, 2.1rem);
+  text-wrap: balance;
 }
 .library-summary {
   display: flex;
@@ -244,6 +245,14 @@
   border-radius: var(--suite-radius-sm);
   background: var(--suite-raised);
 }
+.library-search:focus-within {
+  border-color: var(--suite-accent);
+  box-shadow: 0 0 0 1px var(--suite-accent);
+}
+.library-search:has(input:focus-visible) {
+  outline: 2px solid var(--suite-accent);
+  outline-offset: 2px;
+}
 .library-search > i {
   color: var(--suite-subtle);
 }
@@ -269,6 +278,7 @@
 .library-scroll {
   padding: 22px 28px 30px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 .library-section-block {
   margin-bottom: 30px;

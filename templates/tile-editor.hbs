@@ -14,8 +14,8 @@
   <input type="hidden" name="image" value="{{image}}" />
 
   <div class="form-group">
-    <label>{{localize nameLabel}}</label>
-    <input type="text" name="name" value="{{name}}" placeholder="{{localize nameLabel}}" required autofocus />
+    <label for="{{fieldId}}-name">{{localize nameLabel}}</label>
+    <input id="{{fieldId}}-name" type="text" name="name" value="{{name}}" placeholder="{{localize nameLabel}}" required autofocus />
     <p class="form-hint">{{localize hint}}</p>
   </div>
 

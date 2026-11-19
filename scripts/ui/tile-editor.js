@@ -65,6 +65,7 @@ export class BestiaryTileEditor extends HandlebarsApplicationMixin(ApplicationV2
 
   async _prepareContext() {
     return {
+      fieldId: this.id ?? "bestiary-tile-editor",
       isFamily: this.mode === "family",
       image: this._selectedImage,
       name: this.tileData?.name ?? "",

@@ -284,7 +284,7 @@ function findFamily(section, familyId) {
  */
 export function getEntryContexts(data, uuid) {
   const contexts = [];
-  for (const section of [...(data?.sections ?? [])].sort((left, right) => left.sort - right.sort)) {
+  for (const section of (data?.sections ?? []).toSorted((left, right) => left.sort - right.sort)) {
     for (const entry of section.creatures) {
       if (entry.uuid === uuid) contexts.push({ section, entry });
     }
@@ -693,7 +693,7 @@ export function summarizeResearchTargets(targets, { allowedSkills = null } = {})
       open.map(({ entry }) => {
         const raw = entry.research?.skills ?? [];
         const active = allowed ? raw.filter((skill) => allowed.has(skill)) : raw;
-        return JSON.stringify([...active].sort());
+        return JSON.stringify((Array.isArray(active) ? active : [...active]).toSorted());
       }),
     ),
   );

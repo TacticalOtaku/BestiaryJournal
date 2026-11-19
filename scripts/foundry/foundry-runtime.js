@@ -51,16 +51,36 @@ export function getUserById(userId) {
   return game.users?.get?.(userId) ?? null;
 }
 
+const timestampFormatters = new Map();
+
 export function formatTimestamp(value) {
   if (!value) return "";
+  const lang = game.i18n?.lang || "";
   try {
-    return new Date(value).toLocaleString(game.i18n.lang, {
-      dateStyle: "short",
-      timeStyle: "short",
-    });
+    let formatter = timestampFormatters.get(lang);
+    if (!formatter) {
+      formatter = new Intl.DateTimeFormat(lang || undefined, {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+      timestampFormatters.set(lang, formatter);
+    }
+    return formatter.format(new Date(value));
   } catch {
     return new Date(value).toLocaleString();
   }
+}
+
+/** Modal yes/no confirmation backed by Foundry's native <dialog>-based DialogV2. */
+export function confirmDialog({ title, content, yesLabel, noLabel = localize("BESTIARY.Cancel") }) {
+  return foundry.applications.api.DialogV2.confirm({
+    window: { title },
+    yes: { label: yesLabel },
+    no: { label: noLabel },
+    content,
+    modal: true,
+    rejectClose: false,
+  });
 }
 
 export function openFilePicker({ type = "image", current = "", callback }) {

@@ -68,7 +68,7 @@
 .bestiary-app[data-density="compact"] .section-toggle {
   min-height: 34px;
 }
-.bestiary-app[data-density="compact"] .creature-item-header {
+.bestiary-app[data-density="compact"] .creature-item-toggle {
   padding: 6px 9px;
 }
 .bestiary-app[data-density="compact"] .rail-tabs button {

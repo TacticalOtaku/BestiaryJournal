@@ -24,9 +24,9 @@ export function bestiaryMenuItems(actor) {
   const items = [];
   if (inBestiary && canViewCreature(data, uuid, game.user)) {
     items.push({
-      name: localize("BESTIARY.Actor.Open"),
+      label: localize("BESTIARY.Actor.Open"),
       icon: "fa-book-skull",
-      callback: () => game.bestiaryJournal?.openCreature(uuid),
+      onClick: () => game.bestiaryJournal?.openCreature(uuid),
     });
   }
   if (!game.user.isGM) return items;
@@ -35,10 +35,10 @@ export function bestiaryMenuItems(actor) {
   if (missing.length && items.length) items.push({ separator: true });
   for (const section of missing) {
     items.push({
-      name: game.i18n.format("BESTIARY.Actor.AddTo", { collection: section.name }),
+      label: game.i18n.format("BESTIARY.Actor.AddTo", { collection: section.name }),
       icon: "fa-folder-plus",
       disabled: section.locked,
-      callback: async () => {
+      onClick: async () => {
         const result = await runCommand(
           {
             type: BESTIARY_COMMANDS.ADD_CREATURE,
@@ -62,9 +62,9 @@ export function bestiaryMenuItems(actor) {
     items.push({ separator: true });
     for (let tier = 1; tier <= MAX_RESEARCH_TIER; tier += 1) {
       items.push({
-        name: game.i18n.format("BESTIARY.Actor.GrantParty", { tier: describeTier(tier).label }),
+        label: game.i18n.format("BESTIARY.Actor.GrantParty", { tier: describeTier(tier).label }),
         icon: describeTier(tier).icon,
-        callback: () =>
+        onClick: () =>
           runCommand({
             type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
             uuids: [uuid],

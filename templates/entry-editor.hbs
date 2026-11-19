@@ -18,37 +18,37 @@
 
         <div class="entry-frame-controls">
           <div class="suite-segmented">
-            <button type="button" data-action="setImageSource" data-source="portrait" class="{{#if isPortraitSource}}is-active{{/if}}"><i class="fa-solid fa-image"></i>{{localize "BESTIARY.Entry.Portrait"}}</button>
-            <button type="button" data-action="setImageSource" data-source="token" class="{{#unless isPortraitSource}}is-active{{/unless}}" {{#unless hasToken}}disabled data-tooltip="{{localize 'BESTIARY.Entry.NoToken'}}"{{/unless}}><i class="fa-solid fa-chess-pawn"></i>{{localize "BESTIARY.Entry.Token"}}</button>
+            <button type="button" data-action="setImageSource" data-source="portrait" class="{{#if isPortraitSource}}is-active{{/if}}" aria-pressed="{{#if isPortraitSource}}true{{else}}false{{/if}}"><i class="fa-solid fa-image" aria-hidden="true"></i>{{localize "BESTIARY.Entry.Portrait"}}</button>
+            <button type="button" data-action="setImageSource" data-source="token" class="{{#unless isPortraitSource}}is-active{{/unless}}" aria-pressed="{{#unless isPortraitSource}}true{{else}}false{{/unless}}" {{#unless hasToken}}disabled data-tooltip="{{localize 'BESTIARY.Entry.NoToken'}}"{{/unless}}><i class="fa-solid fa-chess-pawn" aria-hidden="true"></i>{{localize "BESTIARY.Entry.Token"}}</button>
           </div>
           <div class="suite-segmented">
-            <button type="button" data-fit="contain" data-action="setFit" class="{{#unless isCover}}is-active{{/unless}}"><i class="fa-solid fa-compress"></i>{{localize "BESTIARY.Entry.FitContain"}}</button>
-            <button type="button" data-fit="cover" data-action="setFit" class="{{#if isCover}}is-active{{/if}}"><i class="fa-solid fa-crop-simple"></i>{{localize "BESTIARY.Entry.FitCover"}}</button>
+            <button type="button" data-fit="contain" data-action="setFit" class="{{#unless isCover}}is-active{{/unless}}" aria-pressed="{{#unless isCover}}true{{else}}false{{/unless}}"><i class="fa-solid fa-compress" aria-hidden="true"></i>{{localize "BESTIARY.Entry.FitContain"}}</button>
+            <button type="button" data-fit="cover" data-action="setFit" class="{{#if isCover}}is-active{{/if}}" aria-pressed="{{#if isCover}}true{{else}}false{{/if}}"><i class="fa-solid fa-crop-simple" aria-hidden="true"></i>{{localize "BESTIARY.Entry.FitCover"}}</button>
           </div>
-          <button type="button" class="suite-secondary-button" data-action="centerFocus"><i class="fa-solid fa-crosshairs"></i>{{localize "BESTIARY.Entry.CenterFocus"}}</button>
+          <button type="button" class="suite-secondary-button" data-action="centerFocus"><i class="fa-solid fa-crosshairs" aria-hidden="true"></i>{{localize "BESTIARY.Entry.CenterFocus"}}</button>
           <p class="form-hint">{{localize "BESTIARY.Entry.FitHint"}}</p>
         </div>
       </div>
 
       <div class="entry-editor-fields">
         <div class="form-group">
-          <label>{{localize "BESTIARY.Families.Title"}}</label>
-          <select name="familyId" class="entry-family-select">
+          <label for="{{fieldId}}-family">{{localize "BESTIARY.Families.Title"}}</label>
+          <select id="{{fieldId}}-family" name="familyId" class="entry-family-select">
             {{#each families}}<option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>{{/each}}
           </select>
         </div>
 
         <div class="form-group">
-          <label>{{localize "BESTIARY.Research.Dc"}}</label>
+          <label for="{{fieldId}}-dc">{{localize "BESTIARY.Research.Dc"}}</label>
           <div class="entry-dc-row">
-            <input type="number" name="dc" value="{{dc}}" min="0" max="100" step="1" placeholder="{{dcPlaceholder}}" />
-            <button type="button" class="suite-secondary-button" data-action="suggestDc"><i class="fa-solid fa-wand-magic-sparkles"></i>{{localize "BESTIARY.Research.SuggestDc"}}</button>
+            <input id="{{fieldId}}-dc" type="number" name="dc" value="{{dc}}" min="0" max="100" step="1" placeholder="{{dcPlaceholder}}" />
+            <button type="button" class="suite-secondary-button" data-action="suggestDc"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>{{localize "BESTIARY.Research.SuggestDc"}}</button>
           </div>
           <p class="form-hint">{{localize "BESTIARY.Research.DcHint"}}</p>
         </div>
 
-        <div class="form-group">
-          <label>{{localize "BESTIARY.Research.Skills"}}</label>
+        <fieldset class="form-group">
+          <legend>{{localize "BESTIARY.Research.Skills"}}</legend>
           <div class="entry-skill-grid">
             {{#each skills}}
               <label class="entry-skill-option">
@@ -58,7 +58,7 @@
             {{/each}}
           </div>
           <p class="form-hint">{{localize "BESTIARY.Research.SkillsHint"}} {{autoSkillLabel}}</p>
-        </div>
+        </fieldset>
 
         <div class="form-group form-group-checkbox">
           <label><input type="checkbox" name="hidden" {{#if hidden}}checked{{/if}} /><i class="fa-solid fa-eye-slash"></i>{{localize "BESTIARY.HiddenFromPlayers"}}</label>

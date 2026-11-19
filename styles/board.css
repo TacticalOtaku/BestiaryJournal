@@ -21,6 +21,7 @@
   color: var(--suite-subtle);
   font-size: 0.82rem;
   line-height: 1.5;
+  text-wrap: pretty;
 }
 .knowledge-board-controls {
   display: grid;
@@ -31,6 +32,7 @@
 
 .knowledge-board-table {
   overflow: auto;
+  scrollbar-gutter: stable;
   border: 1px solid var(--suite-border);
   border-radius: var(--suite-radius-lg);
   background: var(--suite-surface);

@@ -86,20 +86,52 @@ export function animateDisclosure(element, expanded) {
 }
 
 /**
- * Lightweight right-click menu shared by the library and collection views.
- * Items are `{name, icon, callback, danger, disabled}` or `{separator: true}`.
- * Closes on an outside click, Escape, scrolling or losing window focus.
+ * Accessible arrow-key navigation for `[role="tablist"]` bars whose tabs stay
+ * manually activated on Enter/Space/click so re-renders only run on selection.
+ */
+export function activateTablistKeyboard(root) {
+  for (const tablist of root?.querySelectorAll?.('[role="tablist"]') ?? []) {
+    tablist.addEventListener("keydown", (event) => {
+      const tabs = [...tablist.querySelectorAll('[role="tab"]:not([disabled])')];
+      if (!tabs.length) return;
+      const currentIndex = tabs.indexOf(document.activeElement);
+      if (currentIndex === -1) return;
+      let nextIndex = -1;
+      if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % tabs.length;
+      else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      else if (event.key === "Home") nextIndex = 0;
+      else if (event.key === "End") nextIndex = tabs.length - 1;
+      if (nextIndex === -1) return;
+      event.preventDefault();
+      tabs[nextIndex].focus();
+    });
+  }
+}
+
+/**
+ * Lightweight right-click menu shared by the library, collection views and actor hooks.
+ * Accepts Foundry v14 `{ label, icon, onClick, visible, danger, disabled }` entries
+ * (and legacy `{ name, callback }` aliases) or `{ separator: true }`.
  */
 let closeOpenMenu = null;
 
 export function showContextMenu(event, items) {
   closeOpenMenu?.();
 
-  const menu = document.createElement("nav");
+  const opener =
+    event?.currentTarget instanceof HTMLElement
+      ? event.currentTarget
+      : document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+
+  const menu = document.createElement("div");
   menu.className = "bestiary-context-menu bestiary-app";
   menu.setAttribute("role", "menu");
+  if (typeof menu.showPopover === "function") menu.setAttribute("popover", "manual");
+
   // It lives on <body>, outside any window: it borrows the look of the window it was opened from.
-  const origin = event.target?.closest?.(".bestiary-app");
+  const origin = event?.target?.closest?.(".bestiary-app");
   if (origin)
     Object.assign(menu.dataset, {
       theme: origin.dataset.theme,
@@ -107,67 +139,102 @@ export function showContextMenu(event, items) {
       motion: origin.dataset.motion,
     });
   else stampTheme(menu);
-  const list = document.createElement("ol");
+
+  const list = document.createElement("div");
   list.className = "context-items";
   menu.appendChild(list);
 
   for (const item of items) {
+    if (item.visible === false) continue;
     if (item.separator) {
-      const divider = document.createElement("li");
+      const divider = document.createElement("div");
       divider.className = "context-separator";
       divider.setAttribute("role", "separator");
       list.appendChild(divider);
       continue;
     }
-    const row = document.createElement("li");
+    const row = document.createElement("button");
+    row.type = "button";
     row.className = `context-item${item.danger ? " is-danger" : ""}${item.disabled ? " is-disabled" : ""}`;
     row.setAttribute("role", "menuitem");
+    row.disabled = !!item.disabled;
     row.tabIndex = item.disabled ? -1 : 0;
     if (item.disabled) row.setAttribute("aria-disabled", "true");
     const icon = document.createElement("i");
-    icon.className = `fas ${item.icon}`;
+    icon.className = item.icon?.includes(" ") ? item.icon : `fa-solid ${item.icon}`;
+    icon.setAttribute("aria-hidden", "true");
     const label = document.createElement("span");
-    label.textContent = item.name;
+    label.textContent = item.label ?? item.name ?? "";
     row.append(icon, label);
-    const activate = () => {
+    row.addEventListener("click", (clickEvent) => {
       if (item.disabled) return;
       close();
-      item.callback?.();
-    };
-    row.addEventListener("click", activate);
-    row.addEventListener("keydown", (keyEvent) => {
-      if (keyEvent.key === "Enter" || keyEvent.key === " ") {
-        keyEvent.preventDefault();
-        activate();
-      }
+      (item.onClick ?? item.callback)?.(clickEvent);
     });
     list.appendChild(row);
   }
 
-  menu.style.left = `${event.clientX}px`;
-  menu.style.top = `${event.clientY}px`;
+  const clientX = Number(event?.clientX ?? 0);
+  const clientY = Number(event?.clientY ?? 0);
+  menu.style.left = `${clientX}px`;
+  menu.style.top = `${clientY}px`;
   document.body.appendChild(menu);
+  if (typeof menu.showPopover === "function") {
+    try {
+      menu.showPopover();
+    } catch {
+      /* Detached/mocked DOM environments without top-layer support keep fixed positioning. */
+    }
+  }
 
   const bounds = menu.getBoundingClientRect();
-  menu.style.left = `${Math.max(8, Math.min(event.clientX, window.innerWidth - bounds.width - 8))}px`;
-  menu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - bounds.height - 8))}px`;
+  menu.style.left = `${Math.max(8, Math.min(clientX, window.innerWidth - bounds.width - 8))}px`;
+  menu.style.top = `${Math.max(8, Math.min(clientY, window.innerHeight - bounds.height - 8))}px`;
 
+  const enabledItems = () => [...menu.querySelectorAll('.context-item[role="menuitem"]:not([disabled])')];
   const onPointerDown = (pointer) => {
     if (!menu.contains(pointer.target)) close();
   };
   const onKeyDown = (keyEvent) => {
-    if (keyEvent.key !== "Escape") return;
-    keyEvent.preventDefault();
-    keyEvent.stopPropagation();
-    close();
+    if (keyEvent.key === "Escape") {
+      keyEvent.preventDefault();
+      keyEvent.stopPropagation();
+      close({ restoreFocus: true });
+      return;
+    }
+    if (keyEvent.key === "Tab") {
+      keyEvent.preventDefault();
+      close({ restoreFocus: true });
+      return;
+    }
+    const targets = enabledItems();
+    if (!targets.length) return;
+    const index = targets.indexOf(document.activeElement);
+    let next = -1;
+    if (keyEvent.key === "ArrowDown") next = index === -1 ? 0 : (index + 1) % targets.length;
+    else if (keyEvent.key === "ArrowUp")
+      next = index === -1 ? targets.length - 1 : (index - 1 + targets.length) % targets.length;
+    else if (keyEvent.key === "Home") next = 0;
+    else if (keyEvent.key === "End") next = targets.length - 1;
+    if (next !== -1) {
+      keyEvent.preventDefault();
+      keyEvent.stopPropagation();
+      targets[next].focus({ preventScroll: true });
+    }
   };
-  function close() {
+  function close({ restoreFocus = false } = {}) {
+    try {
+      if (menu.matches?.(":popover-open")) menu.hidePopover?.();
+    } catch {
+      /* Ignore cleanup errors if already disconnected. */
+    }
     menu.remove();
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("scroll", close, true);
     window.removeEventListener("blur", close);
     if (closeOpenMenu === close) closeOpenMenu = null;
+    if (restoreFocus && opener?.isConnected) opener.focus({ preventScroll: true });
   }
   closeOpenMenu = close;
   setTimeout(() => {
@@ -177,6 +244,6 @@ export function showContextMenu(event, items) {
     document.addEventListener("scroll", close, true);
     window.addEventListener("blur", close);
   }, 0);
-  menu.querySelector(".context-item:not(.is-disabled)")?.focus({ preventScroll: true });
+  enabledItems()[0]?.focus({ preventScroll: true });
   return menu;
 }

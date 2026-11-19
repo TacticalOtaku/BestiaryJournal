@@ -89,6 +89,7 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.12;
+  text-wrap: balance;
 }
 
 .bestiary-app .window-content button:focus-visible,
@@ -99,6 +100,17 @@
   outline: 2px solid var(--suite-accent);
   outline-offset: 2px;
   box-shadow: none;
+}
+
+.bestiary-app
+  .window-content
+  :is(.library-search, .preview-as, .item-tier-control)
+  :is(input, select):focus-visible {
+  outline: 2px solid transparent;
+}
+
+:where(.bestiary-app) .bestiary-search-landmark {
+  display: contents;
 }
 
 /* Author styles below set `display` on many elements; `hidden` must still win. */
@@ -117,16 +129,18 @@
   scrollbar-color: color-mix(in srgb, var(--suite-muted) 50%, transparent) transparent;
   scrollbar-width: thin;
 }
-.bestiary-scrollable::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.bestiary-scrollable::-webkit-scrollbar-track {
-  background: transparent;
-}
-.bestiary-scrollable::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--suite-muted) 45%, transparent);
-  border-radius: 99px;
+@supports not (scrollbar-color: auto) {
+  .bestiary-scrollable::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .bestiary-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .bestiary-scrollable::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--suite-muted) 45%, transparent);
+    border-radius: 99px;
+  }
 }
 :where(.bestiary-app) .sr-only {
   position: absolute;
@@ -565,6 +579,8 @@
 /* Context menu */
 .bestiary-context-menu {
   position: fixed;
+  inset: auto;
+  margin: 0;
   z-index: 9999;
   min-width: 216px;
   padding: 6px;
@@ -573,20 +589,25 @@
   background: var(--suite-raised);
   box-shadow: var(--suite-shadow);
 }
-.bestiary-context-menu ol {
-  list-style: none;
+.bestiary-context-menu .context-items {
+  display: flex;
+  flex-direction: column;
   margin: 0;
   padding: 0;
 }
 :where(.bestiary-app) .context-item {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 11px;
+  border: 0;
   border-radius: var(--suite-radius-sm);
+  background: transparent;
   color: var(--suite-text);
   cursor: pointer;
   font-size: 0.87rem;
+  text-align: left;
 }
 :where(.bestiary-app) .context-item:hover {
   background: var(--suite-hover);

@@ -148,6 +148,7 @@ export async function openShareDialog({ uuid, creatureName, knowledge }) {
     window: { title: localize("BESTIARY.Share.Title"), icon: "fa-solid fa-share-nodes", resizable: true },
     classes: ["bestiary-journal", "bestiary-app", "bestiary-dialog"],
     position: { width: 460 },
+    modal: true,
     content,
     buttons: [
       {

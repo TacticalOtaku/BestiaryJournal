@@ -10,7 +10,7 @@ import {
 import { buildCreatureRows, rowInputs, summarizeRows } from "./creature-rows.js";
 import { ACCENTS, COVER_SIZES, DENSITIES, MOTION_LEVELS, THEMES } from "../core/theme.js";
 import { MIN_RESEARCH_TIER } from "../core/research-model.js";
-import { localize, resolveUuid } from "../foundry/foundry-runtime.js";
+import { confirmDialog, localize, resolveUuid } from "../foundry/foundry-runtime.js";
 import { BestiaryTileEditor } from "./tile-editor.js";
 import { BestiarySectionView } from "./section-view.js";
 import { BestiaryTierSettings } from "./tier-settings.js";
@@ -86,7 +86,10 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   static PARTS = {
-    main: { template: "modules/bestiary-journal/templates/bestiary-main.hbs" },
+    main: {
+      template: "modules/bestiary-journal/templates/bestiary-main.hbs",
+      scrollable: [".library-scroll", ".library-collection-nav"],
+    },
   };
 
   constructor(options = {}) {
@@ -104,7 +107,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const inputs = await rowInputs(visibleSections, { data, knowledge });
     const sections = this._buildSectionCards(visibleSections, inputs);
     const creatures = buildCreatureRows(visibleSections, inputs);
-    const byDate = [...creatures].sort((a, b) => b.addedAt - a.addedAt);
+    const byDate = creatures.toSorted((a, b) => b.addedAt - a.addedAt);
     const favoriteCreatures = byDate.filter((creature) => creature.isFavorite);
     const displayed = {
       overview: creatures,
@@ -319,33 +322,32 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _showSectionMenu(event, sectionId, { isHidden, isLocked }) {
     showContextMenu(event, [
       {
-        name: localize("BESTIARY.EditSection"),
+        label: localize("BESTIARY.EditSection"),
         icon: "fa-pen",
-        callback: () => this._editSectionById(sectionId),
+        onClick: () => this._editSectionById(sectionId),
       },
       {
-        name: localize(isHidden ? "BESTIARY.ShowToPlayers" : "BESTIARY.HideFromPlayers"),
+        label: localize(isHidden ? "BESTIARY.ShowToPlayers" : "BESTIARY.HideFromPlayers"),
         icon: isHidden ? "fa-eye" : "fa-eye-slash",
-        callback: () => runCommand({ type: BESTIARY_COMMANDS.TOGGLE_SECTION_VISIBILITY, sectionId }),
+        onClick: () => runCommand({ type: BESTIARY_COMMANDS.TOGGLE_SECTION_VISIBILITY, sectionId }),
       },
       {
-        name: localize(isLocked ? "BESTIARY.Lock.Unlock" : "BESTIARY.Lock.Lock"),
+        label: localize(isLocked ? "BESTIARY.Lock.Unlock" : "BESTIARY.Lock.Lock"),
         icon: isLocked ? "fa-lock-open" : "fa-lock",
-        callback: () =>
-          runCommand({ type: BESTIARY_COMMANDS.SET_SECTION_LOCK, sectionId, locked: !isLocked }),
+        onClick: () => runCommand({ type: BESTIARY_COMMANDS.SET_SECTION_LOCK, sectionId, locked: !isLocked }),
       },
       { separator: true },
       {
-        name: localize("BESTIARY.Transfer.ExportSection"),
+        label: localize("BESTIARY.Transfer.ExportSection"),
         icon: "fa-file-export",
-        callback: () => exportBestiary({ sectionIds: [sectionId] }),
+        onClick: () => exportBestiary({ sectionIds: [sectionId] }),
       },
       {
-        name: localize("BESTIARY.DeleteSection"),
+        label: localize("BESTIARY.DeleteSection"),
         icon: "fa-trash",
         danger: true,
         disabled: isLocked,
-        callback: () => this._deleteSectionById(sectionId),
+        onClick: () => this._deleteSectionById(sectionId),
       },
     ]);
   }
@@ -406,7 +408,9 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       grid.classList.toggle("is-list", layout === "list");
     }
     for (const button of this.element.querySelectorAll("[data-layout]")) {
-      button.classList.toggle("is-active", button.dataset.layout === layout);
+      const active = button.dataset.layout === layout;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
     }
   }
 
@@ -448,10 +452,14 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!tile) return;
     // The "…" button opens the same menu as a right click.
     const bounds = target.getBoundingClientRect();
-    this._showSectionMenu({ clientX: bounds.left, clientY: bounds.bottom + 4 }, tile.dataset.sectionId, {
-      isHidden: tile.dataset.hidden === "true",
-      isLocked: tile.dataset.locked === "true",
-    });
+    this._showSectionMenu(
+      { target, currentTarget: target, clientX: bounds.left, clientY: bounds.bottom + 4 },
+      tile.dataset.sectionId,
+      {
+        isHidden: tile.dataset.hidden === "true",
+        isLocked: tile.dataset.locked === "true",
+      },
+    );
   }
 
   _editSectionById(sectionId) {
@@ -461,12 +469,10 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   async _deleteSectionById(sectionId) {
-    const confirmed = await foundry.applications.api.DialogV2.confirm({
-      window: { title: localize("BESTIARY.DeleteSection") },
-      yes: { label: localize("BESTIARY.DeleteSection") },
-      no: { label: localize("BESTIARY.Cancel") },
+    const confirmed = await confirmDialog({
+      title: localize("BESTIARY.DeleteSection"),
+      yesLabel: localize("BESTIARY.DeleteSection"),
       content: `<p>${localize("BESTIARY.ConfirmDelete")}</p>`,
-      rejectClose: false,
     });
     if (!confirmed) return;
     await runCommand(

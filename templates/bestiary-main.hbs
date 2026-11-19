@@ -42,10 +42,10 @@
       {{#if isGM}}
         <button type="button" class="library-new-button" data-action="createSection" data-tooltip="{{localize 'BESTIARY.NewCollection'}}"><i class="fa-solid fa-plus"></i><span>{{localize "BESTIARY.NewCollection"}}</span></button>
         <div class="library-footer-tools">
-          <button type="button" data-action="importSnapshot" data-tooltip="{{localize 'BESTIARY.Transfer.Import'}}"><i class="fa-solid fa-file-import"></i></button>
-          <button type="button" data-action="exportAll" data-tooltip="{{localize 'BESTIARY.Transfer.ExportAll'}}"><i class="fa-solid fa-file-export"></i></button>
-          <button type="button" data-action="openTierSettings" data-tooltip="{{localize 'BESTIARY.Tier.WorldTitle'}}"><i class="fa-solid fa-layer-group"></i></button>
-          <button type="button" data-action="openKnowledgeBoard" data-tooltip="{{localize 'BESTIARY.Board.Title'}}"><i class="fa-solid fa-table-cells"></i></button>
+          <button type="button" data-action="importSnapshot" data-tooltip="{{localize 'BESTIARY.Transfer.Import'}}" aria-label="{{localize 'BESTIARY.Transfer.Import'}}"><i class="fa-solid fa-file-import" aria-hidden="true"></i></button>
+          <button type="button" data-action="exportAll" data-tooltip="{{localize 'BESTIARY.Transfer.ExportAll'}}" aria-label="{{localize 'BESTIARY.Transfer.ExportAll'}}"><i class="fa-solid fa-file-export" aria-hidden="true"></i></button>
+          <button type="button" data-action="openTierSettings" data-tooltip="{{localize 'BESTIARY.Tier.WorldTitle'}}" aria-label="{{localize 'BESTIARY.Tier.WorldTitle'}}"><i class="fa-solid fa-layer-group" aria-hidden="true"></i></button>
+          <button type="button" data-action="openKnowledgeBoard" data-tooltip="{{localize 'BESTIARY.Board.Title'}}" aria-label="{{localize 'BESTIARY.Board.Title'}}"><i class="fa-solid fa-table-cells" aria-hidden="true"></i></button>
         </div>
       {{/if}}
     </div>
@@ -77,15 +77,18 @@
       </p>
 
       <div class="library-toolbar-row">
-        <label class="library-search">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="search" class="library-search-input" placeholder="{{localize 'BESTIARY.SearchLibrary'}}" />
-          <button type="button" class="library-search-clear" data-action="clearSearch" aria-label="{{localize 'BESTIARY.ClearSearch'}}"><i class="fa-solid fa-xmark"></i></button>
-        </label>
+        <search class="bestiary-search-landmark">
+          <label class="library-search">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <span class="sr-only">{{localize "BESTIARY.SearchLibrary"}}</span>
+            <input type="search" class="library-search-input" placeholder="{{localize 'BESTIARY.SearchLibrary'}}" />
+            <button type="button" class="library-search-clear" data-action="clearSearch" aria-label="{{localize 'BESTIARY.ClearSearch'}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+          </label>
+        </search>
         {{#unless (bjOr isOverview isNotes)}}
-          <div class="suite-segmented suite-view-switch" aria-label="{{localize 'BESTIARY.ViewMode'}}">
-            <button type="button" class="{{#if isGrid}}is-active{{/if}}" data-action="toggleCreatureLayout" data-layout="grid" aria-label="{{localize 'BESTIARY.ViewCard'}}" data-tooltip="{{localize 'BESTIARY.ViewCard'}}"><i class="fa-solid fa-table-cells-large"></i></button>
-            <button type="button" class="{{#unless isGrid}}is-active{{/unless}}" data-action="toggleCreatureLayout" data-layout="list" aria-label="{{localize 'BESTIARY.ViewList'}}" data-tooltip="{{localize 'BESTIARY.ViewList'}}"><i class="fa-solid fa-list"></i></button>
+          <div class="suite-segmented suite-view-switch" role="group" aria-label="{{localize 'BESTIARY.ViewMode'}}">
+            <button type="button" class="{{#if isGrid}}is-active{{/if}}" data-action="toggleCreatureLayout" data-layout="grid" aria-pressed="{{#if isGrid}}true{{else}}false{{/if}}" aria-label="{{localize 'BESTIARY.ViewCard'}}" data-tooltip="{{localize 'BESTIARY.ViewCard'}}"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i></button>
+            <button type="button" class="{{#unless isGrid}}is-active{{/unless}}" data-action="toggleCreatureLayout" data-layout="list" aria-pressed="{{#unless isGrid}}true{{else}}false{{/unless}}" aria-label="{{localize 'BESTIARY.ViewList'}}" data-tooltip="{{localize 'BESTIARY.ViewList'}}"><i class="fa-solid fa-list" aria-hidden="true"></i></button>
           </div>
         {{/unless}}
       </div>

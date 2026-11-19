@@ -76,6 +76,7 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
 
     return {
       error: false,
+      fieldId: this.id ?? "bestiary-entry-editor",
       name: this._creature?.name ?? this._draft.label ?? this.uuid,
       sectionName: section?.name ?? "",
       families: [
@@ -107,13 +108,16 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
     };
   }
 
+  _onFirstRender(context, options) {
+    super._onFirstRender(context, options);
+    // The outer form survives re-renders; bind field tracking once and preserve draft edits.
+    this.element.addEventListener("change", () => this._captureForm());
+  }
+
   _onRender(context, options) {
     super._onRender(context, options);
     if (context.error) return;
     this._activateFocusPicker();
-    // Every field writes through to the draft, so nothing typed is lost if
-    // the form has to be drawn again.
-    this.element.addEventListener("change", () => this._captureForm());
   }
 
   _captureForm() {
@@ -172,7 +176,9 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
   _onSetImageSource(event, target) {
     this._draft.image.source = target.dataset.source === "token" ? "token" : "portrait";
     for (const button of this.element.querySelectorAll("[data-source]")) {
-      button.classList.toggle("is-active", button.dataset.source === this._draft.image.source);
+      const active = button.dataset.source === this._draft.image.source;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
     }
     this._syncPreview();
   }
@@ -199,7 +205,9 @@ export class BestiaryEntryEditor extends HandlebarsApplicationMixin(ApplicationV
       dot.classList.toggle("is-active", preview.fit === "cover");
     }
     for (const button of this.element.querySelectorAll("[data-fit]")) {
-      button.classList.toggle("is-active", button.dataset.fit === preview.fit);
+      const active = button.dataset.fit === preview.fit;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
     }
   }
 

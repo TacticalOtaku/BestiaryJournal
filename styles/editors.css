@@ -79,8 +79,12 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
 }
-:where(.bestiary-app) .form-group > label {
+:where(.bestiary-app) .form-group > :is(label, legend) {
   color: var(--suite-muted);
   font-size: 0.8rem;
 }
@@ -116,6 +120,7 @@
   color: var(--suite-subtle);
   font-size: 0.76rem;
   line-height: 1.5;
+  text-wrap: pretty;
 }
 /* Editors close on one ruled footer; the action keeps its own width instead of Foundry's full-width flexrow. */
 :where(.bestiary-app) .sheet-footer {
@@ -329,6 +334,7 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   padding-right: 4px;
   border-top: 1px solid var(--suite-border);
 }
@@ -411,6 +417,7 @@
 }
 .tier-settings-body {
   overflow-y: auto;
+  scrollbar-gutter: stable;
   padding-right: 6px;
 }
 .tier-settings-body .tier-group {

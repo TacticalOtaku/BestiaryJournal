@@ -216,19 +216,22 @@ test("item disclosure updates aria-expanded together with visible state", () => 
   const { app } = setup();
   const classes = new Set();
   const attributes = { "aria-expanded": "false" };
-  const item = {
-    dataset: { itemKey: "actions:bite" },
-    classList: { toggle: (name, enabled) => (enabled ? classes.add(name) : classes.delete(name)) },
+  const toggle = {
     setAttribute: (name, value) => {
       attributes[name] = value;
     },
-    querySelector: () => null,
     closest: (selector) => (selector === "[data-item-key]" ? item : null),
   };
-  app._onExpandItem({ target: item }, item);
+  const item = {
+    dataset: { itemKey: "actions:bite" },
+    classList: { toggle: (name, enabled) => (enabled ? classes.add(name) : classes.delete(name)) },
+    querySelector: (selector) => (selector === ".creature-item-toggle" ? toggle : null),
+    closest: (selector) => (selector === "[data-item-key]" ? item : null),
+  };
+  app._onExpandItem({ target: toggle }, toggle);
   assert.equal(classes.has("is-expanded"), true);
   assert.equal(attributes["aria-expanded"], "true");
-  app._onExpandItem({ target: item }, item);
+  app._onExpandItem({ target: toggle }, toggle);
   assert.equal(classes.has("is-expanded"), false);
   assert.equal(attributes["aria-expanded"], "false");
 });

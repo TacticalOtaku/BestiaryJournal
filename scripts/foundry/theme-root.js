@@ -61,5 +61,6 @@ export function registerThemeRoot() {
   };
   Hooks.on("createSetting", followAim);
   Hooks.on("updateSetting", followAim);
+  globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.addEventListener?.("change", restampAll);
   new MutationObserver(restampAll).observe(document.body, { attributes: true, attributeFilter: ["class"] });
 }

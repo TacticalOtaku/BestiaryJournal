@@ -2,7 +2,7 @@ import { BESTIARY_COMMANDS } from "../core/bestiary-domain.js";
 import { planSnapshotImport } from "../core/snapshot-import.js";
 import { getBestiaryData, getBestiaryState } from "./bestiary-store.js";
 import { runCommand } from "./command-feedback.js";
-import { formatCount, localize } from "./foundry-runtime.js";
+import { confirmDialog, formatCount, localize } from "./foundry-runtime.js";
 
 const MODULE_ID = "bestiary-journal";
 const EXPORT_FORMAT = 1;
@@ -131,6 +131,7 @@ export async function importBestiaryFromFile() {
     },
     classes: ["bestiary-journal", "bestiary-app", "bestiary-dialog"],
     position: { width: 520 },
+    modal: true,
     content: `
       <section class="bestiary-import-dialog">
         <p>${game.i18n.format("BESTIARY.Transfer.ImportSummary", counts)}</p>
@@ -156,12 +157,10 @@ export async function importBestiaryFromFile() {
 
   if (!mode || mode === "cancel") return false;
   if (mode === "replace") {
-    const confirmed = await foundry.applications.api.DialogV2.confirm({
-      window: { title: localize("BESTIARY.Transfer.ModeReplace") },
-      yes: { label: localize("BESTIARY.Transfer.ModeReplace") },
-      no: { label: localize("BESTIARY.Cancel") },
+    const confirmed = await confirmDialog({
+      title: localize("BESTIARY.Transfer.ModeReplace"),
+      yesLabel: localize("BESTIARY.Transfer.ModeReplace"),
       content: `<p>${localize("BESTIARY.Transfer.ReplaceWarning")}</p>${describePlan("BESTIARY.Transfer.PlanReplace", replacePlan)}`,
-      rejectClose: false,
     });
     if (!confirmed) return false;
   }

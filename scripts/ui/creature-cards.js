@@ -95,7 +95,7 @@ function formatSpeed(creature) {
 
 /** Known names alphabetically, creatures the viewer cannot name last. */
 export function sortByKnownName(cards) {
-  return cards.sort((a, b) => !a.sortName - !b.sortName || a.sortName.localeCompare(b.sortName));
+  return cards.toSorted((a, b) => !a.sortName - !b.sortName || a.sortName.localeCompare(b.sortName));
 }
 
 /**

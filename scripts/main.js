@@ -482,6 +482,7 @@ Hooks.on("renderJournalDirectory", (app, html) => {
     : game.i18n.localize("BESTIARY.Title");
   const icon = document.createElement("i");
   icon.className = "fa-solid fa-book-skull";
+  icon.setAttribute("inert", "");
   btn.append(icon, document.createTextNode(` ${game.i18n.localize("BESTIARY.Title")}`));
   btn.addEventListener("click", () => game.bestiaryJournal?.toggle());
   headerActions.appendChild(btn);

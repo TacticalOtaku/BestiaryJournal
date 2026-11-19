@@ -27,6 +27,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  text-wrap: balance;
 }
 .collection-lock-flag {
   font-size: 0.8rem;
@@ -97,6 +98,7 @@
 .collection-results-scroll {
   padding: 16px 26px 26px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   min-width: 0;
 }
 .active-filter-chips {

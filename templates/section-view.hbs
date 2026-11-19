@@ -46,12 +46,15 @@
       </div>
 
       <div class="collection-toolbar">
-        <label class="library-search collection-search">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="search" class="collection-search-input" placeholder="{{localize 'BESTIARY.SearchCollection'}}" />
-        </label>
+        <search class="bestiary-search-landmark">
+          <label class="library-search collection-search">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <span class="sr-only">{{localize "BESTIARY.SearchCollection"}}</span>
+            <input type="search" class="collection-search-input" placeholder="{{localize 'BESTIARY.SearchCollection'}}" />
+          </label>
+        </search>
         <button type="button" class="suite-toolbar-button" data-action="toggleFilters">
-          <i class="fa-solid fa-sliders"></i><span class="toolbar-label">{{localize "BESTIARY.Filters"}}</span><span class="filter-count-badge" hidden>0</span>
+          <i class="fa-solid fa-sliders" aria-hidden="true"></i><span class="toolbar-label">{{localize "BESTIARY.Filters"}}</span><span class="filter-count-badge" hidden>0</span>
         </button>
         <label class="collection-sort">
           <span class="sr-only">{{localize "BESTIARY.Sorting"}}</span>
@@ -61,11 +64,11 @@
             <option value="cr-asc">{{localize "BESTIARY.SortCRAsc"}}</option>
             <option value="cr-desc">{{localize "BESTIARY.SortCRDesc"}}</option>
           </select>
-          <i class="fa-solid fa-chevron-down"></i>
+          <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
         </label>
-        <div class="suite-segmented suite-view-switch">
-          <button type="button" class="{{#if isGrid}}is-active{{/if}}" data-action="toggleView" data-view-mode="grid" aria-label="{{localize 'BESTIARY.ViewCard'}}" data-tooltip="{{localize 'BESTIARY.ViewCard'}}"><i class="fa-solid fa-table-cells-large"></i></button>
-          <button type="button" class="{{#unless isGrid}}is-active{{/unless}}" data-action="toggleView" data-view-mode="list" aria-label="{{localize 'BESTIARY.ViewList'}}" data-tooltip="{{localize 'BESTIARY.ViewList'}}"><i class="fa-solid fa-list"></i></button>
+        <div class="suite-segmented suite-view-switch" role="group" aria-label="{{localize 'BESTIARY.ViewMode'}}">
+          <button type="button" class="{{#if isGrid}}is-active{{/if}}" data-action="toggleView" data-view-mode="grid" aria-pressed="{{#if isGrid}}true{{else}}false{{/if}}" aria-label="{{localize 'BESTIARY.ViewCard'}}" data-tooltip="{{localize 'BESTIARY.ViewCard'}}"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i></button>
+          <button type="button" class="{{#unless isGrid}}is-active{{/unless}}" data-action="toggleView" data-view-mode="list" aria-pressed="{{#unless isGrid}}true{{else}}false{{/unless}}" aria-label="{{localize 'BESTIARY.ViewList'}}" data-tooltip="{{localize 'BESTIARY.ViewList'}}"><i class="fa-solid fa-list" aria-hidden="true"></i></button>
         </div>
       </div>
     </header>
@@ -79,20 +82,20 @@
             <section class="family-group {{#if this.collapsed}}is-collapsed{{/if}} {{#if this.hidden}}is-hidden-family{{/if}}"
                      data-family-group="{{this.id}}" data-family-id="{{this.id}}">
               <header class="family-header" data-family-drop="{{this.id}}">
-                <button type="button" class="family-toggle" data-action="toggleFamily">
-                  <i class="fa-solid family-chevron {{#if this.collapsed}}fa-chevron-right{{else}}fa-chevron-down{{/if}}"></i>
-                  {{#if this.image}}<img class="family-cover" src="{{this.image}}" alt="" />{{else}}<span class="family-dot"><i class="fa-solid fa-folder-tree"></i></span>{{/if}}
+                <button type="button" class="family-toggle" data-action="toggleFamily" aria-expanded="{{#if this.collapsed}}false{{else}}true{{/if}}">
+                  <i class="fa-solid family-chevron {{#if this.collapsed}}fa-chevron-right{{else}}fa-chevron-down{{/if}}" aria-hidden="true"></i>
+                  {{#if this.image}}<img class="family-cover" src="{{this.image}}" alt="" />{{else}}<span class="family-dot" aria-hidden="true"><i class="fa-solid fa-folder-tree"></i></span>{{/if}}
                   <span class="family-name">{{this.name}}</span>
                   <em class="family-count">{{this.count}}</em>
-                  {{#if this.hidden}}<i class="fa-solid fa-eye-slash family-flag" data-tooltip="{{localize 'BESTIARY.HiddenFromPlayers'}}"></i>{{/if}}
+                  {{#if this.hidden}}<i class="fa-solid fa-eye-slash family-flag" data-tooltip="{{localize 'BESTIARY.HiddenFromPlayers'}}" aria-label="{{localize 'BESTIARY.HiddenFromPlayers'}}"></i>{{/if}}
                 </button>
                 {{#if ../isGM}}
                   <div class="family-actions">
-                    <button type="button" data-action="openBulkResearch" data-family-id="{{this.id}}" data-tooltip="{{localize 'BESTIARY.BulkResearch.Title'}}" aria-label="{{localize 'BESTIARY.BulkResearch.Title'}}"><i class="fa-solid fa-sliders"></i></button>
-                    <button type="button" data-action="openBulkImport" data-family-id="{{this.id}}" data-tooltip="{{localize 'BESTIARY.Import.Title'}}"><i class="fa-solid fa-layer-group"></i></button>
+                    <button type="button" data-action="openBulkResearch" data-family-id="{{this.id}}" data-tooltip="{{localize 'BESTIARY.BulkResearch.Title'}}" aria-label="{{localize 'BESTIARY.BulkResearch.Title'}}"><i class="fa-solid fa-sliders" aria-hidden="true"></i></button>
+                    <button type="button" data-action="openBulkImport" data-family-id="{{this.id}}" data-tooltip="{{localize 'BESTIARY.Import.Title'}}" aria-label="{{localize 'BESTIARY.Import.Title'}}"><i class="fa-solid fa-layer-group" aria-hidden="true"></i></button>
                     {{#unless this.isUngrouped}}
-                      <button type="button" data-action="editFamily" data-tooltip="{{localize 'BESTIARY.Families.Edit'}}"><i class="fa-solid fa-pen"></i></button>
-                      <button type="button" data-action="deleteFamily" data-tooltip="{{localize 'BESTIARY.Families.Delete'}}"><i class="fa-solid fa-trash"></i></button>
+                      <button type="button" data-action="editFamily" data-tooltip="{{localize 'BESTIARY.Families.Edit'}}" aria-label="{{localize 'BESTIARY.Families.Edit'}}"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+                      <button type="button" data-action="deleteFamily" data-tooltip="{{localize 'BESTIARY.Families.Delete'}}" aria-label="{{localize 'BESTIARY.Families.Delete'}}"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
                     {{/unless}}
                   </div>
                 {{/if}}
@@ -146,8 +149,8 @@
           {{#each groups}}
             <section class="family-group is-list {{#if this.collapsed}}is-collapsed{{/if}}" data-family-group="{{this.id}}" data-family-id="{{this.id}}">
               <header class="family-header is-list" data-family-drop="{{this.id}}">
-                <button type="button" class="family-toggle" data-action="toggleFamily">
-                  <i class="fa-solid family-chevron {{#if this.collapsed}}fa-chevron-right{{else}}fa-chevron-down{{/if}}"></i>
+                <button type="button" class="family-toggle" data-action="toggleFamily" aria-expanded="{{#if this.collapsed}}false{{else}}true{{/if}}">
+                  <i class="fa-solid family-chevron {{#if this.collapsed}}fa-chevron-right{{else}}fa-chevron-down{{/if}}" aria-hidden="true"></i>
                   <span class="family-name">{{this.name}}</span>
                   <em class="family-count">{{this.count}}</em>
                 </button>

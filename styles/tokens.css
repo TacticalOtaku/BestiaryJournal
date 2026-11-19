@@ -118,10 +118,12 @@
   --suite-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --suite-fast: 140ms;
   --suite-normal: 240ms;
+  color-scheme: dark;
   color: var(--suite-text);
 }
 
 .bestiary-app[data-theme="parchment"] {
+  color-scheme: light;
   --suite-bg: #f4eedf;
   --suite-surface: #ece3cf;
   --suite-raised: #faf6ec;
