@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.7
+
+### Added
+
+- **Mid-combat encounter reveal & disposition filter**: Added world setting **Reveal hidden enemies mid-combat** (`encounterRevealOnUnhide`, enabled by default) reacting to `updateCombatant` and `updateToken` when hidden enemies are revealed or flip disposition during an active fight, and excluded friendly NPC tokens (`CONST.TOKEN_DISPOSITIONS.FRIENDLY`) from **Encounter reveal**.
+
+### Changed
+
+- **Server-scoped note storage (`JournalEntry` / `JournalEntryPage`)**: Moved creature notes off the monolithic `bestiarySocial` world setting into hidden, permission-scoped `JournalEntry` documents (`foundry/note-store.js`) — GM-only (`default: NONE`), per-author private (`default: NONE`, `[authorId]: OBSERVER`), and party-shared (`default: OBSERVER`) — so private and unshared GM notes are isolated on the server, single-note edits update only one `JournalEntryPage`, and non-shared note updates no longer emit `refreshBestiary` over the module socket. Existing `bestiarySocial` notes migrate automatically on GM startup (`foundry/migrations.js`).
+- **Modularized entry point**: Extracted settings/keybindings (`foundry/settings.js`), chat creature links (`foundry/chat-links.js`), and Journals sidebar integration (`foundry/journal-directory.js`) out of `scripts/main.js`, preserving the `ui → foundry → integrations → core` dependency hierarchy.
+
+### Validation
+
+- 186 automated unit tests pass, together with ESLint and project/manifest validation.
+
 ## 0.4.6
 
 ### Fixed

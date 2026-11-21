@@ -7,7 +7,7 @@
 **A visual bestiary for Foundry VTT and D&D 5e with per-player knowledge tiers, creature collections, party notes, and GM authority.**
 
 [![Foundry VTT](https://img.shields.io/badge/Foundry_VTT-v14.367-2e8555?style=flat-square)](https://foundryvtt.com/)
-[![Version](https://img.shields.io/badge/version-0.4.6-d97706?style=flat-square)](https://github.com/TacticalOtaku/BestiaryJournal/releases/tag/v0.4.6)
+[![Version](https://img.shields.io/badge/version-0.4.7-d97706?style=flat-square)](https://github.com/TacticalOtaku/BestiaryJournal/releases/tag/v0.4.7)
 [![D&D 5e](https://img.shields.io/badge/D%26D_5e-v5.3.3-b91c1c?style=flat-square)](https://github.com/foundryvtt/dnd5e)
 [![License](https://img.shields.io/badge/License-GPLv3-2563eb?style=flat-square)](LICENSE)
 
@@ -31,11 +31,11 @@
 
 Creature knowledge is tracked per player across four progressive tiers:
 
-| Tier         | Revealed by default                                                                                                                         |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Unknown**  | Silhouette instead of portrait; name, creature type, and statistics hidden                                                                  |
-| **Rumors**   | Portrait, name, creature type, and size                                                                                                     |
-| **Studied**  | AC, HP, CR, speed, ability scores, skills, senses, languages, damage resistances, traits, and actions                                       |
+| Tier         | Revealed by default                                                                                                                           |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Unknown**  | Silhouette instead of portrait; name, creature type, and statistics hidden                                                                    |
+| **Rumors**   | Portrait, name, creature type, and size                                                                                                       |
+| **Studied**  | AC, HP, CR, speed, ability scores, skills, senses, languages, damage resistances, traits, and actions                                         |
 | **Mastered** | Alignment, XP, immunities, vulnerabilities, damage modifiers, condition immunities, bonus/legendary actions, reactions, spells, gear, and bio |
 
 - **Knowledge management** — GMs set tiers for individual players in the creature card, grant knowledge to the whole party in one click, or manage the entire matrix via the **Party Knowledge** board.
@@ -70,25 +70,25 @@ Creature knowledge is tracked per player across four progressive tiers:
 
 ### 🧭 Built for GMs & Players
 
-| For Gamemasters                                                        | For Players                                           |
-| ---------------------------------------------------------------------- | ----------------------------------------------------- |
-| **Party Knowledge** board (`creature × player`)                        | **New** badge and notifications on tier advances      |
-| **Bestiary…** menu in Actor Directory, NPC sheet (`⋮`), and Token HUD | Personal progress bars on collection covers           |
-| Party-wide progress on covers & **Encounter Reveal** on combat start   | Separate **Unidentified** group hiding family spoilers |
-| Clean reference statblocks without NPC roll clutter                    | Share creature cards to chat capped by party knowledge |
+| For Gamemasters                                                       | For Players                                            |
+| --------------------------------------------------------------------- | ------------------------------------------------------ |
+| **Party Knowledge** board (`creature × player`)                       | **New** badge and notifications on tier advances       |
+| **Bestiary…** menu in Actor Directory, NPC sheet (`⋮`), and Token HUD | Personal progress bars on collection covers            |
+| Party-wide progress on covers & **Encounter Reveal** on combat start  | Separate **Unidentified** group hiding family spoilers |
+| Clean reference statblocks without NPC roll clutter                   | Share creature cards to chat capped by party knowledge |
 
 ---
 
 ## ⌨️ Entry Points
 
-| Entry Point          | Where to find it                                                                        |
-| -------------------- | --------------------------------------------------------------------------------------- |
-| **Keybinding**       | `Shift + B` by default (rebindable under _Configure Controls_)                          |
-| **Journals sidebar** | Header button in the **Journals** tab                                                   |
+| Entry Point          | Where to find it                                                                       |
+| -------------------- | -------------------------------------------------------------------------------------- |
+| **Keybinding**       | `Shift + B` by default (rebindable under _Configure Controls_)                         |
+| **Journals sidebar** | Header button in the **Journals** tab                                                  |
 | **Actor actions**    | **Bestiary…** in the Actor Directory context menu, NPC sheet `⋮` menu, and Token HUD   |
-| **Chat cards**       | **Send to Chat** on a creature card or **Post Party Knowledge** from a collection menu  |
-| **Module Settings**  | _Configure Settings → Module Settings → Bestiary Journal_                               |
-| **Macros & modules** | Public API `game.bestiaryJournal` — see [API.md](API.md)                                |
+| **Chat cards**       | **Send to Chat** on a creature card or **Post Party Knowledge** from a collection menu |
+| **Module Settings**  | _Configure Settings → Module Settings → Bestiary Journal_                              |
+| **Macros & modules** | Public API `game.bestiaryJournal` — see [API.md](API.md)                               |
 
 ---
 
@@ -96,15 +96,16 @@ Creature knowledge is tracked per player across four progressive tiers:
 
 ### World Settings (GM-only)
 
-| Setting                     | Default        | Purpose                                                                     |
-| --------------------------- | -------------- | --------------------------------------------------------------------------- |
-| **Allow player sharing**    | On             | Enable or disable knowledge sharing between players                         |
-| **When players can share**  | Out of combat  | `Always`, `Out of combat`, or `After a rest` following the last combat      |
-| **Research by roll**        | On             | Allow raising tiers via skill checks from creature cards                    |
-| **Single attempt per entry**| Off            | Lock retries after a failed research roll until reset by the GM             |
-| **Encounter reveal**        | Off            | Grant **Rumors** to uninformed players when fighting a visible bestiary NPC |
-| **Include custom skills**   | Off            | Include non-standard skills from `CONFIG.DND5E.skills` in research options  |
-| **Research tiers**          | —              | Configure global reveal thresholds per statblock section                    |
+| Setting                      | Default       | Purpose                                                                                                     |
+| ---------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Allow player sharing**     | On            | Enable or disable knowledge sharing between players                                                         |
+| **When players can share**   | Out of combat | `Always`, `Out of combat`, or `After a rest` following the last combat                                      |
+| **Research by roll**         | On            | Allow raising tiers via skill checks from creature cards                                                    |
+| **Single attempt per entry** | Off           | Lock retries after a failed research roll until reset by the GM                                             |
+| **Encounter reveal**         | Off           | Grant **Rumors** to uninformed players when fighting a visible enemy bestiary NPC                           |
+| **Reveal hidden mid-combat** | On            | When **Encounter reveal** is on, also grant **Rumors** immediately if a hidden enemy is revealed mid-combat |
+| **Include custom skills**    | Off           | Include non-standard skills from `CONFIG.DND5E.skills` in research options                                  |
+| **Research tiers**           | —             | Configure global reveal thresholds per statblock section                                                    |
 
 ### Client Settings & Appearance
 
@@ -113,7 +114,7 @@ Creature knowledge is tracked per player across four progressive tiers:
 
 > [!NOTE]
 > **Foundry VTT Architectural Note**
-> World settings in Foundry synchronize to connected clients. While the Bestiary Journal UI strictly hides unrevealed tiers and notes, a player inspecting raw world settings (`bestiaryKnowledge` / `bestiarySocial`) or world actors in the browser console could technically read underlying data. Avoid storing critical spoilers for console-inspecting players inside bestiary notes.
+> Private notes and unshared GM notes are stored in hidden, permission-scoped `JournalEntry` documents enforced by Foundry's server (`NONE` default ownership / per-author `OBSERVER`), so players cannot read other players' private notes or hidden GM notes via the console. However, world settings (`bestiaryData`, `bestiaryKnowledge`), `Party`-shared notes, and world actors synchronize to connected clients, so avoid storing critical spoilers for console-inspecting players in world actor sheets or `Party`-channel notes.
 
 ---
 
@@ -167,13 +168,13 @@ npm run package  # Build release archive into dist/bestiary-journal-v<version>.z
 npm run release  # Run check + package
 ```
 
-| Document                                     | Purpose                                                               |
-| -------------------------------------------- | --------------------------------------------------------------------- |
-| [API.md](API.md)                             | Public API `game.bestiaryJournal` and `bestiaryJournalRefresh` hook   |
-| [CHANGELOG.md](CHANGELOG.md)                 | Detailed version history                                              |
-| [docs/architecture.md](docs/architecture.md) | Layers (`core`, `integrations`, `foundry`, `ui`), stores, and flow    |
-| [docs/live-check.md](docs/live-check.md)     | Manual Foundry QA checklist and `tools/live-check.js`                 |
-| [GLOSSARY.md](GLOSSARY.md)                   | Project domain glossary                                               |
+| Document                                     | Purpose                                                             |
+| -------------------------------------------- | ------------------------------------------------------------------- |
+| [API.md](API.md)                             | Public API `game.bestiaryJournal` and `bestiaryJournalRefresh` hook |
+| [CHANGELOG.md](CHANGELOG.md)                 | Detailed version history                                            |
+| [docs/architecture.md](docs/architecture.md) | Layers (`core`, `integrations`, `foundry`, `ui`), stores, and flow  |
+| [docs/live-check.md](docs/live-check.md)     | Manual Foundry QA checklist and `tools/live-check.js`               |
+| [GLOSSARY.md](GLOSSARY.md)                   | Project domain glossary                                             |
 
 Pull Requests are disabled on this repository; bug reports and feature suggestions are welcome via [GitHub Issues](https://github.com/TacticalOtaku/BestiaryJournal/issues) (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
