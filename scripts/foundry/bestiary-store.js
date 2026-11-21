@@ -12,6 +12,7 @@ import {
 import { prepareResearchCommand } from "./research-authority.js";
 import { allowedResearchSkills } from "./research-skills.js";
 import { sharingFacts } from "./sharing-window.js";
+import { hasJournalNoteStore, readJournalSocial, syncJournalSocialChanges } from "./note-store.js";
 import { log } from "../core/logger.js";
 
 const MODULE_ID = "bestiary-journal";
@@ -54,6 +55,7 @@ export function getBestiaryKnowledge() {
 }
 
 export function getBestiarySocial() {
+  if (hasJournalNoteStore()) return readJournalSocial();
   return normalizeSocial(game.settings.get(MODULE_ID, SETTING_BY_STORE.social));
 }
 
@@ -240,8 +242,13 @@ async function persistCommand(command, requester) {
   });
   if (!result.changedAny) return { changed: false };
 
+  const useJournalNotes = hasJournalNoteStore();
   for (const key of STORE_KEYS) {
     if (!result.changed[key]) continue;
+    if (key === "social" && useJournalNotes) {
+      await syncJournalSocialChanges(current.social, result.state.social);
+      continue;
+    }
     await game.settings.set(MODULE_ID, SETTING_BY_STORE[key], result.state[key]);
   }
   const payload = {
@@ -250,7 +257,11 @@ async function persistCommand(command, requester) {
     uuids: affectedUuids(command, current, result.state),
     revision: result.state.data.revision,
   };
-  game.socket?.emit(SOCKET_NAME, payload);
+  // JournalEntryPage updates already synchronize to authorized clients via Foundry's
+  // permission-filtered document hooks, so social-only changes never need a socket broadcast.
+  if (!useJournalNotes || result.changed.data || result.changed.knowledge) {
+    game.socket?.emit(SOCKET_NAME, payload);
+  }
   Hooks.callAll("bestiaryJournalRefresh", payload);
   return { changed: true, stores: result.changed };
 }

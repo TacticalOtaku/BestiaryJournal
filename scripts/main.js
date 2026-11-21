@@ -1,296 +1,42 @@
 import { BestiaryCreatureView } from "./ui/creature-view.js";
 import { BestiarySectionView } from "./ui/section-view.js";
 import { BestiaryTierSettings } from "./ui/tier-settings.js";
-import {
-  canUserViewBestiaryCreature,
-  getBestiaryData,
-  handleBestiaryStoreSocket,
-  isAuthorityGm,
-} from "./foundry/bestiary-store.js";
+import { handleBestiaryStoreSocket, isAuthorityGm } from "./foundry/bestiary-store.js";
 import { runMigrations } from "./foundry/migrations.js";
 import { registerSharingClock } from "./foundry/sharing-window.js";
 import { registerEncounterReveal } from "./foundry/encounter.js";
-import { SHARING_WINDOWS } from "./core/bestiary-domain.js";
 import { migrateClientPreferencesToUser } from "./foundry/client-preferences.js";
 import { splitDisplayName } from "./core/display-names.js";
 import { SILHOUETTE_PLACEHOLDER } from "./core/image-framing.js";
 import { formatCount } from "./foundry/foundry-runtime.js";
-import { registerThemeRoot, restampAll } from "./foundry/theme-root.js";
+import { registerThemeRoot } from "./foundry/theme-root.js";
 import { announceKnowledge, startKnowledgeWatch } from "./foundry/knowledge-watch.js";
+import { registerBestiarySettings } from "./foundry/settings.js";
+import { refreshBestiaryChatLinks, registerBestiaryChatLinks } from "./foundry/chat-links.js";
+import { registerJournalDirectoryIntegration } from "./foundry/journal-directory.js";
+import { registerNoteStoreHooks } from "./foundry/note-store.js";
 import { registerActorIntegration } from "./ui/actor-integration.js";
 import { createApi } from "./ui/api.js";
 import { BestiaryKnowledgeBoard } from "./ui/knowledge-board.js";
-import { ACCENTS, COVER_SIZES, DENSITIES, MOTION_LEVELS, THEMES } from "./core/theme.js";
-import { log, setDebugLogging } from "./core/logger.js";
+import { log } from "./core/logger.js";
 
 const MODULE_ID = "bestiary-journal";
 const { ApplicationV2 } = foundry.applications.api;
-const bestiaryChatLinks = new Set();
 
 Hooks.once("init", () => {
-  registerWorldStores();
-  registerWorldOptions();
-  registerPreferences();
+  registerBestiarySettings({
+    onTierConfigChange: () => scheduleBestiaryRefresh({ changed: { data: true }, uuids: null }),
+    onRefreshCards: () => scheduleBestiaryRefresh({ changed: { settings: true } }),
+  });
   registerMenus();
-  registerKeybindings();
   registerHandlebarsHelpers();
   registerThemeRoot();
   registerActorIntegration();
+  registerBestiaryChatLinks();
+  registerJournalDirectoryIntegration();
+  registerImageFallback();
   log.debug("Initialized");
 });
-
-function registerWorldStores() {
-  game.settings.register(MODULE_ID, "bestiaryData", {
-    name: "Bestiary Data",
-    scope: "world",
-    config: false,
-    type: Object,
-    default: { revision: 0, sections: [] },
-  });
-  game.settings.register(MODULE_ID, "bestiaryKnowledge", {
-    name: "Bestiary Knowledge",
-    scope: "world",
-    config: false,
-    type: Object,
-    default: { revision: 0, users: {} },
-  });
-  game.settings.register(MODULE_ID, "bestiarySocial", {
-    name: "Bestiary Comments",
-    scope: "world",
-    config: false,
-    type: Object,
-    default: { revision: 0, comments: [] },
-  });
-  game.settings.register(MODULE_ID, "tierBlockConfig", {
-    name: "Bestiary Tier Block Config",
-    scope: "world",
-    config: false,
-    type: Object,
-    default: {},
-    // Fires on every client, so open cards follow a new world ladder at once.
-    onChange: () => scheduleBestiaryRefresh({ changed: { data: true }, uuids: null }),
-  });
-  game.settings.register(MODULE_ID, "dataVersion", {
-    name: "Bestiary Data Version",
-    scope: "world",
-    config: false,
-    type: Number,
-    default: 0,
-  });
-  game.settings.register(MODULE_ID, "migrationBackup", {
-    name: "Bestiary Migration Recovery",
-    scope: "world",
-    config: false,
-    type: Object,
-    default: {},
-  });
-
-  // Legacy stores, kept so the one-time migration can read them.
-  game.settings.register(MODULE_ID, "creatureDetailLevels", {
-    name: "Legacy Detail Levels",
-    scope: "world",
-    config: false,
-    type: Object,
-    default: {},
-  });
-  game.settings.register(MODULE_ID, "creatureCustomDisplay", {
-    name: "Legacy Custom Display",
-    scope: "world",
-    config: false,
-    type: Object,
-    default: {},
-  });
-  game.settings.register(MODULE_ID, "gmOnlyDetailToggle", {
-    name: "Legacy GM Only Detail Toggle",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: false,
-  });
-}
-
-function registerWorldOptions() {
-  // Both options decide which buttons a creature card offers, so open cards
-  // redraw as soon as the GM flips them. The authority enforces them anyway.
-  const refreshCards = () => scheduleBestiaryRefresh({ changed: { settings: true } });
-
-  game.settings.register(MODULE_ID, "allowPlayerSharing", {
-    name: "BESTIARY.Settings.AllowSharing",
-    hint: "BESTIARY.Settings.AllowSharingHint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: true,
-    onChange: refreshCards,
-  });
-  game.settings.register(MODULE_ID, "sharingWindow", {
-    name: "BESTIARY.Settings.SharingWindow",
-    hint: "BESTIARY.Settings.SharingWindowHint",
-    scope: "world",
-    config: true,
-    type: String,
-    default: "outOfCombat",
-    choices: Object.fromEntries(
-      SHARING_WINDOWS.map((mode) => [mode, `BESTIARY.Settings.SharingWindow_${mode}`]),
-    ),
-  });
-  // When each player last rested and fought; written by the authoritative GM only.
-  game.settings.register(MODULE_ID, "sharingClock", {
-    scope: "world",
-    config: false,
-    type: Object,
-    default: { revision: 0, users: {} },
-  });
-  game.settings.register(MODULE_ID, "researchRollEnabled", {
-    name: "BESTIARY.Settings.ResearchRoll",
-    hint: "BESTIARY.Settings.ResearchRollHint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: true,
-    onChange: refreshCards,
-  });
-  game.settings.register(MODULE_ID, "encounterReveal", {
-    name: "BESTIARY.Settings.EncounterReveal",
-    hint: "BESTIARY.Settings.EncounterRevealHint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false,
-  });
-  // Only read by the authority when the next roll is judged; nothing to redraw.
-  game.settings.register(MODULE_ID, "researchSingleAttempt", {
-    name: "BESTIARY.Settings.SingleAttempt",
-    hint: "BESTIARY.Settings.SingleAttemptHint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false,
-  });
-  game.settings.register(MODULE_ID, "includeCustomSkills", {
-    name: "BESTIARY.Settings.IncludeCustomSkills",
-    hint: "BESTIARY.Settings.IncludeCustomSkillsHint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false,
-    onChange: refreshCards,
-  });
-}
-
-/**
- * Favorites and collapsed families follow the user across devices ("user"
- * scope). The rest is about this screen and stays per browser ("client").
- */
-function registerPreferences() {
-  game.settings.register(MODULE_ID, "favoriteCreatures", {
-    name: "Favorite Creatures",
-    scope: "user",
-    config: false,
-    type: Array,
-    default: [],
-  });
-  game.settings.register(MODULE_ID, "libraryViewMode", {
-    name: "Library View Mode",
-    scope: "client",
-    config: false,
-    type: String,
-    default: "grid",
-  });
-  game.settings.register(MODULE_ID, "previewAsUser", {
-    name: "Preview As User",
-    scope: "client",
-    config: false,
-    type: String,
-    default: "",
-  });
-  // Tier at which the player last opened each creature ({uuid: tier}); null until their first run seeds it.
-  game.settings.register(MODULE_ID, "seenTiers", {
-    name: "Seen Creatures",
-    scope: "user",
-    config: false,
-    type: Object,
-    default: null,
-  });
-  game.settings.register(MODULE_ID, "collapsedFamilies", {
-    name: "Collapsed Families",
-    scope: "user",
-    config: false,
-    type: Array,
-    default: [],
-  });
-  game.settings.register(MODULE_ID, "commentChannel", {
-    name: "Preferred Comment Channel",
-    scope: "client",
-    config: false,
-    type: String,
-    default: "private",
-  });
-  // The window look follows the user (AIM keeps the same split): theme, accent and density per user, motion per
-  // device. Like AIM, they are set in the window itself (the library's look drawer), not in Foundry's settings.
-  const lookChoices = (values, prefix) =>
-    Object.fromEntries(values.map((value) => [value, `BESTIARY.Settings.${prefix}_${value}`]));
-  game.settings.register(MODULE_ID, "uiTheme", {
-    name: "BESTIARY.Settings.Theme",
-    hint: "BESTIARY.Settings.ThemeHint",
-    scope: "user",
-    config: false,
-    type: String,
-    default: "auto",
-    choices: lookChoices(THEMES, "Theme"),
-    onChange: restampAll,
-  });
-  game.settings.register(MODULE_ID, "uiAccent", {
-    name: "BESTIARY.Settings.Accent",
-    hint: "BESTIARY.Settings.AccentHint",
-    scope: "user",
-    config: false,
-    type: String,
-    default: "brass",
-    choices: lookChoices(ACCENTS, "Accent"),
-    onChange: restampAll,
-  });
-  game.settings.register(MODULE_ID, "uiMotion", {
-    name: "BESTIARY.Settings.Motion",
-    hint: "BESTIARY.Settings.MotionHint",
-    scope: "client",
-    config: false,
-    type: String,
-    default: "full",
-    choices: lookChoices(MOTION_LEVELS, "Motion"),
-    onChange: restampAll,
-  });
-  game.settings.register(MODULE_ID, "uiDensity", {
-    name: "BESTIARY.Settings.Density",
-    hint: "BESTIARY.Settings.DensityHint",
-    scope: "user",
-    config: false,
-    type: String,
-    default: "comfortable",
-    choices: lookChoices(DENSITIES, "Density"),
-    onChange: restampAll,
-  });
-  game.settings.register(MODULE_ID, "uiCoverSize", {
-    name: "BESTIARY.Settings.CoverSize",
-    hint: "BESTIARY.Settings.CoverSizeHint",
-    scope: "client",
-    config: false,
-    type: String,
-    default: "medium",
-    choices: lookChoices(COVER_SIZES, "CoverSize"),
-    onChange: restampAll,
-  });
-  game.settings.register(MODULE_ID, "debug", {
-    name: "BESTIARY.Settings.Debug",
-    hint: "BESTIARY.Settings.DebugHint",
-    scope: "client",
-    config: true,
-    type: Boolean,
-    default: false,
-    onChange: setDebugLogging,
-  });
-  setDebugLogging(game.settings.get(MODULE_ID, "debug"));
-}
 
 function registerMenus() {
   game.settings.registerMenu(MODULE_ID, "openBestiaryMenu", {
@@ -308,22 +54,6 @@ function registerMenus() {
     icon: "fa-solid fa-layer-group",
     type: BestiaryTierSettings,
     restricted: true,
-  });
-}
-
-function registerKeybindings() {
-  game.keybindings.register(MODULE_ID, "openBestiary", {
-    name: "BESTIARY.Keybinding.Open",
-    hint: "BESTIARY.Keybinding.OpenHint",
-    editable: [{ key: "KeyB", modifiers: ["Shift"] }],
-    onDown: () => {
-      if (!game.bestiaryJournal) return false;
-      game.bestiaryJournal.toggle();
-      return true;
-    },
-    onUp: () => {},
-    restricted: false,
-    precedence: CONST.KEYBINDING_PRECEDENCE.NORMAL,
   });
 }
 
@@ -354,6 +84,7 @@ Hooks.once("ready", async () => {
     if (data.action === "refreshBestiary") Hooks.callAll("bestiaryJournalRefresh", data);
   });
   Hooks.on("bestiaryJournalRefresh", (payload) => scheduleBestiaryRefresh(payload));
+  registerNoteStoreHooks();
   registerSharingClock(isAuthorityGm);
   registerEncounterReveal(isAuthorityGm);
 
@@ -406,87 +137,20 @@ function refreshBestiaryViews(payload) {
   refreshBestiaryChatLinks();
 }
 
-Hooks.on("renderChatMessageHTML", (message, html) => {
-  const flaggedUuid = message.getFlag(MODULE_ID, "creatureUuid");
-  for (const link of html.querySelectorAll("a.bestiary-creature-link")) {
-    const uuid = link.dataset.bestiaryCreatureUuid || flaggedUuid;
-    if (!uuid) continue;
-    link.dataset.bestiaryCreatureUuid = uuid;
-    bestiaryChatLinks.add(link);
-    refreshBestiaryChatLink(link);
-    link.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      game.bestiaryJournal?.openCreature(uuid);
-    });
-  }
-});
-
-function refreshBestiaryChatLink(link, data) {
-  const canView = canUserViewBestiaryCreature(link.dataset.bestiaryCreatureUuid, game.user, data);
-  link.classList.toggle("is-disabled", !canView);
-  if (canView) {
-    link.removeAttribute("aria-disabled");
-    link.removeAttribute("title");
-    delete link.dataset.tooltip;
-  } else {
-    const unavailable = game.i18n.localize("BESTIARY.CreatureUnavailable");
-    link.setAttribute("aria-disabled", "true");
-    link.title = unavailable;
-    link.dataset.tooltip = unavailable;
-  }
-}
-
-function refreshBestiaryChatLinks() {
-  const data = getBestiaryData();
-  for (const link of bestiaryChatLinks) {
-    if (!link.isConnected) {
-      bestiaryChatLinks.delete(link);
-      continue;
-    }
-    refreshBestiaryChatLink(link, data);
-  }
-}
-
 /** Art that fails to load (a broken compendium path) shows the silhouette, not the browser's broken-image glyph. */
-document.addEventListener(
-  "error",
-  (event) => {
-    const img = event.target;
-    if (!(img instanceof HTMLImageElement) || !img.closest(".bestiary-app") || img.dataset.bestiaryFallback)
-      return;
-    img.dataset.bestiaryFallback = "true";
-    img.src = SILHOUETTE_PLACEHOLDER;
-  },
-  true,
-);
-
-/**
- * Sidebar tabs are ApplicationV2 since v13, so the hook is named after the
- * directory class and `html` is a plain element.
- */
-Hooks.on("renderJournalDirectory", (app, html) => {
-  const root = html instanceof HTMLElement ? html : html?.[0];
-  if (!root || root.querySelector(".bestiary-sidebar-btn")) return;
-
-  const headerActions =
-    root.querySelector(".header-actions") ?? root.querySelector(".directory-header .action-buttons");
-  if (!headerActions) return;
-
-  const keyHint = formatKeybinding(game.keybindings.get(MODULE_ID, "openBestiary"));
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.classList.add("bestiary-sidebar-btn");
-  btn.dataset.tooltip = keyHint
-    ? `${game.i18n.localize("BESTIARY.Title")} (${keyHint})`
-    : game.i18n.localize("BESTIARY.Title");
-  const icon = document.createElement("i");
-  icon.className = "fa-solid fa-book-skull";
-  icon.setAttribute("inert", "");
-  btn.append(icon, document.createTextNode(` ${game.i18n.localize("BESTIARY.Title")}`));
-  btn.addEventListener("click", () => game.bestiaryJournal?.toggle());
-  headerActions.appendChild(btn);
-});
+function registerImageFallback() {
+  document.addEventListener(
+    "error",
+    (event) => {
+      const img = event.target;
+      if (!(img instanceof HTMLImageElement) || !img.closest(".bestiary-app") || img.dataset.bestiaryFallback)
+        return;
+      img.dataset.bestiaryFallback = "true";
+      img.src = SILHOUETTE_PLACEHOLDER;
+    },
+    true,
+  );
+}
 
 /** Opens the bestiary from the module settings menu instead of a form. */
 class BestiarySettingsLauncher extends ApplicationV2 {
@@ -506,20 +170,4 @@ class BestiarySettingsLauncher extends ApplicationV2 {
     game.bestiaryJournal?.open();
     return this;
   }
-}
-
-function formatKeybinding(bindings) {
-  if (!bindings?.length) return "";
-  const binding = bindings[0];
-  const parts = [];
-  for (const mod of binding.modifiers ?? []) {
-    if (mod === "Control") parts.push("Ctrl");
-    else parts.push(mod);
-  }
-  let keyLabel = binding.key ?? "";
-  if (keyLabel.startsWith("Key")) keyLabel = keyLabel.slice(3);
-  else if (keyLabel.startsWith("Digit")) keyLabel = keyLabel.slice(5);
-  else if (keyLabel.startsWith("Numpad")) keyLabel = `Num${keyLabel.slice(6)}`;
-  parts.push(keyLabel);
-  return parts.join(" + ");
 }

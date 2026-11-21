@@ -1,6 +1,7 @@
 import { NEVER_TIER } from "../core/research-model.js";
 import { normalizeBestiaryData, normalizeKnowledge } from "../core/bestiary-domain.js";
 import { getPlayerUsers } from "./foundry-runtime.js";
+import { migrateSocialToJournalStore } from "./note-store.js";
 import { log } from "../core/logger.js";
 
 const MODULE_ID = "bestiary-journal";
@@ -40,6 +41,12 @@ const LEGACY_LEVEL_TIERS = { minimal: 1, standard: 2, expanded: 3, custom: 2 };
  * originals; if storage also refuses rollback, retain the copy for recovery.
  */
 export async function runMigrations() {
+  const migratedLegacy = await runLegacySchemaMigration();
+  const migratedNotes = await migrateSocialToJournalStore();
+  return migratedLegacy || migratedNotes;
+}
+
+async function runLegacySchemaMigration() {
   const current = Number(game.settings.get(MODULE_ID, "dataVersion") ?? 0);
   if (current >= DATA_VERSION) return false;
 

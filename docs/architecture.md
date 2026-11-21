@@ -6,7 +6,7 @@ A map of the code for anyone extending it. Supported platform: Foundry VTT 14.36
 
 ```text
 scripts/
-  main.js            composition root: settings, menus, keybindings, Handlebars helpers, hooks
+  main.js            composition root: menus, Handlebars helpers, refresh coalescing, lifecycle hooks
   core/              pure logic — no game/ui/Hooks access, unit tested in plain Node
     research-model.js    knowledge tiers: blocks, thresholds, visibility of blocks and single items
     knowledge-lens.js    what one viewer (GM, player, party) knows of one creature; every page asks it
@@ -26,7 +26,11 @@ scripts/
   foundry/           everything that touches the Foundry runtime
     foundry-runtime.js   thin adapter over Foundry/dnd5e globals (localize, fromUuid, enrichHTML, users)
     theme-root.js        stamps data-theme, data-accent and data-motion on every bestiary window
+    settings.js          world/user/client settings and keybindings registration
+    chat-links.js        clickable creature links in chat messages
+    journal-directory.js Journals sidebar button and hiding internal note-store JournalEntries
     bestiary-store.js    world state, command relay to the authoritative GM over the module socket
+    note-store.js        scoped JournalEntry / JournalEntryPage persistence for notes (GM, party, private)
     research-authority.js  GM-side check of a research roll
     research.js, research-skills.js, migrations.js, transfer.js, creature-cache.js,
     creature-display.js, client-preferences.js, command-feedback.js,
@@ -45,14 +49,18 @@ an argument.
 
 ## World state and commands
 
-World state lives in three world settings so a note does not rewrite the whole structure: `bestiaryData`
-(structure), `bestiaryKnowledge` (player knowledge) and `bestiarySocial` (notes). Each carries a
-`revision`; `dataVersion` drives `foundry/migrations.js`. Before migration writes, `migrationBackup` holds the raw
-structure, knowledge and version. A failed write restores those originals, including a write whose acknowledgement
-failed after saving. If storage also refuses rollback, the recovery copy is retained and a retry refuses to
-overwrite it with partial data. A GM must inspect that copy and any subsequent world changes before recovery:
-restore structure and knowledge first, then the original version, and clear the backup only after verifying them.
-Successful migration clears the recovery copy; a cleanup failure does not undo the completed migration.
+World state splits structure and knowledge across `bestiaryData` (structure) and `bestiaryKnowledge` (player
+knowledge), while notes live in hidden, permission-scoped `JournalEntry` / `JournalEntryPage` documents
+(`foundry/note-store.js`): one GM-only store (`default: NONE`), one party store (`default: OBSERVER`) for shared
+notes, and one private store per author (`default: NONE`, `[authorId]: OBSERVER`). On startup, `foundry/migrations.js`
+migrates any legacy `bestiarySocial` comments into these `JournalEntry` stores and clears the setting. Each world
+store carries a `revision`; `dataVersion` drives legacy `0.1.x` schema migration (`foundry/migrations.js`). Before
+migration writes, `migrationBackup` holds the raw structure, knowledge and version. A failed write restores those
+originals, including a write whose acknowledgement failed after saving. If storage also refuses rollback, the
+recovery copy is retained and a retry refuses to overwrite it with partial data. A GM must inspect that copy and any
+subsequent world changes before recovery: restore structure and knowledge first, then the original version, and clear
+the backup only after verifying them. Successful migration clears the recovery copy; a cleanup failure does not undo
+the completed migration.
 
 Changes are serialised through the authoritative active GM (`isAuthorityGm`). Player commands travel as a
 server-persisted user flag that the GM clears after handling, so replaying a request changes nothing. The socket
