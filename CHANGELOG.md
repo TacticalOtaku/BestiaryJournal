@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.5.0
+
+### Added
+
+- **Custom Research Tiers**: Worlds are no longer limited to the 4 default tiers (`Unknown`, `Rumors`, `Studied`, `Mastered`). GMs can now add up to **10 total tiers**, insert new tiers anywhere in the ladder (between existing tiers or above `Mastered`), edit names and player hints, choose from curated FontAwesome icons and 10 contrast-checked theme colors, reorder tiers with arrow controls, or delete tiers — with automatic remapping of all existing player knowledge, creature thresholds, and global block defaults.
+- **Configurable Encounter Reveal Target**: Added the **Encounter reveal tier** (`encounterRevealTier`) setting (also editable directly inside **Research tiers**) so GMs can pick any custom or built-in tier granted when **Meeting in combat** triggers.
+- **Interactive Onboarding Guide & Contextual Hints**:
+  - Added the role-aware **Guide & Features** window (`BestiaryGuideApp`, opened automatically once per user on first Bestiary launch and anytime via `?`, the sidebar button, Module Settings, or `game.bestiaryJournal.openGuide()`), showing tailored Quick Start steps for GMs and players, a live preview of the world's configured tier ladder, note privacy rules, and keyboard/drag shortcuts.
+  - Added a dismissible rotating **Quick Tip** banner on the Library Overview, an inline hint under **Notes** showing active channel privacy (`Private`, `Party`, `GM`), contextual hints in empty states/preview/research panels, richer tool tooltips, and the per-user **Show guide & contextual hints** (`showOnboardingHints`) toggle.
+
+### Fixed & Changed
+
+- **Unified Tier Ladder Styling**: In **GM view**, all steps in `.tier-ladder` now unlock equally without highlighting the highest tier as `isCurrent`, and active player steps highlight via primary theme text ink (`--suite-text`), bold weight, and a tier-colored icon instead of coloring the label text.
+- **Safe Legacy Upgrade & Snapshot Portability**: Moved internal `"GM only"` constant `NEVER_TIER` from `4` to `100` (`tierSchemaVersion` migrates legacy `4` values automatically once per world), and bumped snapshot export format to `2` while keeping format `1` imports compatible.
+
+### Validation
+
+- 199 automated unit tests pass, together with ESLint, project/manifest validation, and Night/Parchment contrast checks.
+
 ## 0.4.7
 
 ### Added

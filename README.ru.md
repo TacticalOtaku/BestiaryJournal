@@ -7,7 +7,7 @@
 **Визуальный бестиарий для Foundry VTT и D&D 5e с персональными ступенями знания, коллекциями существ, заметками и контролем мастера.**
 
 [![Foundry VTT](https://img.shields.io/badge/Foundry_VTT-v14.367-2e8555?style=flat-square)](https://foundryvtt.com/)
-[![Version](https://img.shields.io/badge/version-0.4.7-d97706?style=flat-square)](https://github.com/TacticalOtaku/BestiaryJournal/releases/tag/v0.4.7)
+[![Version](https://img.shields.io/badge/version-0.5.0-d97706?style=flat-square)](https://github.com/TacticalOtaku/BestiaryJournal/releases/tag/v0.5.0)
 [![D&D 5e](https://img.shields.io/badge/D%26D_5e-v5.3.3-b91c1c?style=flat-square)](https://github.com/foundryvtt/dnd5e)
 [![License](https://img.shields.io/badge/License-GPLv3-2563eb?style=flat-square)](LICENSE)
 
