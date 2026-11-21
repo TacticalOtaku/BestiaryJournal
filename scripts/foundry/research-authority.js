@@ -11,7 +11,7 @@ import { BestiaryCommandError, normalizeBestiaryData, normalizeKnowledge } from 
 import { judgeResearchRoll } from "../core/research-judge.js";
 import { PARTY_VIEWER } from "../core/knowledge-lens.js";
 import { readCreatureTraits, readResearchRoll, skillLabel } from "../integrations/dnd5e.js";
-import { knowledgeLensFor } from "./creature-display.js";
+import { getWorldMaxResearchTier, knowledgeLensFor } from "./creature-display.js";
 import { localize } from "./foundry-runtime.js";
 import { allowedResearchSkills } from "./research-skills.js";
 
@@ -28,7 +28,8 @@ export async function prepareResearchCommand(command, requester) {
   const research = message?.getFlag(MODULE_ID, "research");
   const read = readResearchRoll(message);
   const actor = game.actors?.get(read?.actorId ?? "");
-  const data = normalizeBestiaryData(game.settings.get(MODULE_ID, "bestiaryData"));
+  const maxTier = getWorldMaxResearchTier();
+  const data = normalizeBestiaryData(game.settings.get(MODULE_ID, "bestiaryData"), maxTier);
   const creature = await readCreatureDocument(uuid);
 
   const { command: recorded, config } = judgeResearchRoll({
@@ -41,12 +42,13 @@ export async function prepareResearchCommand(command, requester) {
       ownedByRequester: !!actor?.testUserPermission?.(requester, "OWNER"),
     },
     data,
-    knowledge: normalizeKnowledge(game.settings.get(MODULE_ID, "bestiaryKnowledge")),
+    knowledge: normalizeKnowledge(game.settings.get(MODULE_ID, "bestiaryKnowledge"), maxTier),
     creature,
     settings: {
       enabled: game.settings.get(MODULE_ID, "researchRollEnabled") !== false,
       singleAttempt: game.settings.get(MODULE_ID, "researchSingleAttempt") === true,
       allowedSkills: allowedResearchSkills(),
+      maxTier,
     },
     now: Date.now(),
   });
@@ -117,7 +119,10 @@ async function postOutcome({
   else if (message.whisper?.length) whisper = [...new Set([...message.whisper, requester.id, ...gmIds])];
 
   // Read after persistence, so newly earned knowledge counts for its recipients.
-  const knowledge = normalizeKnowledge(game.settings.get(MODULE_ID, "bestiaryKnowledge"));
+  const knowledge = normalizeKnowledge(
+    game.settings.get(MODULE_ID, "bestiaryKnowledge"),
+    getWorldMaxResearchTier(),
+  );
   const viewers = whisper.length
     ? whisper.map((id) => game.users.get(id) ?? { id, isGM: false })
     : [PARTY_VIEWER];

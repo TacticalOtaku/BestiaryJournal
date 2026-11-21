@@ -129,12 +129,13 @@
 .tier-ladder {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 6px 4px;
   margin: 0;
   padding: 0;
 }
 .tier-ladder li {
+  --step-color: var(--tier-color, var(--tier-unknown));
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -156,18 +157,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.tier-ladder li:nth-child(1) {
-  --step-color: var(--tier-unknown);
-}
-.tier-ladder li:nth-child(2) {
-  --step-color: var(--tier-rumors);
-}
-.tier-ladder li:nth-child(3) {
-  --step-color: var(--tier-studied);
-}
-.tier-ladder li:nth-child(4) {
-  --step-color: var(--tier-mastered);
-}
 .tier-ladder li.is-reached {
   color: var(--suite-muted);
 }
@@ -175,8 +164,11 @@
   background: var(--step-color);
 }
 .tier-ladder li.is-current {
-  color: var(--step-color);
+  color: var(--suite-text);
   font-weight: 700;
+}
+.tier-ladder li.is-current > span > i {
+  color: var(--step-color);
 }
 
 .creature-key-stats {
@@ -769,6 +761,26 @@
   margin: 0 0 10px;
   color: var(--suite-subtle);
   font-size: 0.76rem;
+}
+.rail-tip,
+.rail-channel-hint {
+  margin: 8px 0 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--suite-border);
+  border-left: 2px solid var(--suite-accent);
+  border-radius: var(--suite-radius-sm);
+  background: var(--suite-surface);
+  color: var(--suite-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+.rail-tip i {
+  margin-top: 2px;
+  color: var(--suite-accent);
+  flex: 0 0 auto;
 }
 .rail-note {
   margin: 9px 0 0;

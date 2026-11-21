@@ -6,6 +6,7 @@ import {
   applyBestiaryCommand,
   createBestiaryState,
 } from "../scripts/core/bestiary-domain.js";
+import { NEVER_TIER } from "../scripts/core/research-model.js";
 import { planSnapshotImport } from "../scripts/core/snapshot-import.js";
 
 let counter = 0;
@@ -96,4 +97,49 @@ test("an empty snapshot imports nothing", () => {
     deps,
   );
   assert.equal(result.changedAny, false);
+});
+
+test("legacy format 1 snapshots convert value 4 to NEVER_TIER while format 2 preserves custom tier 4", () => {
+  const legacyPayload = {
+    format: 1,
+    sections: [
+      {
+        id: "desert",
+        name: "Desert",
+        creatures: [{ uuid: "Actor.mummy", blockTiers: { biography: 4 }, itemTiers: { "actions:rot": 4 } }],
+      },
+    ],
+  };
+  const legacyImported = applyBestiaryCommand(
+    world(),
+    { type: BESTIARY_COMMANDS.IMPORT_SNAPSHOT, payload: legacyPayload, mode: "merge", isGM: true },
+    { ...deps, maxTier: 5 },
+  );
+  const legacyMummy = legacyImported.state.data.sections
+    .find((s) => s.id === "desert")
+    .creatures.find((c) => c.uuid === "Actor.mummy");
+  assert.equal(legacyMummy.blockTiers.biography, NEVER_TIER);
+  assert.equal(legacyMummy.itemTiers["actions:rot"], NEVER_TIER);
+
+  const modernPayload = {
+    format: 2,
+    neverTier: NEVER_TIER,
+    sections: [
+      {
+        id: "tomb",
+        name: "Tomb",
+        creatures: [{ uuid: "Actor.lich", blockTiers: { biography: 4, alignment: NEVER_TIER } }],
+      },
+    ],
+  };
+  const modernImported = applyBestiaryCommand(
+    world(),
+    { type: BESTIARY_COMMANDS.IMPORT_SNAPSHOT, payload: modernPayload, mode: "merge", isGM: true },
+    { ...deps, maxTier: 5 },
+  );
+  const lich = modernImported.state.data.sections
+    .find((s) => s.id === "tomb")
+    .creatures.find((c) => c.uuid === "Actor.lich");
+  assert.equal(lich.blockTiers.biography, 4);
+  assert.equal(lich.blockTiers.alignment, NEVER_TIER);
 });

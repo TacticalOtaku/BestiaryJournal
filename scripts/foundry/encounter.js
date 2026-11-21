@@ -1,11 +1,19 @@
 import { BESTIARY_COMMANDS, getEntryContexts, getUserTier } from "../core/bestiary-domain.js";
+import { clampKnownTier } from "../core/research-model.js";
 import { log } from "../core/logger.js";
 import { getBestiaryData, getBestiaryKnowledge } from "./bestiary-store.js";
+import { getWorldMaxResearchTier } from "./creature-display.js";
 import { runCommand } from "./command-feedback.js";
 import { getPlayerUsers } from "./foundry-runtime.js";
 
 const MODULE_ID = "bestiary-journal";
-const ENCOUNTER_TIER = 1;
+const DEFAULT_ENCOUNTER_TIER = 1;
+
+function targetEncounterTier(maxTier = getWorldMaxResearchTier()) {
+  const configured = Number(game.settings.get(MODULE_ID, "encounterRevealTier"));
+  if (!Number.isFinite(configured)) return Math.min(DEFAULT_ENCOUNTER_TIER, maxTier);
+  return Math.max(1, clampKnownTier(configured, DEFAULT_ENCOUNTER_TIER, maxTier));
+}
 
 /** The bestiary's actor for a combatant: an unlinked token's base actor. */
 function combatantUuid(combatant, tokenOverride = null) {
@@ -78,18 +86,20 @@ export function collectTokenRevealUuids(tokenDocument, combats, data, changed = 
 
 function revealEncounterUuids(uuids) {
   if (!uuids.size) return;
+  const maxTier = getWorldMaxResearchTier();
+  const targetTier = targetEncounterTier(maxTier);
   const knowledge = getBestiaryKnowledge();
   const players = getPlayerUsers();
   for (const uuid of uuids) {
     const userIds = players
-      .filter((user) => getUserTier(knowledge, user.id, uuid) < ENCOUNTER_TIER)
+      .filter((user) => getUserTier(knowledge, user.id, uuid, maxTier) < targetTier)
       .map((user) => user.id);
     if (!userIds.length) continue;
     runCommand({
       type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
       uuids: [uuid],
       userIds,
-      tier: ENCOUNTER_TIER,
+      tier: targetTier,
       source: "encounter",
     }).catch((error) => log.warn(`Could not reveal ${uuid} on encounter`, error));
   }

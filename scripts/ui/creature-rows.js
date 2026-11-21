@@ -8,7 +8,11 @@ import {
 import { isNewToViewer, tierProgress } from "../core/knowledge-progress.js";
 import { getFavoriteCreatureUuids } from "../foundry/client-preferences.js";
 import { getCreatureDataMany } from "../foundry/creature-cache.js";
-import { getWorldBlockTiers } from "../foundry/creature-display.js";
+import {
+  getWorldMaxResearchTier,
+  getWorldBlockTiers,
+  getWorldResearchTiers,
+} from "../foundry/creature-display.js";
 import { getPlayerUsers } from "../foundry/foundry-runtime.js";
 import { describeTier } from "../foundry/research.js";
 import { buildCreatureCard, sortByKnownName } from "./creature-cards.js";
@@ -63,10 +67,12 @@ export function buildCreatureRows(sections, inputs) {
     const creature = creatures.get(uuid) ?? null;
     // A deleted actor stays listed for the GM to clean up; players neither see nor count it.
     if (!creature && !viewer.isGM) continue;
+    const maxTier = getWorldMaxResearchTier();
     const lens = createKnowledgeLens({
-      tier: viewerTier(knowledge, viewer, uuid),
+      tier: viewerTier(knowledge, viewer, uuid, [], maxTier),
       worldTiers,
       entries: playerEntryContexts(data, uuid).map((context) => context.entry),
+      maxTier,
     });
     const card = buildCreatureCard({ uuid, entry, creature, lens, searchExtra: collections });
     rows.push({
@@ -83,7 +89,7 @@ export function buildCreatureRows(sections, inputs) {
       progressTier: !viewer.isGM
         ? lens.tier
         : players.length
-          ? viewerTier(knowledge, PARTY_VIEWER, uuid, players)
+          ? viewerTier(knowledge, PARTY_VIEWER, uuid, players, maxTier)
           : null,
       isNew: !viewer.isGM && isNewToViewer(seenTiers[uuid], lens.tier),
       tierBadge: viewer.isGM ? buildPartyBadge(knowledge, uuid, players) : describeTier(lens.tier),
@@ -96,6 +102,7 @@ export function buildCreatureRows(sections, inputs) {
 export function summarizeRows(rows) {
   const progress = tierProgress(
     rows.filter((row) => !row.isMissing && row.progressTier !== null).map((row) => row.progressTier),
+    getWorldResearchTiers(),
   );
   return { count: rows.length, progress: progress.total ? progress : null };
 }

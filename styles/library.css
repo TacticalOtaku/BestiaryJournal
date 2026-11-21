@@ -178,6 +178,25 @@
   color: var(--suite-text);
   background: var(--suite-hover);
 }
+.library-guide-button {
+  min-height: 36px;
+  width: 100%;
+  padding: 0 11px;
+  border: 1px solid var(--suite-border);
+  border-radius: var(--suite-radius-sm);
+  background: var(--suite-surface);
+  color: var(--suite-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.84rem;
+}
+.library-guide-button:hover {
+  color: var(--suite-text);
+  border-color: var(--suite-accent-line);
+  background: var(--suite-accent-soft);
+}
 
 .library-workspace {
   min-width: 0;
@@ -708,8 +727,10 @@
 .collection-progress > i {
   flex-basis: 0;
   min-width: 4px;
+  background: var(--tier-color, var(--tier-unknown));
 }
-.collection-progress > .is-unknown {
+.collection-progress > .is-unknown,
+.collection-progress > [data-tier-color="unknown"] {
   background: color-mix(in srgb, var(--tier-unknown) 45%, transparent);
 }
 .collection-progress > .is-rumors {
@@ -720,6 +741,9 @@
 }
 .collection-progress > .is-mastered {
   background: var(--tier-mastered);
+}
+.collection-progress > [data-tier-color]:not([data-tier-color="unknown"]) {
+  background: var(--tier-color);
 }
 
 @container collection-card (max-width: 230px) {
@@ -838,13 +862,18 @@
   overflow: hidden;
 }
 .library-toolbar {
-  padding-right: 70px;
+  padding-right: 112px;
 }
-.library-look-button {
+.library-top-actions {
   position: absolute;
   top: 16px;
   right: 22px;
   z-index: 5;
+  display: flex;
+  gap: 6px;
+}
+.library-help-button,
+.library-look-button {
   width: 34px;
   height: 34px;
   border: 1px solid var(--suite-border);
@@ -852,9 +881,112 @@
   background: var(--suite-surface);
   color: var(--suite-muted);
 }
+.library-help-button:hover,
 .library-look-button:hover {
   color: var(--suite-text);
   border-color: var(--suite-accent-line);
+}
+
+/* Quick-tip strip shown on Overview until dismissed or disabled in settings. */
+.bestiary-tip-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 11px 14px;
+  border: 1px solid var(--suite-border);
+  border-left: 3px solid var(--suite-accent);
+  border-radius: var(--suite-radius);
+  background: color-mix(in srgb, var(--suite-accent-soft) 55%, var(--suite-surface));
+}
+.tip-banner-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: var(--suite-radius-sm);
+  background: var(--suite-accent-soft);
+  color: var(--suite-accent);
+}
+.tip-banner-copy {
+  min-width: 0;
+  flex: 1 1 220px;
+}
+.tip-banner-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tip-banner-badge {
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: var(--suite-accent);
+  color: var(--suite-on-accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tip-banner-title-row strong {
+  font-size: 0.9rem;
+  color: var(--suite-text);
+}
+.tip-banner-copy p {
+  margin: 4px 0 0;
+  color: var(--suite-muted);
+  font-size: 0.81rem;
+  line-height: 1.45;
+}
+.tip-banner-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+.tip-banner-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--suite-border);
+  border-radius: var(--suite-radius-sm);
+  background: var(--suite-surface);
+  padding: 2px;
+}
+.tip-banner-nav button,
+.tip-banner-dismiss {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--suite-muted);
+}
+.tip-banner-nav button:hover,
+.tip-banner-dismiss:hover {
+  color: var(--suite-text);
+  background: var(--suite-hover);
+}
+.tip-banner-nav span {
+  min-width: 28px;
+  text-align: center;
+  color: var(--suite-subtle);
+  font-size: 0.74rem;
+}
+.tip-banner-more {
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--suite-border-strong);
+  border-radius: var(--suite-radius-sm);
+  background: var(--suite-surface);
+  color: var(--suite-accent);
+  font-size: 0.8rem;
+}
+.tip-banner-more:hover {
+  border-color: var(--suite-accent);
+  background: var(--suite-accent-soft);
 }
 .look-drawer {
   position: absolute;

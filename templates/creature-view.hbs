@@ -10,7 +10,7 @@
 
       <header class="creature-topbar">
         <div class="creature-topbar-left">
-          <span class="tier-chip is-{{tierBadge.key}} is-large"><i class="fa-solid {{tierBadge.icon}}"></i>{{tierBadge.label}}</span>
+          <span class="tier-chip is-{{tierBadge.key}} is-large" {{#if tierBadge.color}}data-tier-color="{{tierBadge.color}}"{{/if}}><i class="fa-solid {{tierBadge.icon}}"></i>{{tierBadge.label}}</span>
           {{#if locked}}<span class="suite-badge is-locked is-inline"><i class="fa-solid fa-lock"></i>{{#if isGM}}{{#if lockReason}}{{lockReason}}{{else}}{{localize "BESTIARY.Lock.Locked"}}{{/if}}{{else}}{{localize "BESTIARY.Lock.Locked"}}{{/if}}</span>{{/if}}
           {{#each collections}}
             <span class="creature-collection-tag"><i class="fa-regular fa-folder"></i>{{this.sectionName}}{{#if this.familyName}} · {{this.familyName}}{{/if}}</span>
@@ -19,7 +19,7 @@
 
         <div class="creature-topbar-right">
           {{#if isGM}}
-            <label class="preview-as">
+            <label class="preview-as" data-tooltip="{{localize 'BESTIARY.Guide.TooltipPreviewAs'}}">
               <i class="fa-solid fa-user-secret" aria-hidden="true"></i>
               <span class="sr-only">{{localize "BESTIARY.Preview.Banner"}}</span>
               <select class="preview-as-select">
@@ -27,16 +27,17 @@
               </select>
             </label>
             {{#if hasEntry}}
-              <button type="button" class="suite-icon-button" data-action="openEntryEditor" data-tooltip="{{localize 'BESTIARY.Entry.Title'}}" aria-label="{{localize 'BESTIARY.Entry.Title'}}"><i class="fa-solid fa-sliders" aria-hidden="true"></i></button>
+              <button type="button" class="suite-icon-button" data-action="openEntryEditor" data-tooltip="{{localize 'BESTIARY.Guide.TooltipEntryEditor'}}" aria-label="{{localize 'BESTIARY.Entry.Title'}}"><i class="fa-solid fa-sliders" aria-hidden="true"></i></button>
               <button type="button" class="suite-icon-button {{#if entryLocked}}is-active{{/if}}" data-action="toggleLock" data-tooltip="{{lockLabel}}" aria-label="{{lockLabel}}" {{#if lockDisabled}}disabled{{/if}}><i class="fa-solid {{#if entryLocked}}fa-lock{{else}}fa-lock-open{{/if}}" aria-hidden="true"></i></button>
             {{/if}}
             <button type="button" class="suite-icon-button" data-action="openSheet" data-tooltip="{{localize 'BESTIARY.OpenSheet'}}" aria-label="{{localize 'BESTIARY.OpenSheet'}}"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></button>
           {{/if}}
           <button type="button" class="suite-icon-button {{#if isFavorite}}is-active{{/if}}" data-action="toggleFavorite" aria-pressed="{{#if isFavorite}}true{{else}}false{{/if}}" data-tooltip="{{localize 'BESTIARY.ToggleFavorite'}}" aria-label="{{localize 'BESTIARY.ToggleFavorite'}}"><i class="{{#if isFavorite}}fas{{else}}far{{/if}} fa-star" aria-hidden="true"></i></button>
-          <button type="button" class="suite-icon-button" data-action="sendToChat" data-tooltip="{{localize 'BESTIARY.SendToChat'}}" aria-label="{{localize 'BESTIARY.SendToChat'}}"><i class="fa-regular fa-message" aria-hidden="true"></i></button>
+          <button type="button" class="suite-icon-button" data-action="sendToChat" data-tooltip="{{localize 'BESTIARY.Guide.TooltipSendToChat'}}" aria-label="{{localize 'BESTIARY.SendToChat'}}"><i class="fa-regular fa-message" aria-hidden="true"></i></button>
           {{#if shareEnabled}}
-            <button type="button" class="suite-primary-button is-compact" data-action="shareCreature"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i>{{localize "BESTIARY.Share.Button"}}</button>
+            <button type="button" class="suite-primary-button is-compact" data-action="shareCreature" data-tooltip="{{localize 'BESTIARY.Guide.TooltipShare'}}"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i>{{localize "BESTIARY.Share.Button"}}</button>
           {{/if}}
+          <button type="button" class="suite-icon-button" data-action="openGuide" data-tab="research" data-tooltip="{{localize 'BESTIARY.Guide.OpenTooltip'}}" aria-label="{{localize 'BESTIARY.Guide.Title'}}"><i class="fa-regular fa-circle-question" aria-hidden="true"></i></button>
         </div>
       </header>
 
@@ -59,9 +60,9 @@
             <p class="creature-type-line">{{creature.typeLabel}}{{#if creature.showAlignment}} · {{creature.alignment}}{{/if}}</p>
           </div>
 
-          <ol class="tier-ladder" aria-label="{{localize 'BESTIARY.Tier.Ladder'}}">
+          <ol class="tier-ladder" style="--tier-count: {{tierSteps.length}}" aria-label="{{localize 'BESTIARY.Tier.Ladder'}}">
             {{#each tierSteps}}
-              <li class="{{#if this.reached}}is-reached{{/if}} {{#if this.isCurrent}}is-current{{/if}}">
+              <li class="{{#if this.reached}}is-reached{{/if}} {{#if this.isCurrent}}is-current{{/if}}" data-tier-color="{{this.color}}">
                 <span><i class="fa-solid {{this.icon}}"></i>{{this.label}}</span>
               </li>
             {{/each}}
@@ -330,6 +331,11 @@
                   {{#if shareEnabled}}
                     <button type="button" class="suite-secondary-button rail-wide" data-action="shareCreature"><i class="fa-solid fa-share-nodes"></i>{{localize "BESTIARY.Share.Button"}}</button>
                   {{/if}}
+                  {{#if (bjAnd showHints research.enabled)}}
+                    {{#unless research.isMaxed}}
+                      <p class="rail-tip"><i class="fa-solid fa-circle-info" aria-hidden="true"></i>{{localize "BESTIARY.Guide.InlineResearchTip"}}</p>
+                    {{/unless}}
+                  {{/if}}
                 </section>
               {{/if}}
             {{/if}}
@@ -343,6 +349,7 @@
                     </button>
                   {{/each}}
                 </div>
+                {{#if activeChannelHint}}<p class="rail-channel-hint">{{activeChannelHint}}</p>{{/if}}
 
                 {{#each comments.channels}}
                   {{#if (bjEq this.key ../commentChannel)}}
@@ -409,6 +416,7 @@
                   <button type="button" class="rail-inline-button" data-action="resetBlockTiers" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-rotate-left"></i>{{localize "BESTIARY.Tier.Reset"}}</button>
                 </header>
                 <p class="rail-hint">{{localize "BESTIARY.Tier.EntryHint"}}</p>
+                {{#if showHints}}<p class="rail-tip"><i class="fa-solid fa-eye" aria-hidden="true"></i>{{localize "BESTIARY.Guide.InlineItemPinTip"}}</p>{{/if}}
                 {{#each tierMatrix}}
                   <div class="tier-group">
                     <h4><i class="fa-solid {{this.icon}}"></i>{{this.label}}{{#if this.overrideCount}}<em>{{this.overrideCount}}</em>{{/if}}</h4>

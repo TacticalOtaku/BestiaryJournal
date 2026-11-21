@@ -1,7 +1,7 @@
 import { formatCR, formatDistanceUnit } from "../integrations/dnd5e.js";
-import { knowledgeLensFor } from "../foundry/creature-display.js";
+import { getWorldResearchTiers, knowledgeLensFor } from "../foundry/creature-display.js";
+import { describeTier } from "../foundry/research.js";
 import { buildImageView, buildThumbView, SILHOUETTE_PLACEHOLDER } from "../core/image-framing.js";
-import { RESEARCH_TIERS } from "../core/research-model.js";
 import { PARTY_VIEWER } from "../core/knowledge-lens.js";
 import { selectEntryContext } from "../core/bestiary-domain.js";
 import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store.js";
@@ -121,8 +121,12 @@ export async function postCreatureToChat({ uuid, sectionId, viewer }) {
   const card = document.createElement("div");
   card.className = "bestiary-chat-card";
   // The tier the card was posted at; a GM's full card names none.
-  const posted = RESEARCH_TIERS[tier];
-  if (posted) card.dataset.tier = posted.key;
+  const tiers = getWorldResearchTiers();
+  const posted = tiers[tier] ? describeTier(tier, tiers) : null;
+  if (posted) {
+    card.dataset.tier = posted.key;
+    card.dataset.tierColor = posted.color;
+  }
 
   const portrait = document.createElement("img");
   portrait.src = knowsPortrait
@@ -136,9 +140,7 @@ export async function postCreatureToChat({ uuid, sectionId, viewer }) {
   const copy = document.createElement("div");
   const kicker = document.createElement("span");
   kicker.className = "bestiary-chat-kicker";
-  kicker.textContent = [localize("BESTIARY.Title"), posted && localize(posted.label)]
-    .filter(Boolean)
-    .join(" · ");
+  kicker.textContent = [localize("BESTIARY.Title"), posted?.label].filter(Boolean).join(" · ");
   const name = document.createElement("strong");
   name.textContent = displayName;
 

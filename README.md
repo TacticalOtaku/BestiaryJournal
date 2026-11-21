@@ -29,15 +29,16 @@
 
 ### 🧠 Research & Knowledge Tiers
 
-Creature knowledge is tracked per player across four progressive tiers:
+Creature knowledge is tracked per player along a customizable research ladder (4 built-in tiers by default, expandable up to 10):
 
-| Tier         | Revealed by default                                                                                                                           |
+| Default Tier | Revealed by default                                                                                                                           |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Unknown**  | Silhouette instead of portrait; name, creature type, and statistics hidden                                                                    |
 | **Rumors**   | Portrait, name, creature type, and size                                                                                                       |
 | **Studied**  | AC, HP, CR, speed, ability scores, skills, senses, languages, damage resistances, traits, and actions                                         |
 | **Mastered** | Alignment, XP, immunities, vulnerabilities, damage modifiers, condition immunities, bonus/legendary actions, reactions, spells, gear, and bio |
 
+- **Custom tiers** — GMs can add custom research tiers (between default tiers or beyond **Mastered**), rename or edit hints, choose FontAwesome icons and WCAG-verified accent colors, reorder tiers, or remove them. Existing creature and player progress remaps automatically when tiers change.
 - **Knowledge management** — GMs set tiers for individual players in the creature card, grant knowledge to the whole party in one click, or manage the entire matrix via the **Party Knowledge** board.
 - **Research rolls** — Players roll Nature, Arcana, Religion, Perception, or another allowed skill directly from the creature card; success raises their tier by one. Research DC derives from CR or is set by the GM.
 - **GM authority** — Research rolls are judged by the active GM client (verifying message author, character ownership, skill eligibility, freshness, and single-use consumption) and posted to chat respecting what recipients know.
@@ -96,19 +97,21 @@ Creature knowledge is tracked per player across four progressive tiers:
 
 ### World Settings (GM-only)
 
-| Setting                      | Default       | Purpose                                                                                                     |
-| ---------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Allow player sharing**     | On            | Enable or disable knowledge sharing between players                                                         |
-| **When players can share**   | Out of combat | `Always`, `Out of combat`, or `After a rest` following the last combat                                      |
-| **Research by roll**         | On            | Allow raising tiers via skill checks from creature cards                                                    |
-| **Single attempt per entry** | Off           | Lock retries after a failed research roll until reset by the GM                                             |
-| **Encounter reveal**         | Off           | Grant **Rumors** to uninformed players when fighting a visible enemy bestiary NPC                           |
-| **Reveal hidden mid-combat** | On            | When **Encounter reveal** is on, also grant **Rumors** immediately if a hidden enemy is revealed mid-combat |
-| **Include custom skills**    | Off           | Include non-standard skills from `CONFIG.DND5E.skills` in research options                                  |
-| **Research tiers**           | —             | Configure global reveal thresholds per statblock section                                                    |
+| Setting                      | Default       | Purpose                                                                                                        |
+| ---------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Allow player sharing**     | On            | Enable or disable knowledge sharing between players                                                            |
+| **When players can share**   | Out of combat | `Always`, `Out of combat`, or `After a rest` following the last combat                                         |
+| **Research by roll**         | On            | Allow raising tiers via skill checks from creature cards                                                       |
+| **Single attempt per entry** | Off           | Lock retries after a failed research roll until reset by the GM                                                |
+| **Encounter reveal**         | Off           | Grant players the configured encounter tier (by default **Rumors**) when fighting a visible enemy bestiary NPC |
+| **Encounter reveal tier**    | Rumors        | Research tier granted when **Encounter reveal** triggers                                                       |
+| **Reveal hidden mid-combat** | On            | When **Encounter reveal** is on, also grant knowledge immediately if a hidden enemy is revealed mid-combat     |
+| **Include custom skills**    | Off           | Include non-standard skills from `CONFIG.DND5E.skills` in research options                                     |
+| **Research tiers**           | —             | Manage custom research tiers (names, hints, icons, colors, order) and global reveal thresholds per section     |
 
 ### Client Settings & Appearance
 
+- **Show guide & contextual hints** (user setting, on by default) — opens the interactive walkthrough once on first open and displays quick-tip banners and inline hints (reopen anytime via `?` or **Guide & tips**).
 - **Debug logging** (client setting, off by default) — detailed diagnostics in the browser console.
 - **Window appearance** — theme, accent, density, cover size, and motion level are configured via the palette button in the library window.
 

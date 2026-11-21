@@ -1,6 +1,6 @@
 import { BESTIARY_COMMANDS, canViewCreature, getEntryContexts } from "../core/bestiary-domain.js";
-import { MAX_RESEARCH_TIER } from "../core/research-model.js";
 import { getBestiaryData } from "../foundry/bestiary-store.js";
+import { getWorldResearchTiers } from "../foundry/creature-display.js";
 import { runCommand } from "../foundry/command-feedback.js";
 import { getPlayerUsers, localize } from "../foundry/foundry-runtime.js";
 import { describeTier } from "../foundry/research.js";
@@ -60,16 +60,18 @@ export function bestiaryMenuItems(actor) {
   const players = getPlayerUsers();
   if (inBestiary && players.length) {
     items.push({ separator: true });
-    for (let tier = 1; tier <= MAX_RESEARCH_TIER; tier += 1) {
+    const tiers = getWorldResearchTiers();
+    for (const definition of tiers.slice(1)) {
+      const info = describeTier(definition.value, tiers);
       items.push({
-        label: game.i18n.format("BESTIARY.Actor.GrantParty", { tier: describeTier(tier).label }),
-        icon: describeTier(tier).icon,
+        label: game.i18n.format("BESTIARY.Actor.GrantParty", { tier: info.label }),
+        icon: info.icon,
         onClick: () =>
           runCommand({
             type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
             uuids: [uuid],
             userIds: players.map((user) => user.id),
-            tier,
+            tier: definition.value,
             source: "gm",
           }),
       });

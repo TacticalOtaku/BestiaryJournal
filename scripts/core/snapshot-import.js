@@ -1,3 +1,4 @@
+import { LEGACY_NEVER_TIER, MAX_RESEARCH_TIER, NEVER_TIER } from "./research-model.js";
 import { normalizeBestiaryData } from "./bestiary-domain.js";
 
 /**
@@ -10,9 +11,9 @@ import { normalizeBestiaryData } from "./bestiary-domain.js";
  * `sections` are the current collections, left as they are; returns the collections after the import, whether
  * anything was imported, and a report of collection names: merged, created, removed and locked.
  */
-export function importSnapshot(sections, payload, mode, { now, generateId }) {
+export function importSnapshot(sections, payload, mode, { now, generateId, maxTier = MAX_RESEARCH_TIER }) {
   const current = structuredClone(sections);
-  const incoming = prepareIncomingSections(payload, generateId);
+  const incoming = prepareIncomingSections(payload, generateId, { maxTier });
   const report = { merged: [], created: [], removed: [], locked: [] };
   if (!incoming.length) return { sections: current, imported: false, report };
 
@@ -48,11 +49,12 @@ export function importSnapshot(sections, payload, mode, { now, generateId }) {
 }
 
 /** What an import would do, so the GM can confirm it before anything changes. */
-export function planSnapshotImport(data, payload, mode = "merge") {
+export function planSnapshotImport(data, payload, mode = "merge", { maxTier = MAX_RESEARCH_TIER } = {}) {
   let counter = 0;
-  return importSnapshot(normalizeBestiaryData(data).sections, payload, mode, {
+  return importSnapshot(normalizeBestiaryData(data, maxTier).sections, payload, mode, {
     now: () => 0,
     generateId: () => `__preview${++counter}`,
+    maxTier,
   }).report;
 }
 
@@ -60,9 +62,33 @@ export function planSnapshotImport(data, payload, mode = "merge") {
  * Normalizes snapshot sections and repairs what a hand-edited or doubled
  * export can contain: missing or repeated ids, and the same creature twice.
  */
-function prepareIncomingSections(payload, generateId) {
+function convertLegacyNeverTierMap(tierMap) {
+  if (!tierMap || typeof tierMap !== "object") return tierMap;
+  const next = {};
+  for (const [key, value] of Object.entries(tierMap)) {
+    next[key] = Number(value) === LEGACY_NEVER_TIER ? NEVER_TIER : value;
+  }
+  return next;
+}
+
+function prepareIncomingSections(payload, generateId, { maxTier = MAX_RESEARCH_TIER } = {}) {
   const source = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
-  const sections = normalizeBestiaryData({ sections: source.sections }).sections;
+  const isLegacyNeverFormat = Number(source.format ?? 1) < 2 && source.neverTier === undefined;
+  const rawSections = Array.isArray(source.sections)
+    ? source.sections.map((section) =>
+        isLegacyNeverFormat && Array.isArray(section?.creatures)
+          ? {
+              ...section,
+              creatures: section.creatures.map((entry) => ({
+                ...entry,
+                blockTiers: convertLegacyNeverTierMap(entry?.blockTiers),
+                itemTiers: convertLegacyNeverTierMap(entry?.itemTiers),
+              })),
+            }
+          : section,
+      )
+    : source.sections;
+  const sections = normalizeBestiaryData({ sections: rawSections }, maxTier).sections;
   const seenIds = new Set();
   return sections.map((section) => {
     const id = section.id && !seenIds.has(section.id) ? section.id : generateId();

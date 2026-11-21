@@ -98,6 +98,7 @@
 
 /* Each cell is a tier tag that is also its own picker. */
 .board-tier {
+  --chip-color: var(--tier-color, var(--tier-unknown));
   width: 100%;
   min-width: 118px;
   height: 28px;
@@ -120,4 +121,7 @@
 }
 .board-tier.is-mastered {
   --chip-color: var(--tier-mastered);
+}
+.board-tier[data-tier-color] {
+  --chip-color: var(--tier-color);
 }

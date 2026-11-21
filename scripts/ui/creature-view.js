@@ -1,11 +1,5 @@
 import { getCreatureData } from "../foundry/creature-cache.js";
-import {
-  MAX_RESEARCH_TIER,
-  MIN_RESEARCH_TIER,
-  isGmTier,
-  itemTierKey,
-  resolveCreatureResearch,
-} from "../core/research-model.js";
+import { MIN_RESEARCH_TIER, isGmTier, itemTierKey, resolveCreatureResearch } from "../core/research-model.js";
 import { playerEntryContexts } from "../core/knowledge-lens.js";
 import {
   BESTIARY_COMMANDS,
@@ -19,7 +13,12 @@ import {
 } from "../core/bestiary-domain.js";
 import { getBestiaryData, getBestiaryKnowledge, getBestiarySocial } from "../foundry/bestiary-store.js";
 import { reportCommandError, runCommand } from "../foundry/command-feedback.js";
-import { buildEntryTierMatrix, knowledgeLensFor, localizedTierChoices } from "../foundry/creature-display.js";
+import {
+  buildEntryTierMatrix,
+  getWorldMaxResearchTier,
+  knowledgeLensFor,
+  localizedTierChoices,
+} from "../foundry/creature-display.js";
 import { postCreatureToChat } from "./creature-cards.js";
 import {
   buildCommentThreads,
@@ -47,12 +46,14 @@ import {
   getPreferredCommentChannel,
   getPreviewUserId,
   getFavoriteCreatureUuids,
+  getShowOnboardingHints,
   setPreferredCommentChannel,
   setPreviewUserId,
   toggleFavoriteCreature,
 } from "../foundry/client-preferences.js";
 import { confirmDialog, getPlayerUsers, localize, resolveUuid } from "../foundry/foundry-runtime.js";
 import { BestiaryEntryEditor } from "./entry-editor.js";
+import { BestiaryGuideApp } from "./guide-app.js";
 import { buildStatblock, buildTierSteps } from "./creature-statblock.js";
 import { activateTablistKeyboard, animateDisclosure, playApplicationEntrance } from "./ui-effects.js";
 import { bindArtwork } from "./artwork.js";
@@ -136,6 +137,9 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       },
       clearPreview: function () {
         this._onSetPreview("");
+      },
+      openGuide: function (event, target) {
+        BestiaryGuideApp.open({ tab: target?.dataset?.tab || "research" });
       },
     },
   };
@@ -268,6 +272,10 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
 
       comments,
       commentChannel: this._activeCommentChannel(real, comments.channels),
+      activeChannelHint:
+        comments.channels.find(
+          (channel) => channel.key === this._activeCommentChannel(real, comments.channels),
+        )?.hint ?? "",
       commentDraft: this._commentDraft,
       commentPending: this._commentPending,
       editingCommentId: this._editingCommentId,
@@ -280,6 +288,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       isRailComments: this._rail === "comments",
       isRailConfig: this._rail === "config",
       isFavorite: getFavoriteCreatureUuids().has(this.actorUuid),
+      showHints: getShowOnboardingHints(),
     };
   }
 
@@ -308,11 +317,12 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     this._researchSkill = config.skills[0];
     const record = getKnowledgeRecord(getBestiaryKnowledge(), viewer.id, this.actorUuid);
     const actors = researchActors(game.users.get(viewer.id));
+    const maxTier = getWorldMaxResearchTier();
     const canRoll =
       !isPreview &&
       isResearchRollEnabled() &&
       !locked &&
-      tier < MAX_RESEARCH_TIER &&
+      tier < maxTier &&
       !record?.blocked &&
       actors.length > 0;
     return {
@@ -321,8 +331,8 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
       blocked: !!record?.blocked,
       attempts: record?.attempts ?? 0,
       dc: knowsDc ? config.dc : "?",
-      isMaxed: tier >= MAX_RESEARCH_TIER,
-      nextTierLabel: describeTier(Math.min(tier + 1, MAX_RESEARCH_TIER)).label,
+      isMaxed: tier >= maxTier,
+      nextTierLabel: describeTier(Math.min(tier + 1, maxTier)).label,
       skills: knowsSkill ? config.skills.map((skill) => ({ value: skill, label: skillLabel(skill) })) : [],
       skillHidden: !knowsSkill,
       actors: actors.map((actor) => ({ id: actor.id, name: actor.name, img: actor.img })),
@@ -590,7 +600,7 @@ export class BestiaryCreatureView extends HandlebarsApplicationMixin(Application
     if (!game.user.isGM) return;
     const userId = target.dataset.userId;
     const delta = Number(target.dataset.delta ?? 1);
-    const current = getUserTier(getBestiaryKnowledge(), userId, this.actorUuid);
+    const current = getUserTier(getBestiaryKnowledge(), userId, this.actorUuid, getWorldMaxResearchTier());
     await setKnowledgeTier(this.actorUuid, userId, current + delta);
   }
 

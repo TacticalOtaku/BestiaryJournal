@@ -4,6 +4,8 @@ import {
   RESEARCH_SKILLS,
   clampKnownTier,
   clampTier,
+  remapTierMap,
+  remapTierValue,
 } from "./research-model.js";
 import { importSnapshot } from "./snapshot-import.js";
 
@@ -45,6 +47,7 @@ export const BESTIARY_COMMANDS = Object.freeze({
   RESET_KNOWLEDGE: "resetKnowledge",
   RECORD_RESEARCH: "recordResearch",
   SHARE_KNOWLEDGE: "shareKnowledge",
+  REMAP_TIER_VALUES: "remapTierValues",
 
   ADD_COMMENT: "addComment",
   UPDATE_COMMENT: "updateComment",
@@ -78,16 +81,16 @@ const IMAGE_FITS = Object.freeze(["auto", "contain", "cover"]);
 
 // ── Normalization ──────────────────────────────────────────────────────────
 
-export function normalizeBestiaryData(value) {
+export function normalizeBestiaryData(value, maxTier = MAX_RESEARCH_TIER) {
   const source = isObject(value) ? value : {};
   const sections = Array.isArray(source.sections) ? source.sections : [];
   return {
     revision: safeInt(source.revision, 0),
-    sections: sections.map((section, index) => normalizeSection(section, index)),
+    sections: sections.map((section, index) => normalizeSection(section, index, maxTier)),
   };
 }
 
-function normalizeSection(value, index = 0) {
+function normalizeSection(value, index = 0, maxTier = MAX_RESEARCH_TIER) {
   const source = isObject(value) ? value : {};
   const families = Array.isArray(source.families) ? source.families : [];
   const creatures = Array.isArray(source.creatures) ? source.creatures : [];
@@ -100,7 +103,7 @@ function normalizeSection(value, index = 0) {
     sort: safeInt(source.sort, index * 100),
     updatedAt: safeInt(source.updatedAt, 0),
     families: families.map((family, familyIndex) => normalizeFamily(family, familyIndex)),
-    creatures: creatures.map((entry) => normalizeCreatureEntry(entry)),
+    creatures: creatures.map((entry) => normalizeCreatureEntry(entry, maxTier)),
   };
 }
 
@@ -116,7 +119,7 @@ function normalizeFamily(value, index = 0) {
   };
 }
 
-function normalizeCreatureEntry(value) {
+function normalizeCreatureEntry(value, maxTier = MAX_RESEARCH_TIER) {
   const source = isObject(value) ? value : {};
   const image = isObject(source.image) ? source.image : {};
   const research = isObject(source.research) ? source.research : {};
@@ -143,22 +146,22 @@ function normalizeCreatureEntry(value) {
         ? research.skills.filter((skill) => typeof skill === "string" && skill)
         : [],
     },
-    blockTiers: normalizeTierMap(source.blockTiers),
-    itemTiers: normalizeTierMap(source.itemTiers),
+    blockTiers: normalizeTierMap(source.blockTiers, maxTier),
+    itemTiers: normalizeTierMap(source.itemTiers, maxTier),
   };
 }
 
-function normalizeTierMap(value) {
+function normalizeTierMap(value, maxTier = MAX_RESEARCH_TIER) {
   if (!isObject(value)) return {};
   const result = {};
   for (const [key, raw] of Object.entries(value)) {
     if (typeof key !== "string" || !key) continue;
-    result[key] = clampTier(raw, MIN_RESEARCH_TIER);
+    result[key] = clampTier(raw, MIN_RESEARCH_TIER, maxTier);
   }
   return result;
 }
 
-export function normalizeKnowledge(value) {
+export function normalizeKnowledge(value, maxTier = MAX_RESEARCH_TIER) {
   const source = isObject(value) ? value : {};
   const users = isObject(source.users) ? source.users : {};
   const normalized = {};
@@ -167,17 +170,17 @@ export function normalizeKnowledge(value) {
     const bucket = {};
     for (const [uuid, record] of Object.entries(records)) {
       if (!isObject(record)) continue;
-      bucket[uuid] = normalizeKnowledgeRecord(record);
+      bucket[uuid] = normalizeKnowledgeRecord(record, maxTier);
     }
     normalized[userId] = bucket;
   }
   return { revision: safeInt(source.revision, 0), users: normalized };
 }
 
-function normalizeKnowledgeRecord(value) {
+function normalizeKnowledgeRecord(value, maxTier = MAX_RESEARCH_TIER) {
   const source = isObject(value) ? value : {};
   return {
-    tier: clampKnownTier(source.tier, MIN_RESEARCH_TIER),
+    tier: clampKnownTier(source.tier, MIN_RESEARCH_TIER, maxTier),
     source: String(source.source ?? "gm"),
     updatedAt: safeInt(source.updatedAt, 0),
     grantedBy: source.grantedBy ? String(source.grantedBy) : null,
@@ -218,10 +221,10 @@ function normalizeComment(value) {
   };
 }
 
-export function createBestiaryState(sources = {}) {
+export function createBestiaryState(sources = {}, maxTier = MAX_RESEARCH_TIER) {
   return {
-    data: normalizeBestiaryData(sources.data),
-    knowledge: normalizeKnowledge(sources.knowledge),
+    data: normalizeBestiaryData(sources.data, maxTier),
+    knowledge: normalizeKnowledge(sources.knowledge, maxTier),
     social: normalizeSocial(sources.social),
   };
 }
@@ -343,8 +346,8 @@ export function getKnowledgeRecord(knowledge, userId, uuid) {
   return knowledge?.users?.[userId]?.[uuid] ?? null;
 }
 
-export function getUserTier(knowledge, userId, uuid) {
-  return clampKnownTier(getKnowledgeRecord(knowledge, userId, uuid)?.tier, MIN_RESEARCH_TIER);
+export function getUserTier(knowledge, userId, uuid, maxTier = MAX_RESEARCH_TIER) {
+  return clampKnownTier(getKnowledgeRecord(knowledge, userId, uuid)?.tier, MIN_RESEARCH_TIER, maxTier);
 }
 
 // ── Comment selectors ──────────────────────────────────────────────────────
@@ -377,7 +380,12 @@ export function selectComments(social, uuid, viewer) {
  * the sharing rules and is read only when a player shares.
  */
 export function applyBestiaryCommand(currentState, command, dependencies = {}) {
-  const state = cloneState(currentState);
+  const maxTier = Math.max(1, safeInt(dependencies.maxTier, MAX_RESEARCH_TIER));
+  const remapTarget =
+    command?.type === BESTIARY_COMMANDS.REMAP_TIER_VALUES
+      ? Math.max(maxTier, safeInt(command.maxNewTier, maxTier))
+      : maxTier;
+  const state = cloneState(currentState, Math.max(maxTier, remapTarget));
   const handler = COMMAND_HANDLERS[command?.type];
   if (!handler) throw new Error(`Unknown bestiary command: ${command?.type ?? "<empty>"}`);
   if (!command.isGM && !PLAYER_COMMANDS.has(command.type))
@@ -392,6 +400,7 @@ export function applyBestiaryCommand(currentState, command, dependencies = {}) {
     // Lets the authority reject ids that are not players of this world.
     isPlayerUser: dependencies.isPlayerUser ?? (() => true),
     allowedSkills: dependencies.allowedSkills ?? RESEARCH_SKILLS,
+    maxTier,
   };
   const touched = handler(state, command, context) || [];
   const changed = Object.fromEntries(STORE_KEYS.map((key) => [key, touched.includes(key)]));
@@ -444,6 +453,7 @@ const COMMAND_HANDLERS = {
   [BESTIARY_COMMANDS.RESET_KNOWLEDGE]: handleResetKnowledge,
   [BESTIARY_COMMANDS.RECORD_RESEARCH]: handleRecordResearch,
   [BESTIARY_COMMANDS.SHARE_KNOWLEDGE]: handleShareKnowledge,
+  [BESTIARY_COMMANDS.REMAP_TIER_VALUES]: handleRemapTierValues,
 
   [BESTIARY_COMMANDS.ADD_COMMENT]: handleAddComment,
   [BESTIARY_COMMANDS.UPDATE_COMMENT]: handleUpdateComment,
@@ -565,15 +575,15 @@ function handleDeleteFamily(state, command, { now }) {
 
 // ── Creature handlers ──
 
-function handleAddCreature(state, command, { now }) {
-  return addEntries(state, command.sectionId, [command], command.familyId, now);
+function handleAddCreature(state, command, { now, maxTier }) {
+  return addEntries(state, command.sectionId, [command], command.familyId, now, maxTier);
 }
 
-function handleAddCreatures(state, command, { now }) {
-  return addEntries(state, command.sectionId, command.entries ?? [], command.familyId, now);
+function handleAddCreatures(state, command, { now, maxTier }) {
+  return addEntries(state, command.sectionId, command.entries ?? [], command.familyId, now, maxTier);
 }
 
-function addEntries(state, sectionId, sources, familyId, now) {
+function addEntries(state, sectionId, sources, familyId, now, maxTier) {
   const section = findSection(state.data, sectionId);
   if (!section || section.locked) return TOUCHED_NONE;
   const family = familyId ? findFamily(section, familyId) : null;
@@ -582,13 +592,16 @@ function addEntries(state, sectionId, sources, familyId, now) {
     const uuid = String(source?.uuid ?? "");
     if (!uuid || section.creatures.some((entry) => entry.uuid === uuid)) continue;
     section.creatures.push(
-      normalizeCreatureEntry({
-        ...source,
-        uuid,
-        addedAt: now(),
-        hidden: !!source.hidden,
-        familyId: family?.id ?? null,
-      }),
+      normalizeCreatureEntry(
+        {
+          ...source,
+          uuid,
+          addedAt: now(),
+          hidden: !!source.hidden,
+          familyId: family?.id ?? null,
+        },
+        maxTier,
+      ),
     );
     changed = true;
   }
@@ -615,7 +628,7 @@ function handleToggleCreatureVisibility(state, command, { now }) {
   return TOUCHED_DATA;
 }
 
-function handleUpdateCreatureEntry(state, command, { now }) {
+function handleUpdateCreatureEntry(state, command, { now, maxTier }) {
   const section = findSection(state.data, command.sectionId);
   const entry = section?.creatures.find((item) => item.uuid === command.uuid);
   if (!entry || section.locked || entry.locked) return TOUCHED_NONE;
@@ -629,15 +642,17 @@ function handleUpdateCreatureEntry(state, command, { now }) {
   if ("label" in patch) entry.label = String(patch.label ?? "");
   if ("thumb" in patch) entry.thumb = String(patch.thumb ?? "");
   if (isObject(patch.image))
-    entry.image = normalizeCreatureEntry({ image: { ...entry.image, ...patch.image } }).image;
+    entry.image = normalizeCreatureEntry({ image: { ...entry.image, ...patch.image } }, maxTier).image;
   if (isObject(patch.research)) {
-    entry.research = normalizeCreatureEntry({
-      research: { ...entry.research, ...patch.research },
-    }).research;
+    entry.research = normalizeCreatureEntry(
+      { research: { ...entry.research, ...patch.research } },
+      maxTier,
+    ).research;
   }
   if (isObject(patch.blockTiers)) {
     entry.blockTiers = normalizeTierMap(
       patch.replaceBlockTiers ? patch.blockTiers : { ...entry.blockTiers, ...patch.blockTiers },
+      maxTier,
     );
   }
   if (isObject(patch.itemTiers)) {
@@ -647,7 +662,7 @@ function handleUpdateCreatureEntry(state, command, { now }) {
     for (const [key, value] of Object.entries(patch.itemTiers)) {
       if (value === null) delete merged[key];
     }
-    entry.itemTiers = normalizeTierMap(merged);
+    entry.itemTiers = normalizeTierMap(merged, maxTier);
   }
   section.updatedAt = now();
   return TOUCHED_DATA;
@@ -781,10 +796,11 @@ function handleMoveCreature(state, command, { now }) {
  * exactly as they are. `merge` keeps existing collections and only appends
  * what is missing — see {@link planSnapshotImport} for how sections match.
  */
-function handleImportSnapshot(state, command, { now, generateId }) {
+function handleImportSnapshot(state, command, { now, generateId, maxTier }) {
   const { sections, imported } = importSnapshot(state.data.sections, command.payload, command.mode, {
     now,
     generateId,
+    maxTier,
   });
   if (!imported) return TOUCHED_NONE;
   state.data.sections = sections;
@@ -798,7 +814,7 @@ function handleImportSnapshot(state, command, { now, generateId }) {
  * with the id of whoever issued the command, so reading it here would silently
  * redirect a GM's assignment onto the GM themselves.
  */
-function handleSetKnowledge(state, command, { now }) {
+function handleSetKnowledge(state, command, { now, maxTier }) {
   const uuids = toArray(command.uuids ?? command.uuid);
   const userIds = toArray(command.userIds);
   if (!uuids.length || !userIds.length) return TOUCHED_NONE;
@@ -806,9 +822,9 @@ function handleSetKnowledge(state, command, { now }) {
   let changed = false;
   for (const uuid of uuids) {
     if (isCreatureLocked(state.data, uuid)) continue;
-    const tier = clampKnownTier(command.tier, MIN_RESEARCH_TIER);
+    const tier = clampKnownTier(command.tier, MIN_RESEARCH_TIER, maxTier);
     for (const userId of userIds) {
-      const record = ensureKnowledgeRecord(state.knowledge, userId, uuid);
+      const record = ensureKnowledgeRecord(state.knowledge, userId, uuid, maxTier);
       if (record.tier === tier && record.source === (command.source ?? "gm")) continue;
       record.tier = tier;
       record.source = command.source ?? "gm";
@@ -844,7 +860,7 @@ function handleResetKnowledge(state, command) {
  * a failure only records the attempt (and blocks retries when the world asks
  * for a single attempt).
  */
-function handleRecordResearch(state, command, { now }) {
+function handleRecordResearch(state, command, { now, maxTier }) {
   const userId = String(command.userId ?? "");
   const uuid = String(command.uuid ?? "");
   if (!userId || !uuid) return TOUCHED_NONE;
@@ -853,8 +869,8 @@ function handleRecordResearch(state, command, { now }) {
 
   const existing = getKnowledgeRecord(state.knowledge, userId, uuid);
   if (existing?.blocked) return TOUCHED_NONE;
-  if (clampKnownTier(existing?.tier, MIN_RESEARCH_TIER) >= MAX_RESEARCH_TIER) return TOUCHED_NONE;
-  const record = ensureKnowledgeRecord(state.knowledge, userId, uuid);
+  if (clampKnownTier(existing?.tier, MIN_RESEARCH_TIER, maxTier) >= maxTier) return TOUCHED_NONE;
+  const record = ensureKnowledgeRecord(state.knowledge, userId, uuid, maxTier);
 
   record.attempts += 1;
   record.lastRoll = {
@@ -865,7 +881,7 @@ function handleRecordResearch(state, command, { now }) {
     at: now(),
   };
   if (command.success) {
-    record.tier = clampKnownTier(record.tier + 1, MIN_RESEARCH_TIER);
+    record.tier = clampKnownTier(record.tier + 1, MIN_RESEARCH_TIER, maxTier);
     record.source = "roll";
     // The tier is now earned, so it is no longer attributable to a granter.
     record.grantedBy = null;
@@ -881,7 +897,7 @@ function handleRecordResearch(state, command, { now }) {
  * Sharing never grants more than the sender knows, and never lowers what the
  * recipient already had. The record itself notes who shared it.
  */
-function handleShareKnowledge(state, command, { now, isPlayerUser }) {
+function handleShareKnowledge(state, command, { now, isPlayerUser, maxTier }) {
   const fromUserId = String(command.userId ?? "");
   const uuid = String(command.uuid ?? "");
   const targets = [...new Set(toArray(command.toUserIds ?? command.toUserId))].filter(
@@ -891,13 +907,13 @@ function handleShareKnowledge(state, command, { now, isPlayerUser }) {
   if (isCreatureLocked(state.data, uuid)) return TOUCHED_NONE;
   assertMayView(state.data, uuid, fromUserId, !!command.isGM);
 
-  const senderTier = getUserTier(state.knowledge, fromUserId, uuid);
+  const senderTier = getUserTier(state.knowledge, fromUserId, uuid, maxTier);
   if (senderTier <= MIN_RESEARCH_TIER) return TOUCHED_NONE;
-  const offered = Math.min(senderTier, clampKnownTier(command.tier ?? senderTier, senderTier));
+  const offered = Math.min(senderTier, clampKnownTier(command.tier ?? senderTier, senderTier, maxTier));
 
   let changed = false;
   for (const toUserId of targets) {
-    const record = ensureKnowledgeRecord(state.knowledge, toUserId, uuid);
+    const record = ensureKnowledgeRecord(state.knowledge, toUserId, uuid, maxTier);
     if (record.tier >= offered) continue;
     record.tier = offered;
     record.source = "share";
@@ -909,9 +925,53 @@ function handleShareKnowledge(state, command, { now, isPlayerUser }) {
   return changed ? TOUCHED_KNOWLEDGE : TOUCHED_NONE;
 }
 
-function ensureKnowledgeRecord(knowledge, userId, uuid) {
+function handleRemapTierValues(state, command, { maxTier }) {
+  const valueMap =
+    command.valueMap instanceof Map
+      ? command.valueMap
+      : new Map(Object.entries(command.valueMap ?? {}).map(([k, v]) => [Number(k), Number(v)]));
+  const maxNewTier = Math.max(1, safeInt(command.maxNewTier, maxTier));
+  const touched = [];
+  let dataChanged = false;
+  let knowledgeChanged = false;
+
+  for (const section of state.data.sections) {
+    for (const entry of section.creatures) {
+      const nextBlocks = remapTierMap(entry.blockTiers, valueMap, maxNewTier);
+      const nextItems = remapTierMap(entry.itemTiers, valueMap, maxNewTier);
+      if (
+        JSON.stringify(nextBlocks) !== JSON.stringify(entry.blockTiers) ||
+        JSON.stringify(nextItems) !== JSON.stringify(entry.itemTiers)
+      ) {
+        entry.blockTiers = nextBlocks;
+        entry.itemTiers = nextItems;
+        dataChanged = true;
+      }
+    }
+  }
+
+  for (const records of Object.values(state.knowledge.users)) {
+    for (const record of Object.values(records)) {
+      const nextTier = clampKnownTier(
+        remapTierValue(record.tier, valueMap, maxNewTier),
+        MIN_RESEARCH_TIER,
+        maxNewTier,
+      );
+      if (nextTier !== record.tier) {
+        record.tier = nextTier;
+        knowledgeChanged = true;
+      }
+    }
+  }
+
+  if (dataChanged) touched.push("data");
+  if (knowledgeChanged) touched.push("knowledge");
+  return touched;
+}
+
+function ensureKnowledgeRecord(knowledge, userId, uuid, maxTier = MAX_RESEARCH_TIER) {
   const bucket = (knowledge.users[userId] ??= {});
-  return (bucket[uuid] ??= normalizeKnowledgeRecord({}));
+  return (bucket[uuid] ??= normalizeKnowledgeRecord({}, maxTier));
 }
 
 // ── Comment handlers ──
@@ -986,11 +1046,11 @@ function handleToggleCommentPin(state, command) {
 
 // ── Utilities ──────────────────────────────────────────────────────────────
 
-function cloneState(state) {
+function cloneState(state, maxTier = MAX_RESEARCH_TIER) {
   const source = state ?? {};
   return {
-    data: normalizeBestiaryData(source.data),
-    knowledge: normalizeKnowledge(source.knowledge),
+    data: normalizeBestiaryData(source.data, maxTier),
+    knowledge: normalizeKnowledge(source.knowledge, maxTier),
     social: normalizeSocial(source.social),
   };
 }

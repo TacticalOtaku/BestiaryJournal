@@ -51,7 +51,7 @@
               </th>
               {{#each this.cells}}
                 <td>
-                  <select class="board-tier is-{{this.key}}" data-uuid="{{../uuid}}" data-user-id="{{this.userId}}" aria-label="{{../name}}" {{#if ../locked}}disabled{{/if}}>
+                  <select class="board-tier is-{{this.key}}" data-tier-color="{{this.color}}" data-uuid="{{../uuid}}" data-user-id="{{this.userId}}" aria-label="{{../name}}" {{#if ../locked}}disabled{{/if}}>
                     {{#each this.options}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
                   </select>
                 </td>

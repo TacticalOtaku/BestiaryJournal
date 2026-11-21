@@ -1,4 +1,5 @@
 import { BestiaryCreatureView } from "./ui/creature-view.js";
+import { BestiaryGuideApp } from "./ui/guide-app.js";
 import { BestiarySectionView } from "./ui/section-view.js";
 import { BestiaryTierSettings } from "./ui/tier-settings.js";
 import { handleBestiaryStoreSocket, isAuthorityGm } from "./foundry/bestiary-store.js";
@@ -45,6 +46,14 @@ function registerMenus() {
     hint: "BESTIARY.Settings.OpenBestiaryHint",
     icon: "fa-solid fa-book-skull",
     type: BestiarySettingsLauncher,
+    restricted: false,
+  });
+  game.settings.registerMenu(MODULE_ID, "guideMenu", {
+    name: "BESTIARY.Settings.GuideMenu",
+    label: "BESTIARY.Settings.GuideMenuLabel",
+    hint: "BESTIARY.Settings.GuideMenuHint",
+    icon: "fa-solid fa-compass",
+    type: BestiaryGuideLauncher,
     restricted: false,
   });
   game.settings.registerMenu(MODULE_ID, "tierSettingsMenu", {
@@ -168,6 +177,25 @@ class BestiarySettingsLauncher extends ApplicationV2 {
   /** The settings button always brings the bestiary up, never closes it. */
   render() {
     game.bestiaryJournal?.open();
+    return this;
+  }
+}
+
+/** Opens the Bestiary Guide window from the module settings menu. */
+class BestiaryGuideLauncher extends ApplicationV2 {
+  static DEFAULT_OPTIONS = {
+    id: "bestiary-guide-launcher",
+    window: { title: "BESTIARY.Guide.Title" },
+  };
+
+  async _renderHTML() {
+    return document.createElement("div");
+  }
+
+  _replaceHTML() {}
+
+  render() {
+    BestiaryGuideApp.open({ tab: "quickstart" });
     return this;
   }
 }

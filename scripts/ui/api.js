@@ -5,9 +5,11 @@ import {
   getBestiaryData,
   getBestiaryKnowledge,
 } from "../foundry/bestiary-store.js";
+import { getWorldMaxResearchTier } from "../foundry/creature-display.js";
 import { getPlayerUsers } from "../foundry/foundry-runtime.js";
 import { BestiaryApp } from "./bestiary-app.js";
 import { BestiaryCreatureView } from "./creature-view.js";
+import { BestiaryGuideApp } from "./guide-app.js";
 import { BestiaryKnowledgeBoard } from "./knowledge-board.js";
 import { BestiarySectionView } from "./section-view.js";
 
@@ -61,6 +63,11 @@ export function createApi() {
       return app;
     },
 
+    /** Opens the interactive onboarding and feature guide. */
+    openGuide(tab = "quickstart") {
+      return BestiaryGuideApp.open({ tab });
+    },
+
     /** Opens a collection by id or by name. */
     openCollection(sectionRef) {
       const section = findSectionRef(sectionRef);
@@ -85,9 +92,9 @@ export function createApi() {
       return canUserViewBestiaryCreature(uuid);
     },
 
-    /** A user's tier for a creature: 0 unknown … 3 mastered. */
+    /** A user's tier for a creature: 0 unknown … max tier. */
     getTier(uuid, userId = game.user.id) {
-      return getUserTier(getBestiaryKnowledge(), userId, uuid);
+      return getUserTier(getBestiaryKnowledge(), userId, uuid, getWorldMaxResearchTier());
     },
 
     /** GM: sets the tier of one or many creatures for some players, or for the whole party with "party". */

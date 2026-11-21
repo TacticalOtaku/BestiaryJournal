@@ -94,3 +94,48 @@ export async function setPreferredCommentChannel(channel) {
   await game.settings.set(MODULE_ID, "commentChannel", channel);
   return true;
 }
+
+function readBoolPref(key, fallback) {
+  try {
+    const val = game?.settings?.get?.(MODULE_ID, key);
+    return val === undefined ? fallback : Boolean(val);
+  } catch {
+    return fallback;
+  }
+}
+
+export function hasSeenGuide() {
+  return readBoolPref("guideSeen", true);
+}
+
+export async function setGuideSeen(seen = true) {
+  try {
+    await game?.settings?.set?.(MODULE_ID, "guideSeen", Boolean(seen));
+  } catch {
+    // Ignored when settings are not registered in minimal test harnesses.
+  }
+}
+
+export function getShowOnboardingHints() {
+  return readBoolPref("showOnboardingHints", true);
+}
+
+export async function setShowOnboardingHints(enabled) {
+  try {
+    await game?.settings?.set?.(MODULE_ID, "showOnboardingHints", Boolean(enabled));
+  } catch {
+    // Ignored in minimal test harnesses.
+  }
+}
+
+export function getDismissedTipBanner() {
+  return readBoolPref("dismissedTipBanner", false);
+}
+
+export async function setDismissedTipBanner(dismissed = true) {
+  try {
+    await game?.settings?.set?.(MODULE_ID, "dismissedTipBanner", Boolean(dismissed));
+  } catch {
+    // Ignored in minimal test harnesses.
+  }
+}

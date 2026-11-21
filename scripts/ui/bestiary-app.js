@@ -3,11 +3,15 @@ import { getBestiaryData, getBestiaryKnowledge, getBestiarySocial } from "../fou
 import { buildNotesFeed, selectPartyNotes } from "./comments.js";
 import { runCommand } from "../foundry/command-feedback.js";
 import {
+  getDismissedTipBanner,
   getLibraryViewMode,
+  getShowOnboardingHints,
+  setDismissedTipBanner,
   setLibraryViewMode,
   toggleFavoriteCreature,
 } from "../foundry/client-preferences.js";
 import { buildCreatureRows, rowInputs, summarizeRows } from "./creature-rows.js";
+import { buildQuickTips } from "../core/guide-model.js";
 import { ACCENTS, COVER_SIZES, DENSITIES, MOTION_LEVELS, THEMES } from "../core/theme.js";
 import { MIN_RESEARCH_TIER } from "../core/research-model.js";
 import { confirmDialog, localize, resolveUuid } from "../foundry/foundry-runtime.js";
@@ -15,6 +19,7 @@ import { BestiaryTileEditor } from "./tile-editor.js";
 import { BestiarySectionView } from "./section-view.js";
 import { BestiaryTierSettings } from "./tier-settings.js";
 import { BestiaryKnowledgeBoard } from "./knowledge-board.js";
+import { BestiaryGuideApp, maybeShowFirstTimeGuide } from "./guide-app.js";
 import { exportBestiary, importBestiaryFromFile } from "../foundry/transfer.js";
 import { playApplicationEntrance, showContextMenu } from "./ui-effects.js";
 import { bindArtwork } from "./artwork.js";
@@ -82,6 +87,19 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       setLook: function (event, target) {
         this._onSetLook(target);
       },
+      openGuide: function (event, target) {
+        BestiaryGuideApp.open({ tab: target?.dataset?.tab || "quickstart" });
+      },
+      nextTip: function () {
+        this._onStepTip(1);
+      },
+      prevTip: function () {
+        this._onStepTip(-1);
+      },
+      dismissTipBanner: async function () {
+        await setDismissedTipBanner(true);
+        await this.render();
+      },
     },
   };
 
@@ -97,6 +115,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this._activeView = "overview";
     this._creatureLayout = getLibraryViewMode();
     this._searchQuery = "";
+    this._tipIndex = 0;
   }
 
   async _prepareContext() {
@@ -152,8 +171,30 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isGrid: this._creatureLayout === "grid",
       isGM,
       noSections: sections.length === 0,
+      tipBanner: this._buildTipBanner(isGM),
       emptyState: displayed.length ? null : this._emptyState(isGM, sections.length),
     };
+  }
+
+  _buildTipBanner(isGM) {
+    if (this._activeView !== "overview") return null;
+    if (!getShowOnboardingHints() || getDismissedTipBanner()) return null;
+    const tips = buildQuickTips({ isGM });
+    if (!tips.length) return null;
+    const idx = ((this._tipIndex % tips.length) + tips.length) % tips.length;
+    const tip = tips[idx];
+    return {
+      icon: tip.icon,
+      title: localize(tip.titleKey),
+      body: localize(tip.bodyKey),
+      tab: tip.tab,
+      indexLabel: `${idx + 1}/${tips.length}`,
+    };
+  }
+
+  _onStepTip(delta) {
+    this._tipIndex += delta;
+    this.render();
   }
 
   /** What an empty list says, and the one step that fills it. */
@@ -224,6 +265,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this._activateCreatureCards();
     playApplicationEntrance(this, ".bestiary-shell");
     this._disposeArtwork = bindArtwork(this.element);
+    maybeShowFirstTimeGuide(this);
   }
 
   _onClose(options) {
@@ -233,7 +275,14 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async refreshFromExternalUpdate(payload = {}) {
     const changed = payload.changed ?? {};
-    if (changed.data || changed.knowledge || changed.creatures || changed.seen || changed.social)
+    if (
+      changed.data ||
+      changed.knowledge ||
+      changed.creatures ||
+      changed.seen ||
+      changed.social ||
+      changed.settings
+    )
       await this.render();
   }
 

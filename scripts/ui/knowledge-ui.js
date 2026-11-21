@@ -1,11 +1,11 @@
-import {
-  MAX_RESEARCH_TIER,
-  MIN_RESEARCH_TIER,
-  RESEARCH_TIERS,
-  clampKnownTier,
-} from "../core/research-model.js";
+import { MIN_RESEARCH_TIER, clampKnownTier, maxResearchTier } from "../core/research-model.js";
 import { BESTIARY_COMMANDS, getUserTier } from "../core/bestiary-domain.js";
 import { runCommand } from "../foundry/command-feedback.js";
+import {
+  getWorldMaxResearchTier,
+  getWorldResearchTiers,
+  translateTierText,
+} from "../foundry/creature-display.js";
 import { formatTimestamp, getPlayerUsers, localize } from "../foundry/foundry-runtime.js";
 import { describeTier } from "../foundry/research.js";
 import { sharingBlockKey } from "../foundry/sharing-window.js";
@@ -19,15 +19,18 @@ const SOURCE_LABELS = {
 
 /** One row per player for the GM assignment board. */
 export function buildKnowledgeRoster(knowledge, uuid) {
+  const tiers = getWorldResearchTiers();
+  const maxTier = maxResearchTier(tiers);
   return getPlayerUsers().map((user) => {
     const record = knowledge?.users?.[user.id]?.[uuid] ?? null;
-    const tier = clampKnownTier(record?.tier, MIN_RESEARCH_TIER);
-    const definition = describeTier(tier);
+    const tier = clampKnownTier(record?.tier, MIN_RESEARCH_TIER, maxTier);
+    const definition = describeTier(tier, tiers);
     return {
       ...user,
       tier,
       tierLabel: definition.label,
       tierKey: definition.key,
+      tierColor: definition.color,
       tierIcon: definition.icon,
       sourceLabel: record?.source ? localize(SOURCE_LABELS[record.source] ?? SOURCE_LABELS.gm) : "",
       updatedLabel: record?.updatedAt ? formatTimestamp(record.updatedAt) : "",
@@ -39,9 +42,9 @@ export function buildKnowledgeRoster(knowledge, uuid) {
             dc: record.lastRoll.dc,
           })
         : "",
-      tierOptions: RESEARCH_TIERS.map((choice) => ({
+      tierOptions: tiers.map((choice) => ({
         value: choice.value,
-        label: localize(choice.label),
+        label: translateTierText(choice.label),
         selected: choice.value === tier,
       })),
     };
@@ -54,9 +57,10 @@ export function buildKnowledgeRoster(knowledge, uuid) {
  */
 export function buildPartyBadge(knowledge, uuid, players) {
   if (!players.length) return null;
-  const tiers = players.map((user) => getUserTier(knowledge, user.id, uuid));
+  const maxTier = getWorldMaxResearchTier();
+  const tiers = players.map((user) => getUserTier(knowledge, user.id, uuid, maxTier));
   const known = tiers.filter((tier) => tier > MIN_RESEARCH_TIER).length;
-  const mastered = tiers.filter((tier) => tier >= MAX_RESEARCH_TIER).length;
+  const mastered = tiers.filter((tier) => tier >= maxTier).length;
   return {
     label: `${known}/${players.length}`,
     key: known === 0 ? "none" : mastered === players.length ? "mastered" : "partial",
@@ -70,7 +74,7 @@ export function setKnowledgeTier(uuid, userIds, tier) {
     type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
     uuids: Array.isArray(uuid) ? uuid : [uuid],
     userIds: Array.isArray(userIds) ? userIds : [userIds],
-    tier: clampKnownTier(tier, MIN_RESEARCH_TIER),
+    tier: clampKnownTier(tier, MIN_RESEARCH_TIER, getWorldMaxResearchTier()),
     source: "gm",
     grantedBy: game.user.id,
   });
@@ -100,7 +104,9 @@ export async function openShareDialog({ uuid, creatureName, knowledge }) {
     ui.notifications.warn(localize(blocked));
     return false;
   }
-  const senderTier = getUserTier(knowledge, game.user.id, uuid);
+  const researchTiers = getWorldResearchTiers();
+  const maxTier = maxResearchTier(researchTiers);
+  const senderTier = getUserTier(knowledge, game.user.id, uuid, maxTier);
   if (senderTier <= MIN_RESEARCH_TIER) {
     ui.notifications.warn(localize("BESTIARY.Share.NothingToShare"));
     return false;
@@ -112,12 +118,11 @@ export async function openShareDialog({ uuid, creatureName, knowledge }) {
     return false;
   }
 
-  const tierOptions = RESEARCH_TIERS.filter(
-    (choice) => choice.value > MIN_RESEARCH_TIER && choice.value <= senderTier,
-  )
+  const tierOptions = researchTiers
+    .filter((choice) => choice.value > MIN_RESEARCH_TIER && choice.value <= senderTier)
     .map(
       (choice) =>
-        `<option value="${choice.value}"${choice.value === senderTier ? " selected" : ""}>${foundry.utils.escapeHTML(localize(choice.label))}</option>`,
+        `<option value="${choice.value}"${choice.value === senderTier ? " selected" : ""}>${foundry.utils.escapeHTML(translateTierText(choice.label))}</option>`,
     )
     .join("");
 
@@ -128,7 +133,7 @@ export async function openShareDialog({ uuid, creatureName, knowledge }) {
       <input type="checkbox" name="recipient" value="${foundry.utils.escapeHTML(user.id)}" />
       <img src="${foundry.utils.escapeHTML(user.avatar)}" alt="" />
       <span class="bestiary-share-name" style="--user-color:${foundry.utils.escapeHTML(user.color)}">${foundry.utils.escapeHTML(user.name)}</span>
-      <em>${foundry.utils.escapeHTML(describeTier(getUserTier(knowledge, user.id, uuid)).label)}</em>
+      <em>${foundry.utils.escapeHTML(describeTier(getUserTier(knowledge, user.id, uuid, maxTier), researchTiers).label)}</em>
     </label>`,
     )
     .join("");
@@ -178,7 +183,7 @@ export async function openShareDialog({ uuid, creatureName, knowledge }) {
       type: BESTIARY_COMMANDS.SHARE_KNOWLEDGE,
       uuid,
       toUserIds: result.userIds,
-      tier: Math.min(result.tier, senderTier, MAX_RESEARCH_TIER),
+      tier: Math.min(result.tier, senderTier, maxTier),
     },
     { unchanged: "BESTIARY.Share.NothingChanged" },
   );

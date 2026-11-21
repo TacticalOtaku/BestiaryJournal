@@ -9,6 +9,13 @@ import {
   normalizeKnowledge,
   normalizeSocial,
 } from "../core/bestiary-domain.js";
+import { normalizeResearchTiers, planTierRemapping, remapTierValue } from "../core/research-model.js";
+import {
+  getWorldMaxResearchTier,
+  getWorldResearchTiers,
+  setWorldBlockTiers,
+  setWorldResearchTiers,
+} from "./creature-display.js";
 import { prepareResearchCommand } from "./research-authority.js";
 import { allowedResearchSkills } from "./research-skills.js";
 import { sharingFacts } from "./sharing-window.js";
@@ -46,12 +53,12 @@ const handledRequests = new Map();
 
 // ── Reads ──────────────────────────────────────────────────────────────────
 
-export function getBestiaryData() {
-  return normalizeBestiaryData(game.settings.get(MODULE_ID, SETTING_BY_STORE.data));
+export function getBestiaryData(maxTier = getWorldMaxResearchTier()) {
+  return normalizeBestiaryData(game.settings.get(MODULE_ID, SETTING_BY_STORE.data), maxTier);
 }
 
-export function getBestiaryKnowledge() {
-  return normalizeKnowledge(game.settings.get(MODULE_ID, SETTING_BY_STORE.knowledge));
+export function getBestiaryKnowledge(maxTier = getWorldMaxResearchTier()) {
+  return normalizeKnowledge(game.settings.get(MODULE_ID, SETTING_BY_STORE.knowledge), maxTier);
 }
 
 export function getBestiarySocial() {
@@ -59,10 +66,10 @@ export function getBestiarySocial() {
   return normalizeSocial(game.settings.get(MODULE_ID, SETTING_BY_STORE.social));
 }
 
-export function getBestiaryState() {
+export function getBestiaryState(maxTier = getWorldMaxResearchTier()) {
   return {
-    data: getBestiaryData(),
-    knowledge: getBestiaryKnowledge(),
+    data: getBestiaryData(maxTier),
+    knowledge: getBestiaryKnowledge(maxTier),
     social: getBestiarySocial(),
   };
 }
@@ -233,12 +240,18 @@ function isPlayerUser(userId) {
 
 /** Already inside the authority queue; never enqueue recursively here. */
 async function persistCommand(command, requester) {
-  const current = createBestiaryState(getBestiaryState());
+  const maxTier = getWorldMaxResearchTier();
+  const readMax =
+    command?.type === BESTIARY_COMMANDS.REMAP_TIER_VALUES
+      ? Math.max(maxTier, Number(command.maxNewTier) || maxTier)
+      : maxTier;
+  const current = createBestiaryState(getBestiaryState(readMax), readMax);
   const result = applyBestiaryCommand(current, command, {
     generateId: () => foundry.utils.randomID(16),
     isPlayerUser,
     sharingFacts: () => sharingFacts(requester),
     allowedSkills: allowedResearchSkills(),
+    maxTier,
   });
   if (!result.changedAny) return { changed: false };
 
@@ -313,6 +326,35 @@ function settlePendingRequest(message) {
   pendingRequests.delete(message.requestId);
   if (message.error) pending.reject(new BestiaryCommandError(message.error, message.errorData ?? {}));
   else pending.resolve(message.result);
+}
+
+export async function saveResearchTierConfig({ tiers, blockTiers, encounterRevealTier } = {}) {
+  if (!game.user?.isGM) return false;
+  const oldTiers = getWorldResearchTiers();
+  const nextTiers = normalizeResearchTiers(tiers);
+  const remapping = planTierRemapping(oldTiers, nextTiers);
+
+  if (remapping.changed) {
+    await dispatchBestiaryCommand({
+      type: BESTIARY_COMMANDS.REMAP_TIER_VALUES,
+      valueMap: Object.fromEntries(remapping.valueMap),
+      maxNewTier: remapping.maxNewTier,
+    });
+  }
+
+  await setWorldResearchTiers(nextTiers);
+  await setWorldBlockTiers(blockTiers, remapping.maxNewTier);
+
+  const currentRevealTier = Number(game.settings.get(MODULE_ID, "encounterRevealTier") ?? 1);
+  const nextRevealRaw =
+    encounterRevealTier !== undefined
+      ? Number(encounterRevealTier)
+      : remapTierValue(currentRevealTier, remapping.valueMap, remapping.maxNewTier);
+  const nextRevealTier = Math.max(1, Math.min(remapping.maxNewTier, Math.round(nextRevealRaw) || 1));
+  if (nextRevealTier !== currentRevealTier) {
+    await game.settings.set(MODULE_ID, "encounterRevealTier", nextRevealTier);
+  }
+  return true;
 }
 
 /** Readable text for any error a command can end with. */

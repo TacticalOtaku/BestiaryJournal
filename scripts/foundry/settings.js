@@ -1,14 +1,30 @@
 import { SHARING_WINDOWS } from "../core/bestiary-domain.js";
+import { defaultResearchTiers, normalizeResearchTiers } from "../core/research-model.js";
 import { setDebugLogging } from "../core/logger.js";
 import { ACCENTS, COVER_SIZES, DENSITIES, MOTION_LEVELS, THEMES } from "../core/theme.js";
 import { restampAll } from "./theme-root.js";
 
 const MODULE_ID = "bestiary-journal";
 
+export function syncEncounterRevealTierChoices() {
+  const setting = game.settings?.settings?.get?.(`${MODULE_ID}.encounterRevealTier`);
+  if (!setting) return;
+  const tiers = normalizeResearchTiers(game.settings.get(MODULE_ID, "researchTiers"));
+  setting.choices = Object.fromEntries(
+    tiers
+      .filter((tier) => tier.value > 0)
+      .map((tier) => [
+        tier.value,
+        tier.label.startsWith("BESTIARY.") ? game.i18n.localize(tier.label) : tier.label,
+      ]),
+  );
+}
+
 export function registerBestiarySettings({ onTierConfigChange, onRefreshCards } = {}) {
   registerWorldStores({ onTierConfigChange });
   registerWorldOptions({ onRefreshCards });
-  registerPreferences();
+  syncEncounterRevealTierChoices();
+  registerPreferences({ onRefreshCards });
   registerKeybindings();
 }
 
@@ -34,6 +50,17 @@ function registerWorldStores({ onTierConfigChange }) {
     type: Object,
     default: { revision: 0, comments: [] },
   });
+  game.settings.register(MODULE_ID, "researchTiers", {
+    name: "Bestiary Research Tiers",
+    scope: "world",
+    config: false,
+    type: Array,
+    default: defaultResearchTiers(),
+    onChange: () => {
+      syncEncounterRevealTierChoices();
+      onTierConfigChange?.();
+    },
+  });
   game.settings.register(MODULE_ID, "tierBlockConfig", {
     name: "Bestiary Tier Block Config",
     scope: "world",
@@ -42,6 +69,13 @@ function registerWorldStores({ onTierConfigChange }) {
     default: {},
     // Fires on every client, so open cards follow a new world ladder at once.
     onChange: () => onTierConfigChange?.(),
+  });
+  game.settings.register(MODULE_ID, "tierSchemaVersion", {
+    name: "Bestiary Tier Schema Version",
+    scope: "world",
+    config: false,
+    type: Number,
+    default: 0,
   });
   game.settings.register(MODULE_ID, "dataVersion", {
     name: "Bestiary Data Version",
@@ -137,6 +171,15 @@ function registerWorldOptions({ onRefreshCards }) {
     type: Boolean,
     default: true,
   });
+  game.settings.register(MODULE_ID, "encounterRevealTier", {
+    name: "BESTIARY.Settings.EncounterRevealTier",
+    hint: "BESTIARY.Settings.EncounterRevealTierHint",
+    scope: "world",
+    config: true,
+    type: Number,
+    default: 1,
+    choices: {},
+  });
   // Only read by the authority when the next roll is judged; nothing to redraw.
   game.settings.register(MODULE_ID, "researchSingleAttempt", {
     name: "BESTIARY.Settings.SingleAttempt",
@@ -161,7 +204,7 @@ function registerWorldOptions({ onRefreshCards }) {
  * Favorites and collapsed families follow the user across devices ("user"
  * scope). The rest is about this screen and stays per browser ("client").
  */
-function registerPreferences() {
+function registerPreferences({ onRefreshCards } = {}) {
   game.settings.register(MODULE_ID, "favoriteCreatures", {
     name: "Favorite Creatures",
     scope: "user",
@@ -258,6 +301,30 @@ function registerPreferences() {
     default: "medium",
     choices: lookChoices(COVER_SIZES, "CoverSize"),
     onChange: restampAll,
+  });
+  game.settings.register(MODULE_ID, "guideSeen", {
+    name: "Guide Seen",
+    scope: "user",
+    config: false,
+    type: Boolean,
+    default: false,
+  });
+  game.settings.register(MODULE_ID, "dismissedTipBanner", {
+    name: "Dismissed Library Tip Banner",
+    scope: "user",
+    config: false,
+    type: Boolean,
+    default: false,
+    onChange: () => onRefreshCards?.(),
+  });
+  game.settings.register(MODULE_ID, "showOnboardingHints", {
+    name: "BESTIARY.Settings.OnboardingHints",
+    hint: "BESTIARY.Settings.OnboardingHintsHint",
+    scope: "user",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: () => onRefreshCards?.(),
   });
   game.settings.register(MODULE_ID, "debug", {
     name: "BESTIARY.Settings.Debug",

@@ -1,4 +1,4 @@
-import { NEVER_TIER } from "../core/research-model.js";
+import { LEGACY_NEVER_TIER, NEVER_TIER } from "../core/research-model.js";
 import { normalizeBestiaryData, normalizeKnowledge } from "../core/bestiary-domain.js";
 import { getPlayerUsers } from "./foundry-runtime.js";
 import { migrateSocialToJournalStore } from "./note-store.js";
@@ -42,8 +42,71 @@ const LEGACY_LEVEL_TIERS = { minimal: 1, standard: 2, expanded: 3, custom: 2 };
  */
 export async function runMigrations() {
   const migratedLegacy = await runLegacySchemaMigration();
+  const migratedNeverTier = await migrateLegacyNeverTier();
   const migratedNotes = await migrateSocialToJournalStore();
-  return migratedLegacy || migratedNotes;
+  return migratedLegacy || migratedNeverTier || migratedNotes;
+}
+
+function upgradeNeverTierMap(tierMap) {
+  if (!tierMap || typeof tierMap !== "object") return { map: tierMap, changed: false };
+  let changed = false;
+  const next = {};
+  for (const [key, value] of Object.entries(tierMap)) {
+    if (Number(value) === LEGACY_NEVER_TIER) {
+      next[key] = NEVER_TIER;
+      changed = true;
+    } else {
+      next[key] = value;
+    }
+  }
+  return { map: next, changed };
+}
+
+/**
+ * Older releases stored "GM only" as integer 4 right above the 4 default
+ * tiers. Move those entries to NEVER_TIER (100) so custom tier 4 stays free.
+ */
+export async function migrateLegacyNeverTier() {
+  const schemaVersion = game.settings.get(MODULE_ID, "tierSchemaVersion");
+  if (schemaVersion === undefined || Number(schemaVersion) >= 1) return false;
+  if (Number(game.settings.get(MODULE_ID, "dataVersion") ?? 0) < DATA_VERSION) return false;
+
+  try {
+    const worldConfig = game.settings.get(MODULE_ID, "tierBlockConfig");
+    const upgradedConfig = upgradeNeverTierMap(worldConfig);
+    if (upgradedConfig.changed) {
+      await game.settings.set(MODULE_ID, "tierBlockConfig", upgradedConfig.map);
+    }
+
+    const rawData = structuredClone(game.settings.get(MODULE_ID, "bestiaryData"));
+    let dataChanged = false;
+    for (const section of rawData?.sections ?? []) {
+      for (const entry of section?.creatures ?? []) {
+        const blocks = upgradeNeverTierMap(entry.blockTiers);
+        const items = upgradeNeverTierMap(entry.itemTiers);
+        if (blocks.changed) {
+          entry.blockTiers = blocks.map;
+          dataChanged = true;
+        }
+        if (items.changed) {
+          entry.itemTiers = items.map;
+          dataChanged = true;
+        }
+      }
+    }
+    if (dataChanged) {
+      await game.settings.set(MODULE_ID, "bestiaryData", rawData);
+    }
+
+    await game.settings.set(MODULE_ID, "tierSchemaVersion", 1);
+    if (upgradedConfig.changed || dataChanged) {
+      log.info("Upgraded legacy GM-only tier thresholds for custom tier support");
+    }
+    return upgradedConfig.changed || dataChanged;
+  } catch (error) {
+    log.error("Could not upgrade legacy GM-only tier thresholds", error);
+    return false;
+  }
 }
 
 async function runLegacySchemaMigration() {

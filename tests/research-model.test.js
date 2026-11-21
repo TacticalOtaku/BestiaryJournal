@@ -3,13 +3,19 @@ import assert from "node:assert/strict";
 
 import {
   GM_TIER,
+  MAX_CUSTOM_TIERS,
   NEVER_TIER,
   RESEARCH_SKILLS,
+  RESEARCH_TIERS,
   clampTier,
   defaultBlockTiers,
   isBlockVisible,
   isItemVisible,
   itemTierKey,
+  normalizeResearchTiers,
+  planTierRemapping,
+  remapTierMap,
+  remapTierValue,
   requiredTierForItem,
   resolveAvailableResearchSkills,
   resolveBlockTiers,
@@ -21,8 +27,58 @@ import {
 test("tiers are clamped into the selectable range", () => {
   assert.equal(clampTier(-5), 0);
   assert.equal(clampTier(2), 2);
-  assert.equal(clampTier(99), NEVER_TIER);
+  assert.equal(clampTier(5, 0, 3), 3);
+  assert.equal(clampTier(5, 0, 5), 5);
+  assert.equal(clampTier(GM_TIER), NEVER_TIER);
   assert.equal(clampTier("not a number", 1), 1);
+});
+
+test("normalizeResearchTiers validates custom tiers, deduplicates ids, and caps max count", () => {
+  assert.equal(normalizeResearchTiers(null).length, RESEARCH_TIERS.length);
+  assert.equal(normalizeResearchTiers([{ id: "only-one" }]).length, RESEARCH_TIERS.length);
+
+  const many = Array.from({ length: MAX_CUSTOM_TIERS + 3 }, (_, i) => ({
+    id: i === 0 ? "unknown" : "dup",
+    label: `Tier ${i}`,
+    icon: "bad icon!",
+    color: i === 4 ? "arcane" : "invalid",
+  }));
+  const normalized = normalizeResearchTiers(many);
+  assert.equal(normalized.length, MAX_CUSTOM_TIERS);
+  assert.equal(new Set(normalized.map((t) => t.id)).size, MAX_CUSTOM_TIERS);
+  assert.equal(normalized[4].color, "arcane");
+  assert.ok(normalized[4].icon.startsWith("fa-"));
+  assert.deepEqual(
+    normalized.map((t) => t.value),
+    Array.from({ length: MAX_CUSTOM_TIERS }, (_, i) => i),
+  );
+});
+
+test("planTierRemapping shifts thresholds and knowledge across insertions, deletions, and reordering", () => {
+  const base = RESEARCH_TIERS;
+  const inserted = [
+    base[0],
+    { id: "sightings", label: "Sightings", hint: "", icon: "fa-eye", color: "frost" },
+    base[1],
+    base[2],
+    base[3],
+  ];
+  const insertPlan = planTierRemapping(base, inserted);
+  assert.equal(insertPlan.changed, true);
+  assert.equal(insertPlan.maxNewTier, 4);
+  assert.equal(remapTierValue(0, insertPlan.valueMap, insertPlan.maxNewTier), 0);
+  assert.equal(remapTierValue(1, insertPlan.valueMap, insertPlan.maxNewTier), 2);
+  assert.equal(remapTierValue(2, insertPlan.valueMap, insertPlan.maxNewTier), 3);
+  assert.equal(remapTierValue(3, insertPlan.valueMap, insertPlan.maxNewTier), 4);
+  assert.equal(remapTierValue(NEVER_TIER, insertPlan.valueMap, insertPlan.maxNewTier), NEVER_TIER);
+
+  // Deleting studied (index 2 in base) falls back to rumors (index 1) and shifts mastered (3 -> 2)
+  const deleted = [base[0], base[1], base[3]];
+  const deletePlan = planTierRemapping(base, deleted);
+  assert.deepEqual(
+    remapTierMap({ name: 1, ac: 2, bio: 3, secret: NEVER_TIER }, deletePlan.valueMap, deletePlan.maxNewTier),
+    { name: 1, ac: 1, bio: 2, secret: NEVER_TIER },
+  );
 });
 
 test("world settings layer under per-creature overrides", () => {

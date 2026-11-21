@@ -441,6 +441,14 @@
   margin: 0;
   font-size: 0.8rem;
 }
+.preview-placeholder .preview-drag-hint {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--suite-border);
+  max-width: 26ch;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
 .creature-preview-content > header {
   display: flex;
   align-items: center;

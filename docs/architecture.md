@@ -54,7 +54,9 @@ knowledge), while notes live in hidden, permission-scoped `JournalEntry` / `Jour
 (`foundry/note-store.js`): one GM-only store (`default: NONE`), one party store (`default: OBSERVER`) for shared
 notes, and one private store per author (`default: NONE`, `[authorId]: OBSERVER`). On startup, `foundry/migrations.js`
 migrates any legacy `bestiarySocial` comments into these `JournalEntry` stores and clears the setting. Each world
-store carries a `revision`; `dataVersion` drives legacy `0.1.x` schema migration (`foundry/migrations.js`). Before
+store carries a `revision`; `dataVersion` drives legacy `0.1.x` schema migration (`foundry/migrations.js`), while
+`researchTiers` stores customizable tier definitions (`tierSchemaVersion` upgrades legacy `4` "GM only" values to
+`NEVER_TIER`, and `REMAP_TIER_VALUES` atomically shifts stored thresholds and knowledge on tier changes). Before
 migration writes, `migrationBackup` holds the raw structure, knowledge and version. A failed write restores those
 originals, including a write whose acknowledgement failed after saving. If storage also refuses rollback, the
 recovery copy is retained and a retry refuses to overwrite it with partial data. A GM must inspect that copy and any

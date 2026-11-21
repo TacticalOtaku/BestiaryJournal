@@ -41,6 +41,12 @@
   --bj-tier-rumors: #8a4513;
   --bj-tier-studied: #1e5f59;
   --bj-tier-mastered: #6f4f12;
+  --bj-tier-embers: #933a1a;
+  --bj-tier-arcane: #592fda;
+  --bj-tier-forest: #216141;
+  --bj-tier-frost: #185a87;
+  --bj-tier-rose: #a41d4f;
+  --bj-tier-crimson: #a4241d;
 }
 
 /* The nearest theme wins: Foundry draws chat messages light inside a dark interface. */
@@ -57,6 +63,12 @@
     --bj-tier-rumors: #d8955a;
     --bj-tier-studied: #63b3c2;
     --bj-tier-mastered: #ddb659;
+    --bj-tier-embers: #e2734a;
+    --bj-tier-arcane: #9d7eff;
+    --bj-tier-forest: #5fbf8f;
+    --bj-tier-frost: #6fb7e8;
+    --bj-tier-rose: #e07aa0;
+    --bj-tier-crimson: #ef7079;
   }
   .bestiary-chat-card img.is-silhouette {
     filter: brightness(0) invert(1) opacity(0.35);
@@ -85,17 +97,39 @@
   padding: 10px 12px 10px 13px;
 }
 
-.bestiary-chat-card[data-tier="unknown"] {
+.bestiary-chat-card[data-tier="unknown"],
+.bestiary-chat-card[data-tier-color="unknown"] {
   --bj-chat-edge: var(--bj-tier-unknown);
 }
-.bestiary-chat-card[data-tier="rumors"] {
+.bestiary-chat-card[data-tier="rumors"],
+.bestiary-chat-card[data-tier-color="rumors"] {
   --bj-chat-edge: var(--bj-tier-rumors);
 }
-.bestiary-chat-card[data-tier="studied"] {
+.bestiary-chat-card[data-tier="studied"],
+.bestiary-chat-card[data-tier-color="studied"] {
   --bj-chat-edge: var(--bj-tier-studied);
 }
-.bestiary-chat-card[data-tier="mastered"] {
+.bestiary-chat-card[data-tier="mastered"],
+.bestiary-chat-card[data-tier-color="mastered"] {
   --bj-chat-edge: var(--bj-tier-mastered);
+}
+.bestiary-chat-card[data-tier-color="embers"] {
+  --bj-chat-edge: var(--bj-tier-embers);
+}
+.bestiary-chat-card[data-tier-color="arcane"] {
+  --bj-chat-edge: var(--bj-tier-arcane);
+}
+.bestiary-chat-card[data-tier-color="forest"] {
+  --bj-chat-edge: var(--bj-tier-forest);
+}
+.bestiary-chat-card[data-tier-color="frost"] {
+  --bj-chat-edge: var(--bj-tier-frost);
+}
+.bestiary-chat-card[data-tier-color="rose"] {
+  --bj-chat-edge: var(--bj-tier-rose);
+}
+.bestiary-chat-card[data-tier-color="crimson"] {
+  --bj-chat-edge: var(--bj-tier-crimson);
 }
 
 .bestiary-chat-card img {

@@ -15,6 +15,7 @@ import {
   selectVisibleCreatureEntries,
   sharingBlockReason,
 } from "../scripts/core/bestiary-domain.js";
+import { NEVER_TIER } from "../scripts/core/research-model.js";
 
 let counter = 0;
 const deps = { now: () => 1_000, generateId: () => `id${++counter}` };
@@ -626,4 +627,84 @@ test("a command that finds nothing left to change stays quiet", () => {
     deps,
   );
   assert.equal(locked.changedAny, false);
+});
+
+test("custom maxTier lets research rolls and sharing advance up to tier 5 and REMAP_TIER_VALUES updates state", () => {
+  const state = stateWith(
+    [
+      sectionFixture({
+        creatures: [
+          {
+            uuid: "Actor.wolf",
+            blockTiers: { hp: 2, biography: 3, alignment: NEVER_TIER },
+            itemTiers: { "actions:bite": 3 },
+          },
+        ],
+      }),
+    ],
+    {
+      knowledge: {
+        users: {
+          p1: { "Actor.wolf": { tier: 3 } },
+          p2: { "Actor.wolf": { tier: 1 } },
+        },
+      },
+    },
+  );
+
+  // Advance p1 from 3 -> 4 when maxTier is 5
+  const rolled = applyBestiaryCommand(
+    state,
+    {
+      type: BESTIARY_COMMANDS.RECORD_RESEARCH,
+      uuid: "Actor.wolf",
+      total: 18,
+      dc: 12,
+      success: true,
+      ...player,
+    },
+    { ...deps, maxTier: 5 },
+  );
+  assert.equal(getUserTier(rolled.state.knowledge, "p1", "Actor.wolf", 5), 4);
+
+  // Share tier 4 from p1 to p2
+  const shared = applyBestiaryCommand(
+    rolled.state,
+    { type: BESTIARY_COMMANDS.SHARE_KNOWLEDGE, uuid: "Actor.wolf", toUserIds: ["p2"], tier: 4, ...player },
+    { ...deps, maxTier: 5, sharingFacts: () => ({ allowed: true, mode: "always" }) },
+  );
+  assert.equal(getUserTier(shared.state.knowledge, "p2", "Actor.wolf", 5), 4);
+
+  // Remap tier values when inserting a new tier at position 2 (old 2->3, 3->4, 4->5)
+  assert.throws(
+    () =>
+      applyBestiaryCommand(
+        shared.state,
+        {
+          type: BESTIARY_COMMANDS.REMAP_TIER_VALUES,
+          valueMap: { 0: 0, 1: 1, 2: 3, 3: 4, 4: 5 },
+          maxNewTier: 5,
+          ...player,
+        },
+        deps,
+      ),
+    { key: "BESTIARY.Errors.GmOnly" },
+  );
+
+  const remapped = applyBestiaryCommand(
+    shared.state,
+    {
+      type: BESTIARY_COMMANDS.REMAP_TIER_VALUES,
+      valueMap: { 0: 0, 1: 1, 2: 3, 3: 4, 4: 5 },
+      maxNewTier: 5,
+      userId: "gm",
+      isGM: true,
+    },
+    { ...deps, maxTier: 5 },
+  );
+  const wolfEntry = remapped.state.data.sections[0].creatures[0];
+  assert.deepEqual(wolfEntry.blockTiers, { hp: 3, biography: 4, alignment: NEVER_TIER });
+  assert.deepEqual(wolfEntry.itemTiers, { "actions:bite": 4 });
+  assert.equal(getUserTier(remapped.state.knowledge, "p1", "Actor.wolf", 5), 5);
+  assert.equal(getUserTier(remapped.state.knowledge, "p2", "Actor.wolf", 5), 5);
 });

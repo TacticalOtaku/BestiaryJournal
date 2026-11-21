@@ -1,7 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { migrateClientPreferencesToUser } from "../scripts/foundry/client-preferences.js";
+import {
+  getDismissedTipBanner,
+  getShowOnboardingHints,
+  hasSeenGuide,
+  migrateClientPreferencesToUser,
+  setDismissedTipBanner,
+  setGuideSeen,
+  setShowOnboardingHints,
+} from "../scripts/foundry/client-preferences.js";
 
 function memoryStorage(entries = {}) {
   const data = new Map(Object.entries(entries));
@@ -88,4 +96,31 @@ test("browsers that never stored anything are left alone", async () => {
   const { writes } = fakeSettings();
   await migrateClientPreferencesToUser(memoryStorage());
   assert.deepEqual(writes, []);
+});
+
+test("onboarding preferences default safely and persist updates", async () => {
+  const { values } = fakeSettings({
+    guideSeen: false,
+    showOnboardingHints: true,
+    dismissedTipBanner: false,
+  });
+
+  assert.equal(hasSeenGuide(), false);
+  assert.equal(getShowOnboardingHints(), true);
+  assert.equal(getDismissedTipBanner(), false);
+
+  await setGuideSeen(true);
+  await setShowOnboardingHints(false);
+  await setDismissedTipBanner(true);
+
+  assert.equal(values.guideSeen, true);
+  assert.equal(values.showOnboardingHints, false);
+  assert.equal(values.dismissedTipBanner, true);
+  assert.equal(hasSeenGuide(), true);
+  assert.equal(getShowOnboardingHints(), false);
+  assert.equal(getDismissedTipBanner(), true);
+
+  // When settings are absent in partial test harnesses, hasSeenGuide returns true so timers do not auto-open.
+  globalThis.game = {};
+  assert.equal(hasSeenGuide(), true);
 });

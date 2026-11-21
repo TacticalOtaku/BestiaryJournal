@@ -42,17 +42,23 @@
       {{#if isGM}}
         <button type="button" class="library-new-button" data-action="createSection" data-tooltip="{{localize 'BESTIARY.NewCollection'}}"><i class="fa-solid fa-plus"></i><span>{{localize "BESTIARY.NewCollection"}}</span></button>
         <div class="library-footer-tools">
-          <button type="button" data-action="importSnapshot" data-tooltip="{{localize 'BESTIARY.Transfer.Import'}}" aria-label="{{localize 'BESTIARY.Transfer.Import'}}"><i class="fa-solid fa-file-import" aria-hidden="true"></i></button>
-          <button type="button" data-action="exportAll" data-tooltip="{{localize 'BESTIARY.Transfer.ExportAll'}}" aria-label="{{localize 'BESTIARY.Transfer.ExportAll'}}"><i class="fa-solid fa-file-export" aria-hidden="true"></i></button>
-          <button type="button" data-action="openTierSettings" data-tooltip="{{localize 'BESTIARY.Tier.WorldTitle'}}" aria-label="{{localize 'BESTIARY.Tier.WorldTitle'}}"><i class="fa-solid fa-layer-group" aria-hidden="true"></i></button>
-          <button type="button" data-action="openKnowledgeBoard" data-tooltip="{{localize 'BESTIARY.Board.Title'}}" aria-label="{{localize 'BESTIARY.Board.Title'}}"><i class="fa-solid fa-table-cells" aria-hidden="true"></i></button>
+          <button type="button" data-action="importSnapshot" data-tooltip="{{localize 'BESTIARY.Guide.TooltipImport'}}" aria-label="{{localize 'BESTIARY.Transfer.Import'}}"><i class="fa-solid fa-file-import" aria-hidden="true"></i></button>
+          <button type="button" data-action="exportAll" data-tooltip="{{localize 'BESTIARY.Guide.TooltipExportAll'}}" aria-label="{{localize 'BESTIARY.Transfer.ExportAll'}}"><i class="fa-solid fa-file-export" aria-hidden="true"></i></button>
+          <button type="button" data-action="openTierSettings" data-tooltip="{{localize 'BESTIARY.Guide.TooltipTierSettings'}}" aria-label="{{localize 'BESTIARY.Tier.WorldTitle'}}"><i class="fa-solid fa-layer-group" aria-hidden="true"></i></button>
+          <button type="button" data-action="openKnowledgeBoard" data-tooltip="{{localize 'BESTIARY.Guide.TooltipBoard'}}" aria-label="{{localize 'BESTIARY.Board.Title'}}"><i class="fa-solid fa-table-cells" aria-hidden="true"></i></button>
         </div>
       {{/if}}
+      <button type="button" class="library-guide-button" data-action="openGuide" data-tooltip="{{localize 'BESTIARY.Guide.OpenTooltip'}}">
+        <i class="fa-solid fa-compass" aria-hidden="true"></i><span>{{localize "BESTIARY.Guide.ButtonLabel"}}</span>
+      </button>
     </div>
   </aside>
 
   <main class="library-workspace">
-    <button type="button" class="library-look-button" data-action="toggleLookDrawer" data-tooltip="{{localize 'BESTIARY.Look.Open'}}" aria-label="{{localize 'BESTIARY.Look.Open'}}"><i class="fa-solid fa-palette"></i></button>
+    <div class="library-top-actions">
+      <button type="button" class="library-help-button" data-action="openGuide" data-tooltip="{{localize 'BESTIARY.Guide.OpenTooltip'}}" aria-label="{{localize 'BESTIARY.Guide.Title'}}"><i class="fa-regular fa-circle-question"></i></button>
+      <button type="button" class="library-look-button" data-action="toggleLookDrawer" data-tooltip="{{localize 'BESTIARY.Look.Open'}}" aria-label="{{localize 'BESTIARY.Look.Open'}}"><i class="fa-solid fa-palette"></i></button>
+    </div>
     <aside class="look-drawer {{#if lookOpen}}is-open{{/if}}" aria-label="{{localize 'BESTIARY.Look.Title'}}">
       <header>
         <h2>{{localize "BESTIARY.Look.Title"}}</h2>
@@ -115,6 +121,27 @@
         {{#unless notes.length}}<div class="suite-empty-state"><i class="fa-regular fa-comments"></i><h2>{{localize "BESTIARY.Notes.Empty"}}</h2><p>{{localize "BESTIARY.Notes.EmptyHint"}}</p></div>{{/unless}}
       {{else}}
       {{#if isOverview}}
+        {{#if tipBanner}}
+          <aside class="bestiary-tip-banner" aria-label="{{localize 'BESTIARY.Guide.TipBadge'}}">
+            <span class="tip-banner-icon" aria-hidden="true"><i class="fa-solid {{tipBanner.icon}}"></i></span>
+            <div class="tip-banner-copy">
+              <div class="tip-banner-title-row">
+                <span class="tip-banner-badge">{{localize "BESTIARY.Guide.TipBadge"}}</span>
+                <strong>{{tipBanner.title}}</strong>
+              </div>
+              <p>{{tipBanner.body}}</p>
+            </div>
+            <div class="tip-banner-controls">
+              <div class="tip-banner-nav">
+                <button type="button" data-action="prevTip" aria-label="{{localize 'BESTIARY.Guide.PrevTip'}}" data-tooltip="{{localize 'BESTIARY.Guide.PrevTip'}}"><i class="fa-solid fa-chevron-left"></i></button>
+                <span>{{tipBanner.indexLabel}}</span>
+                <button type="button" data-action="nextTip" aria-label="{{localize 'BESTIARY.Guide.NextTip'}}" data-tooltip="{{localize 'BESTIARY.Guide.NextTip'}}"><i class="fa-solid fa-chevron-right"></i></button>
+              </div>
+              <button type="button" class="tip-banner-more" data-action="openGuide" data-tab="{{tipBanner.tab}}">{{localize "BESTIARY.Guide.LearnMore"}}</button>
+              <button type="button" class="tip-banner-dismiss" data-action="dismissTipBanner" aria-label="{{localize 'BESTIARY.Guide.DismissBanner'}}" data-tooltip="{{localize 'BESTIARY.Guide.DismissBanner'}}"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+          </aside>
+        {{/if}}
         <section class="library-section-block">
           <div class="library-section-title">
             <div><h2>{{localize "BESTIARY.Collections"}}</h2><p>{{localize "BESTIARY.CollectionsHint"}}</p></div>
@@ -135,7 +162,7 @@
                     {{#if this.updatedLabel}}<span>· {{this.updatedLabel}}</span>{{/if}}
                     {{#if this.progress}}<span>· {{this.progress.label}}</span>{{/if}}
                   </p>
-                  {{#if this.progress}}<span class="collection-progress" role="img" aria-label="{{this.progress.label}}">{{#each this.progress.segments}}<i class="is-{{this.key}}" style="flex-grow: {{this.count}}"></i>{{/each}}</span>{{/if}}
+                  {{#if this.progress}}<span class="collection-progress" role="img" aria-label="{{this.progress.label}}">{{#each this.progress.segments}}<i class="is-{{this.key}}" data-tier-color="{{this.color}}" style="flex-grow: {{this.count}}"></i>{{/each}}</span>{{/if}}
                 </div>
                 <div class="collection-card-flags">
                   {{#if this.isHidden}}<span class="suite-badge is-warning" data-tooltip="{{localize 'BESTIARY.HiddenFromPlayers'}}"><i class="fa-solid fa-eye-slash"></i></span>{{/if}}
@@ -177,7 +204,7 @@
                 <small>{{this.collectionLabel}}</small>
               </div>
                 <div class="library-creature-meta">
-                {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
+                {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.color}}data-tier-color="{{this.tierBadge.color}}"{{/if}} {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
               </div>
                 <div class="library-creature-actions">
                 <button type="button" data-action="toggleFavorite" aria-label="{{localize 'BESTIARY.ToggleFavorite'}}" data-tooltip="{{localize 'BESTIARY.ToggleFavorite'}}"><i class="{{#if this.isFavorite}}fas{{else}}far{{/if}} fa-star"></i></button>
@@ -210,7 +237,7 @@
                     <strong class="{{#unless this.knowsName}}is-unknown{{/unless}}" title="{{this.name}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</strong>
                     <span>{{this.typeLabel}}</span>
                   </div>
-                  {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}"><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
+                  {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.color}}data-tier-color="{{this.tierBadge.color}}"{{/if}}><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
                 </article>
               {{/each}}
             </div>
@@ -243,7 +270,7 @@
                 <small>{{this.collectionLabel}}</small>
               </div>
               <div class="library-creature-meta">
-                {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
+                {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.color}}data-tier-color="{{this.tierBadge.color}}"{{/if}} {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
               </div>
               <div class="library-creature-actions">
                 <button type="button" data-action="toggleFavorite" aria-label="{{localize 'BESTIARY.ToggleFavorite'}}" data-tooltip="{{localize 'BESTIARY.ToggleFavorite'}}"><i class="{{#if this.isFavorite}}fas{{else}}far{{/if}} fa-star"></i></button>

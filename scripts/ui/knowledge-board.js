@@ -1,9 +1,11 @@
 import { BESTIARY_COMMANDS, getUserTier, isCreatureLocked } from "../core/bestiary-domain.js";
-import { RESEARCH_TIERS } from "../core/research-model.js";
+import { maxResearchTier } from "../core/research-model.js";
 import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store.js";
+import { getWorldResearchTiers, translateTierText } from "../foundry/creature-display.js";
 import { runCommand } from "../foundry/command-feedback.js";
 import { getCreatureDataMany } from "../foundry/creature-cache.js";
 import { confirmDialog, formatCount, getPlayerUsers, localize } from "../foundry/foundry-runtime.js";
+import { describeTier } from "../foundry/research.js";
 import { playApplicationEntrance } from "./ui-effects.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -56,15 +58,17 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
     const data = getBestiaryData();
     const knowledge = getBestiaryKnowledge();
     const players = getPlayerUsers();
+    const tiers = getWorldResearchTiers();
+    const maxTier = maxResearchTier(tiers);
     const sections = this._scope
       ? data.sections.filter((section) => section.id === this._scope)
       : data.sections;
     const uuids = [...new Set(sections.flatMap((section) => section.creatures.map((entry) => entry.uuid)))];
     const resolved = await getCreatureDataMany(uuids);
-    const tierChoice = (tier, selected) =>
-      RESEARCH_TIERS.map((definition) => ({
+    const tierChoice = (selected) =>
+      tiers.map((definition) => ({
         value: definition.value,
-        label: localize(definition.label),
+        label: translateTierText(definition.label),
         selected: definition.value === selected,
       }));
     const rows = uuids
@@ -77,8 +81,14 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
           img: creature.img,
           locked: isCreatureLocked(data, uuid),
           cells: players.map((user) => {
-            const tier = getUserTier(knowledge, user.id, uuid);
-            return { userId: user.id, key: RESEARCH_TIERS[tier].key, options: tierChoice(tier, tier) };
+            const tier = getUserTier(knowledge, user.id, uuid, maxTier);
+            const definition = tiers[tier] ?? tiers[0];
+            return {
+              userId: user.id,
+              key: definition.key,
+              color: definition.color ?? definition.key,
+              options: tierChoice(tier),
+            };
           }),
         };
       })
@@ -95,7 +105,7 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
           selected: section.id === this._scope,
         })),
       ],
-      tierOptions: tierChoice(1, 1),
+      tierOptions: tierChoice(Math.min(1, maxTier)),
     };
   }
 
@@ -130,7 +140,7 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
     const userIds = userId ? [userId] : getPlayerUsers().map((user) => user.id);
     const uuids = (this._rows ?? []).filter((row) => !row.locked).map((row) => row.uuid);
     if (!uuids.length || !userIds.length) return;
-    const tierLabel = localize(RESEARCH_TIERS[tier].label);
+    const tierLabel = describeTier(tier).label;
     const confirmed = await confirmDialog({
       title: localize("BESTIARY.Board.Apply"),
       yesLabel: localize("BESTIARY.Board.Apply"),

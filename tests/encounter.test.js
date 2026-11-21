@@ -219,4 +219,15 @@ test("registerEncounterReveal hooks respect encounterReveal and encounterRevealO
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(settings.bestiaryKnowledge.users.p1["Actor.ambusher"].tier, 1);
   assert.equal(settings.bestiaryKnowledge.users.p1["Actor.ambusher"].source, "encounter");
+
+  // Custom encounterRevealTier grants configured tier (when researchTiers supports it)
+  settings.researchTiers = [
+    { id: "unknown", label: "Unknown", icon: "fa-circle-question", color: "unknown" },
+    { id: "sightings", label: "Sightings", icon: "fa-eye", color: "frost" },
+    { id: "rumors", label: "Rumors", icon: "fa-comments", color: "rumors" },
+  ];
+  settings.encounterRevealTier = 2;
+  hooks.get("updateToken")(token, { hidden: false });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(settings.bestiaryKnowledge.users.p1["Actor.ambusher"].tier, 2);
 });

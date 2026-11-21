@@ -36,11 +36,11 @@
         </div>
         {{#if isGM}}
           <div class="collection-title-actions">
-            <button type="button" class="suite-secondary-button" data-action="openBulkResearch" data-tooltip="{{localize 'BESTIARY.BulkResearch.Title'}}" aria-label="{{localize 'BESTIARY.BulkResearch.Title'}}"><i class="fa-solid fa-sliders"></i><span>{{localize "BESTIARY.BulkResearch.Title"}}</span></button>
-            <button type="button" class="suite-secondary-button" data-action="openKnowledgeBoard" data-tooltip="{{localize 'BESTIARY.Board.Title'}}" aria-label="{{localize 'BESTIARY.Board.Title'}}"><i class="fa-solid fa-table-cells"></i><span>{{localize "BESTIARY.Board.Short"}}</span></button>
-            <button type="button" class="suite-secondary-button" data-action="createFamily" data-tooltip="{{localize 'BESTIARY.Families.Create'}}" aria-label="{{localize 'BESTIARY.Families.Create'}}"><i class="fa-solid fa-folder-tree"></i><span>{{localize "BESTIARY.Families.Create"}}</span></button>
-            <button type="button" class="suite-secondary-button" data-action="exportSection" data-tooltip="{{localize 'BESTIARY.Transfer.Export'}}" aria-label="{{localize 'BESTIARY.Transfer.Export'}}"><i class="fa-solid fa-file-export"></i><span>{{localize "BESTIARY.Transfer.Export"}}</span></button>
-            <button type="button" class="suite-primary-button" data-action="openBulkImport" data-tooltip="{{localize 'BESTIARY.Import.Title'}}" aria-label="{{localize 'BESTIARY.Import.Title'}}"><i class="fa-solid fa-layer-group"></i><span>{{localize "BESTIARY.Import.Title"}}</span></button>
+            <button type="button" class="suite-secondary-button" data-action="openBulkResearch" data-tooltip="{{localize 'BESTIARY.Guide.TooltipBulkResearch'}}" aria-label="{{localize 'BESTIARY.BulkResearch.Title'}}"><i class="fa-solid fa-sliders"></i><span>{{localize "BESTIARY.BulkResearch.Title"}}</span></button>
+            <button type="button" class="suite-secondary-button" data-action="openKnowledgeBoard" data-tooltip="{{localize 'BESTIARY.Guide.TooltipBoard'}}" aria-label="{{localize 'BESTIARY.Board.Title'}}"><i class="fa-solid fa-table-cells"></i><span>{{localize "BESTIARY.Board.Short"}}</span></button>
+            <button type="button" class="suite-secondary-button" data-action="createFamily" data-tooltip="{{localize 'BESTIARY.Guide.TooltipCreateFamily'}}" aria-label="{{localize 'BESTIARY.Families.Create'}}"><i class="fa-solid fa-folder-tree"></i><span>{{localize "BESTIARY.Families.Create"}}</span></button>
+            <button type="button" class="suite-secondary-button" data-action="exportSection" data-tooltip="{{localize 'BESTIARY.Guide.TooltipExportSection'}}" aria-label="{{localize 'BESTIARY.Transfer.Export'}}"><i class="fa-solid fa-file-export"></i><span>{{localize "BESTIARY.Transfer.Export"}}</span></button>
+            <button type="button" class="suite-primary-button" data-action="openBulkImport" data-tooltip="{{localize 'BESTIARY.Guide.TooltipBulkImport'}}" aria-label="{{localize 'BESTIARY.Import.Title'}}"><i class="fa-solid fa-layer-group"></i><span>{{localize "BESTIARY.Import.Title"}}</span></button>
           </div>
         {{/if}}
       </div>
@@ -70,6 +70,7 @@
           <button type="button" class="{{#if isGrid}}is-active{{/if}}" data-action="toggleView" data-view-mode="grid" aria-pressed="{{#if isGrid}}true{{else}}false{{/if}}" aria-label="{{localize 'BESTIARY.ViewCard'}}" data-tooltip="{{localize 'BESTIARY.ViewCard'}}"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i></button>
           <button type="button" class="{{#unless isGrid}}is-active{{/unless}}" data-action="toggleView" data-view-mode="list" aria-pressed="{{#unless isGrid}}true{{else}}false{{/unless}}" aria-label="{{localize 'BESTIARY.ViewList'}}" data-tooltip="{{localize 'BESTIARY.ViewList'}}"><i class="fa-solid fa-list" aria-hidden="true"></i></button>
         </div>
+        <button type="button" class="suite-icon-button" data-action="openGuide" data-tooltip="{{localize 'BESTIARY.Guide.OpenTooltip'}}" aria-label="{{localize 'BESTIARY.Guide.Title'}}"><i class="fa-regular fa-circle-question" aria-hidden="true"></i></button>
       </div>
     </header>
 
@@ -128,7 +129,7 @@
                         <h3 class="{{#unless this.knowsName}}is-unknown{{/unless}}" title="{{this.name}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h3>
                         <p>{{this.typeLabel}}</p>
                       </div>
-                      {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" data-tooltip="{{this.tierBadge.tooltip}}"><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
+                      {{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.color}}data-tier-color="{{this.tierBadge.color}}"{{/if}} data-tooltip="{{this.tierBadge.tooltip}}"><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}
                     </div>
                     <button type="button" class="creature-card-open" data-action="openCreature" aria-label="{{localize 'BESTIARY.ViewCreature'}}"><i class="fa-solid fa-arrow-right"></i></button>
                   </article>
@@ -172,7 +173,7 @@
                     </div>
                     <span>{{this.typeLabel}}</span>
                     <span>{{#if this.knowsCr}}{{this.crFormatted}}{{else}}—{{/if}}</span>
-                    <span class="collection-row-tier">{{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}</span>
+                    <span class="collection-row-tier">{{#if this.tierBadge}}<span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.color}}data-tier-color="{{this.tierBadge.color}}"{{/if}} {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span>{{/if}}</span>
                     <button type="button" data-action="openCreature" aria-label="{{localize 'BESTIARY.ViewCreature'}}"><i class="fa-solid fa-arrow-right"></i></button>
                   </article>
                 {{/each}}
@@ -198,6 +199,7 @@
           <i class="fa-regular fa-hand-pointer"></i>
           <h3>{{localize "BESTIARY.SelectCreature"}}</h3>
           <p>{{localize "BESTIARY.SelectCreatureHint"}}</p>
+          {{#if showHints}}<p class="preview-drag-hint">{{localize "BESTIARY.Guide.InlinePreviewHint"}}</p>{{/if}}
         </div>
         {{#each creatures}}
           <section class="creature-preview-content" data-uuid="{{this.uuid}}" data-locked="{{this.isLocked}}" data-hidden="{{this.isHidden}}">
@@ -212,7 +214,7 @@
               <div><h2 class="{{#unless this.knowsName}}is-unknown{{/unless}}">{{#each (bjNameParts this.name)}}<span class="bestiary-name-part">{{this}}</span>{{/each}}</h2><p>{{this.typeLabel}}</p></div>
               {{#if this.knowsCr}}<span class="creature-cr-chip">{{localize "BESTIARY.CRShort"}} {{this.crFormatted}}</span>{{/if}}
             </div>
-            {{#if this.tierBadge}}<p class="preview-tier"><span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span></p>{{/if}}
+            {{#if this.tierBadge}}<p class="preview-tier"><span class="tier-chip is-{{this.tierBadge.key}}" {{#if this.tierBadge.color}}data-tier-color="{{this.tierBadge.color}}"{{/if}} {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}><i class="fa-solid {{this.tierBadge.icon}}"></i>{{this.tierBadge.label}}</span></p>{{/if}}
             {{#if (bjOr this.showAc this.showHp)}}
               <div class="preview-stats">
                 {{#if this.showAc}}<div><span>{{localize "BESTIARY.ACShort"}}</span><strong>{{this.ac}}</strong></div>{{/if}}

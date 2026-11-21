@@ -1,58 +1,165 @@
 /**
  * Pure research-tier model. No Foundry globals here so the rules stay testable.
  *
- * Knowledge of a creature is a tier from 0 (nothing) to 3 (complete). Every card
+ * Knowledge of a creature is an integer tier from 0 (nothing) to maxTier
+ * (default 3, configurable per world up to MAX_CUSTOM_TIERS - 1). Every card
  * block declares the tier at which it unlocks; NEVER_TIER keeps a block for the
  * GM only. Individual actions and features may override their block.
  */
 
 export const MIN_RESEARCH_TIER = 0;
 export const MAX_RESEARCH_TIER = 3;
-export const NEVER_TIER = 4;
-export const GM_TIER = 99;
+export const LEGACY_NEVER_TIER = 4;
+export const NEVER_TIER = 100;
+export const GM_TIER = 999;
+export const MAX_CUSTOM_TIERS = 10;
+
+export const TIER_COLORS = Object.freeze([
+  "unknown",
+  "rumors",
+  "studied",
+  "mastered",
+  "embers",
+  "arcane",
+  "forest",
+  "frost",
+  "rose",
+  "crimson",
+]);
+
+export const TIER_ICONS = Object.freeze([
+  "fa-circle-question",
+  "fa-comments",
+  "fa-book-open",
+  "fa-crown",
+  "fa-eye",
+  "fa-magnifying-glass",
+  "fa-feather-pointed",
+  "fa-scroll",
+  "fa-flask",
+  "fa-shield-halved",
+  "fa-skull",
+  "fa-compass",
+  "fa-star",
+  "fa-brain",
+]);
 
 export const RESEARCH_TIERS = Object.freeze([
   {
     value: 0,
+    id: "unknown",
     key: "unknown",
     label: "BESTIARY.Tier.Unknown",
     hint: "BESTIARY.Tier.UnknownHint",
     icon: "fa-circle-question",
+    color: "unknown",
   },
   {
     value: 1,
+    id: "rumors",
     key: "rumors",
     label: "BESTIARY.Tier.Rumors",
     hint: "BESTIARY.Tier.RumorsHint",
     icon: "fa-comments",
+    color: "rumors",
   },
   {
     value: 2,
+    id: "studied",
     key: "studied",
     label: "BESTIARY.Tier.Studied",
     hint: "BESTIARY.Tier.StudiedHint",
     icon: "fa-book-open",
+    color: "studied",
   },
   {
     value: 3,
+    id: "mastered",
     key: "mastered",
     label: "BESTIARY.Tier.Mastered",
     hint: "BESTIARY.Tier.MasteredHint",
     icon: "fa-crown",
+    color: "mastered",
   },
 ]);
 
-/** Selectable values in every tier picker, including the GM-only option. */
-export const TIER_CHOICES = Object.freeze([
-  ...RESEARCH_TIERS,
-  {
-    value: NEVER_TIER,
-    key: "never",
-    label: "BESTIARY.Tier.Never",
-    hint: "BESTIARY.Tier.NeverHint",
-    icon: "fa-eye-slash",
-  },
-]);
+export const NEVER_TIER_DEF = Object.freeze({
+  value: NEVER_TIER,
+  id: "never",
+  key: "never",
+  label: "BESTIARY.Tier.Never",
+  hint: "BESTIARY.Tier.NeverHint",
+  icon: "fa-eye-slash",
+  color: "never",
+});
+
+/** Selectable values in every tier picker for the built-in ladder, including the GM-only option. */
+export const TIER_CHOICES = Object.freeze([...RESEARCH_TIERS, NEVER_TIER_DEF]);
+
+export function defaultResearchTiers() {
+  return RESEARCH_TIERS.map((tier) => ({ ...tier }));
+}
+
+export function maxResearchTier(tiers = RESEARCH_TIERS) {
+  const count = Array.isArray(tiers) && tiers.length >= 2 ? tiers.length : RESEARCH_TIERS.length;
+  return Math.max(1, count - 1);
+}
+
+const DEFAULT_BY_ID = new Map(RESEARCH_TIERS.map((tier) => [tier.id, tier]));
+const TIER_COLOR_SET = new Set(TIER_COLORS);
+const SAFE_ICON_PATTERN = /^fa-[a-z0-9-]+$/;
+
+/**
+ * Sanitizes a world's configured research tier ladder so index 0 stays the base
+ * state, at least one learnable tier exists, ids are unique, and colors/icons
+ * belong to the verified theme palette.
+ */
+export function normalizeResearchTiers(raw) {
+  if (!Array.isArray(raw) || raw.length < 2) return defaultResearchTiers();
+
+  const seenIds = new Set();
+  const normalized = [];
+  for (const [index, item] of raw.slice(0, MAX_CUSTOM_TIERS).entries()) {
+    const source = item && typeof item === "object" ? item : {};
+    let id = typeof source.id === "string" ? source.id.trim() : "";
+    if (!id || seenIds.has(id)) id = `tier_${index}`;
+    while (seenIds.has(id)) id = `${id}_`;
+    seenIds.add(id);
+
+    const defaults = DEFAULT_BY_ID.get(id);
+    const label =
+      typeof source.label === "string" && source.label.trim()
+        ? source.label.trim()
+        : (defaults?.label ?? "BESTIARY.Tier.CustomDefault");
+    const hint = typeof source.hint === "string" ? source.hint.trim() : (defaults?.hint ?? "");
+    const rawIcon = typeof source.icon === "string" ? source.icon.trim() : "";
+    const icon = SAFE_ICON_PATTERN.test(rawIcon)
+      ? rawIcon
+      : (defaults?.icon ?? TIER_ICONS[(index + 3) % TIER_ICONS.length]);
+    const color = TIER_COLOR_SET.has(source.color)
+      ? source.color
+      : (defaults?.color ?? TIER_COLORS[index % TIER_COLORS.length]);
+    const key = defaults?.key ?? color;
+
+    normalized.push({
+      value: index,
+      id,
+      key,
+      label,
+      hint,
+      icon,
+      color,
+    });
+  }
+
+  if (normalized.length < 2) return defaultResearchTiers();
+  return normalized;
+}
+
+export function getTierChoices(tiers = RESEARCH_TIERS) {
+  const list = Array.isArray(tiers) && tiers.length >= 2 ? tiers : RESEARCH_TIERS;
+  return [...list, NEVER_TIER_DEF];
+}
 
 /**
  * Every block that can be revealed on a creature card. `tier` is the built-in
@@ -138,63 +245,120 @@ export const DISPLAY_GROUPS = Object.freeze([
 
 const BLOCK_BY_KEY = new Map(DISPLAY_BLOCKS.map((block) => [block.key, block]));
 
-export function defaultBlockTiers() {
-  return Object.fromEntries(DISPLAY_BLOCKS.map((block) => [block.key, block.tier]));
+export function defaultBlockTiers(maxTier = MAX_RESEARCH_TIER) {
+  return Object.fromEntries(DISPLAY_BLOCKS.map((block) => [block.key, Math.min(block.tier, maxTier)]));
 }
 
-export function clampTier(value, fallback = MIN_RESEARCH_TIER) {
+export function clampTier(value, fallback = MIN_RESEARCH_TIER, maxTier = MAX_RESEARCH_TIER) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
   const rounded = Math.round(numeric);
   if (rounded <= MIN_RESEARCH_TIER) return MIN_RESEARCH_TIER;
   if (rounded >= NEVER_TIER) return NEVER_TIER;
-  return rounded;
+  return Math.min(rounded, Math.max(1, maxTier));
 }
 
-export function clampKnownTier(value, fallback = MIN_RESEARCH_TIER) {
-  return Math.min(clampTier(value, fallback), MAX_RESEARCH_TIER);
+export function clampKnownTier(value, fallback = MIN_RESEARCH_TIER, maxTier = MAX_RESEARCH_TIER) {
+  return Math.min(clampTier(value, fallback, maxTier), Math.max(1, maxTier));
 }
 
 export function isGmTier(tier) {
   return Number(tier) >= GM_TIER;
 }
 
-export function getTierDefinition(tier) {
-  if (isGmTier(tier)) return TIER_CHOICES[TIER_CHOICES.length - 1];
-  return TIER_CHOICES.find((choice) => choice.value === clampTier(tier)) ?? RESEARCH_TIERS[0];
+export function getTierDefinition(tier, tiers = RESEARCH_TIERS) {
+  if (isGmTier(tier)) return NEVER_TIER_DEF;
+  const list = Array.isArray(tiers) && tiers.length >= 2 ? tiers : RESEARCH_TIERS;
+  const maxTier = maxResearchTier(list);
+  const clamped = clampTier(tier, MIN_RESEARCH_TIER, maxTier);
+  if (clamped >= NEVER_TIER) return NEVER_TIER_DEF;
+  return list[clamped] ?? list[0];
+}
+
+/**
+ * Computes how numeric tier values map when the GM inserts, deletes, or
+ * reorders tiers in the ladder so existing knowledge and block thresholds follow
+ * their intended tiers instead of silently shifting.
+ */
+export function planTierRemapping(oldTiers, newTiers) {
+  const prev = normalizeResearchTiers(oldTiers);
+  const next = normalizeResearchTiers(newTiers);
+  const nextIndexById = new Map(next.map((tier, index) => [tier.id, index]));
+  const valueMap = new Map([[0, 0]]);
+  let changed = prev.length !== next.length;
+
+  for (let oldIndex = 1; oldIndex < prev.length; oldIndex += 1) {
+    const oldId = prev[oldIndex].id;
+    let mapped;
+    if (nextIndexById.has(oldId)) {
+      mapped = nextIndexById.get(oldId);
+    } else {
+      mapped = 0;
+      for (let fallbackIndex = oldIndex - 1; fallbackIndex >= 1; fallbackIndex -= 1) {
+        const candidateId = prev[fallbackIndex].id;
+        if (nextIndexById.has(candidateId)) {
+          mapped = nextIndexById.get(candidateId);
+          break;
+        }
+      }
+    }
+    valueMap.set(oldIndex, mapped);
+    if (mapped !== oldIndex) changed = true;
+  }
+
+  return { valueMap, maxNewTier: maxResearchTier(next), changed };
+}
+
+export function remapTierValue(value, valueMap, maxNewTier) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return value;
+  const rounded = Math.round(numeric);
+  if (rounded >= NEVER_TIER) return NEVER_TIER;
+  if (rounded <= MIN_RESEARCH_TIER) return MIN_RESEARCH_TIER;
+  if (valueMap?.has(rounded)) return valueMap.get(rounded);
+  return Math.min(rounded, Math.max(1, maxNewTier));
+}
+
+export function remapTierMap(tierMap, valueMap, maxNewTier) {
+  if (!tierMap || typeof tierMap !== "object") return {};
+  const result = {};
+  for (const [key, value] of Object.entries(tierMap)) {
+    result[key] = remapTierValue(value, valueMap, maxNewTier);
+  }
+  return result;
 }
 
 /**
  * Layers world defaults over the built-ins, then the per-creature overrides.
  * Unknown block keys are dropped so stale settings cannot leak into the view.
  */
-export function resolveBlockTiers(worldTiers, entryTiers) {
-  const resolved = defaultBlockTiers();
+export function resolveBlockTiers(worldTiers, entryTiers, maxTier = MAX_RESEARCH_TIER) {
+  const resolved = defaultBlockTiers(maxTier);
   for (const source of [worldTiers, entryTiers]) {
     if (!source || typeof source !== "object") continue;
     for (const [key, value] of Object.entries(source)) {
       if (!BLOCK_BY_KEY.has(key)) continue;
-      resolved[key] = clampTier(value, resolved[key]);
+      resolved[key] = clampTier(value, resolved[key], maxTier);
     }
   }
   return resolved;
 }
 
 /** Ability sub-blocks can never outrank their parent group. */
-export function isBlockVisible(blockKey, viewerTier, blockTiers) {
+export function isBlockVisible(blockKey, viewerTier, blockTiers, maxTier = MAX_RESEARCH_TIER) {
   if (isGmTier(viewerTier)) return true;
   const definition = BLOCK_BY_KEY.get(blockKey);
   if (!definition) return false;
-  const required = blockTiers?.[blockKey] ?? definition.tier;
+  const required = blockTiers?.[blockKey] ?? Math.min(definition.tier, maxTier);
   if (required >= NEVER_TIER) return false;
-  if (definition.parent && !isBlockVisible(definition.parent, viewerTier, blockTiers)) return false;
-  return clampKnownTier(viewerTier) >= required;
+  if (definition.parent && !isBlockVisible(definition.parent, viewerTier, blockTiers, maxTier)) return false;
+  return clampKnownTier(viewerTier, MIN_RESEARCH_TIER, maxTier) >= required;
 }
 
-export function requiredTierForBlock(blockKey, blockTiers) {
+export function requiredTierForBlock(blockKey, blockTiers, maxTier = MAX_RESEARCH_TIER) {
   const definition = BLOCK_BY_KEY.get(blockKey);
   if (!definition) return NEVER_TIER;
-  return blockTiers?.[blockKey] ?? definition.tier;
+  return clampTier(blockTiers?.[blockKey], Math.min(definition.tier, maxTier), maxTier);
 }
 
 /**
@@ -205,19 +369,26 @@ export function itemTierKey(blockKey, itemId) {
   return `${blockKey}:${itemId}`;
 }
 
-export function requiredTierForItem(blockKey, itemId, blockTiers, itemTiers) {
-  const fallback = requiredTierForBlock(blockKey, blockTiers);
+export function requiredTierForItem(blockKey, itemId, blockTiers, itemTiers, maxTier = MAX_RESEARCH_TIER) {
+  const fallback = requiredTierForBlock(blockKey, blockTiers, maxTier);
   const override = itemTiers?.[itemTierKey(blockKey, itemId)];
   if (override === null || override === undefined || override === "") return fallback;
-  return clampTier(override, fallback);
+  return clampTier(override, fallback, maxTier);
 }
 
-export function isItemVisible(blockKey, itemId, viewerTier, blockTiers, itemTiers) {
+export function isItemVisible(
+  blockKey,
+  itemId,
+  viewerTier,
+  blockTiers,
+  itemTiers,
+  maxTier = MAX_RESEARCH_TIER,
+) {
   if (isGmTier(viewerTier)) return true;
-  if (!isBlockVisible(blockKey, viewerTier, blockTiers)) return false;
-  const required = requiredTierForItem(blockKey, itemId, blockTiers, itemTiers);
+  if (!isBlockVisible(blockKey, viewerTier, blockTiers, maxTier)) return false;
+  const required = requiredTierForItem(blockKey, itemId, blockTiers, itemTiers, maxTier);
   if (required >= NEVER_TIER) return false;
-  return clampKnownTier(viewerTier) >= required;
+  return clampKnownTier(viewerTier, MIN_RESEARCH_TIER, maxTier) >= required;
 }
 
 /** Default investigation skill, guessed from the creature type. */

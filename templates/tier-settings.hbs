@@ -3,27 +3,95 @@
     <div>
       <p class="library-eyebrow">{{localize "BESTIARY.Tier.WorldKicker"}}</p>
       <h1>{{localize "BESTIARY.Tier.WorldTitle"}}</h1>
-      <p class="tier-settings-hint">{{hint}}</p>
+      <p class="tier-settings-hint">{{#if isTiersTab}}{{levelsHint}}{{else}}{{hint}}{{/if}}</p>
     </div>
     <button type="button" class="suite-secondary-button" data-action="restoreDefaults">
       <i class="fa-solid fa-rotate-left"></i>{{localize "BESTIARY.Restore"}}
     </button>
   </header>
 
-  <div class="tier-settings-body bestiary-scrollable">
-    {{#each groups}}
-      <section class="tier-group">
-        <h4><i class="fa-solid {{this.icon}}"></i>{{this.label}}{{#if this.overrideCount}}<em>{{this.overrideCount}}</em>{{/if}}<small>{{this.hint}}</small></h4>
-        {{#each this.blocks}}
-          <label class="tier-row {{#if this.isChild}}is-child{{/if}} {{#if this.isOverridden}}is-overridden{{/if}} {{#if this.isNever}}is-never{{/if}}">
-            <span>{{this.label}}</span>
-            <select data-block-tier="{{this.key}}">
-              {{#each this.choices}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
-            </select>
-          </label>
+  <div class="tier-settings-tabs rail-tabs" role="tablist" aria-label="{{localize 'BESTIARY.Tier.WorldTitle'}}">
+    <button type="button" role="tab" aria-selected="{{#if isTiersTab}}true{{else}}false{{/if}}" tabindex="{{#if isTiersTab}}0{{else}}-1{{/if}}" class="{{#if isTiersTab}}is-active{{/if}}" data-action="setTab" data-tab="tiers">
+      <i class="fa-solid fa-stairs" aria-hidden="true"></i>{{localize "BESTIARY.Tier.LevelsTab"}}<em>{{tierCount}}</em>
+    </button>
+    <button type="button" role="tab" aria-selected="{{#if isBlocksTab}}true{{else}}false{{/if}}" tabindex="{{#if isBlocksTab}}0{{else}}-1{{/if}}" class="{{#if isBlocksTab}}is-active{{/if}}" data-action="setTab" data-tab="blocks">
+      <i class="fa-solid fa-table-list" aria-hidden="true"></i>{{localize "BESTIARY.Tier.BlocksTab"}}
+    </button>
+  </div>
+
+  <div class="tier-settings-body bestiary-scrollable" role="tabpanel">
+    {{#if isTiersTab}}
+      <div class="tier-def-list">
+        {{#each tierRows}}
+          <article class="tier-def-row {{#if this.isBase}}is-base{{/if}}" data-tier-row="{{this.index}}" data-tier-color="{{this.color}}">
+            <span class="tier-def-badge">
+              <i class="fa-solid {{this.icon}}" aria-hidden="true"></i>
+              <strong>{{this.index}}</strong>
+            </span>
+
+            <div class="tier-def-fields">
+              <label class="tier-def-field">
+                <span>{{localize "BESTIARY.Tier.FieldName"}}</span>
+                <input type="text" value="{{this.displayLabel}}" data-tier-index="{{this.index}}" data-tier-field="label" />
+              </label>
+
+              <label class="tier-def-field">
+                <span>{{localize "BESTIARY.Tier.FieldIcon"}}</span>
+                <select data-tier-index="{{this.index}}" data-tier-field="icon">
+                  {{#each this.iconOptions}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
+                </select>
+              </label>
+
+              <label class="tier-def-field">
+                <span>{{localize "BESTIARY.Tier.FieldColor"}}</span>
+                <select data-tier-index="{{this.index}}" data-tier-field="color">
+                  {{#each this.colorOptions}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
+                </select>
+              </label>
+
+              <label class="tier-def-field is-wide">
+                <span>{{localize "BESTIARY.Tier.FieldHint"}}</span>
+                <input type="text" value="{{this.displayHint}}" placeholder="{{localize 'BESTIARY.Tier.FieldHintPlaceholder'}}" data-tier-index="{{this.index}}" data-tier-field="hint" />
+              </label>
+            </div>
+
+            <div class="tier-def-actions">
+              <button type="button" class="suite-icon-button" data-action="insertTier" data-index="{{this.index}}" {{#unless this.canInsertBelow}}disabled{{/unless}} data-tooltip="{{localize 'BESTIARY.Tier.InsertBelow'}}" aria-label="{{localize 'BESTIARY.Tier.InsertBelow'}}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+              <button type="button" class="suite-icon-button" data-action="moveTierUp" data-index="{{this.index}}" {{#unless this.canMoveUp}}disabled{{/unless}} data-tooltip="{{localize 'BESTIARY.Tier.MoveUp'}}" aria-label="{{localize 'BESTIARY.Tier.MoveUp'}}"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+              <button type="button" class="suite-icon-button" data-action="moveTierDown" data-index="{{this.index}}" {{#unless this.canMoveDown}}disabled{{/unless}} data-tooltip="{{localize 'BESTIARY.Tier.MoveDown'}}" aria-label="{{localize 'BESTIARY.Tier.MoveDown'}}"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+              <button type="button" class="suite-icon-button is-danger" data-action="removeTier" data-index="{{this.index}}" {{#unless this.canRemove}}disabled{{/unless}} data-tooltip="{{localize 'BESTIARY.Tier.RemoveLevel'}}" aria-label="{{localize 'BESTIARY.Tier.RemoveLevel'}}"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+            </div>
+          </article>
         {{/each}}
-      </section>
-    {{/each}}
+      </div>
+
+      <div class="tier-def-toolbar">
+        <button type="button" class="suite-secondary-button" data-action="addTier" {{#unless canAdd}}disabled{{/unless}}>
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>{{localize "BESTIARY.Tier.AddLevel"}}
+        </button>
+        {{#if maxLevelsNotice}}<span class="tier-max-notice">{{maxLevelsNotice}}</span>{{/if}}
+        <label class="tier-encounter-field">
+          <span>{{localize "BESTIARY.Tier.EncounterTarget"}}</span>
+          <select class="tier-encounter-select">
+            {{#each encounterOptions}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
+          </select>
+        </label>
+      </div>
+    {{else}}
+      {{#each groups}}
+        <section class="tier-group">
+          <h4><i class="fa-solid {{this.icon}}"></i>{{this.label}}{{#if this.overrideCount}}<em>{{this.overrideCount}}</em>{{/if}}<small>{{this.hint}}</small></h4>
+          {{#each this.blocks}}
+            <label class="tier-row {{#if this.isChild}}is-child{{/if}} {{#if this.isOverridden}}is-overridden{{/if}} {{#if this.isNever}}is-never{{/if}}">
+              <span>{{this.label}}</span>
+              <select data-block-tier="{{this.key}}">
+                {{#each this.choices}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}
+              </select>
+            </label>
+          {{/each}}
+        </section>
+      {{/each}}
+    {{/if}}
   </div>
 
   <footer class="sheet-footer flexrow">

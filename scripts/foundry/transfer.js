@@ -1,11 +1,13 @@
 import { BESTIARY_COMMANDS } from "../core/bestiary-domain.js";
+import { NEVER_TIER } from "../core/research-model.js";
 import { planSnapshotImport } from "../core/snapshot-import.js";
 import { getBestiaryData, getBestiaryState } from "./bestiary-store.js";
+import { getWorldMaxResearchTier } from "./creature-display.js";
 import { runCommand } from "./command-feedback.js";
 import { confirmDialog, formatCount, localize } from "./foundry-runtime.js";
 
 const MODULE_ID = "bestiary-journal";
-const EXPORT_FORMAT = 1;
+const EXPORT_FORMAT = 2;
 
 /**
  * Snapshots the structural side of the bestiary: sections, families, entries,
@@ -21,6 +23,7 @@ export function buildSnapshot({ sectionIds = [], includeSocial = false } = {}) {
   const snapshot = {
     module: MODULE_ID,
     format: EXPORT_FORMAT,
+    neverTier: NEVER_TIER,
     exportedAt: Date.now(),
     world: game.world?.id ?? "",
     system: game.system?.id ?? "",
@@ -68,6 +71,7 @@ export function exportCreatureEntry(sectionId, uuid) {
   const snapshot = {
     module: MODULE_ID,
     format: EXPORT_FORMAT,
+    neverTier: NEVER_TIER,
     exportedAt: Date.now(),
     world: game.world?.id ?? "",
     system: game.system?.id ?? "",
@@ -120,8 +124,9 @@ export async function importBestiaryFromFile() {
     creatures: formatCount("BESTIARY.Count.Creatures", creatureCount),
   };
   const data = getBestiaryData();
-  const mergePlan = planSnapshotImport(data, payload, "merge");
-  const replacePlan = planSnapshotImport(data, payload, "replace");
+  const maxTier = getWorldMaxResearchTier();
+  const mergePlan = planSnapshotImport(data, payload, "merge", { maxTier });
+  const replacePlan = planSnapshotImport(data, payload, "replace", { maxTier });
 
   const mode = await foundry.applications.api.DialogV2.wait({
     window: {

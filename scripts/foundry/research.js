@@ -1,6 +1,7 @@
-import { MAX_RESEARCH_TIER, getTierDefinition } from "../core/research-model.js";
+import { getTierDefinition } from "../core/research-model.js";
 import { BESTIARY_COMMANDS } from "../core/bestiary-domain.js";
 import { BestiaryCommandError, dispatchBestiaryCommand, hasActiveAuthority } from "./bestiary-store.js";
+import { getWorldMaxResearchTier, getWorldResearchTiers, translateTierText } from "./creature-display.js";
 import { localize } from "./foundry-runtime.js";
 import { skillLabel } from "../integrations/dnd5e.js";
 import { researchSkillOptions } from "./research-skills.js";
@@ -60,11 +61,17 @@ export async function runResearchCheck({ uuid, actor, skill, event }) {
   return true;
 }
 
-export function describeTier(tier) {
-  const definition = getTierDefinition(tier);
-  return { ...definition, label: localize(definition.label), hint: localize(definition.hint) };
+export function describeTier(tier, tiers = getWorldResearchTiers()) {
+  const definition = getTierDefinition(tier, tiers);
+  return {
+    ...definition,
+    color: definition.color ?? definition.key,
+    label: translateTierText(definition.label),
+    hint: translateTierText(definition.hint),
+  };
 }
 
 export function nextTierLabel(tier) {
-  return describeTier(Math.min(Number(tier) + 1, MAX_RESEARCH_TIER)).label;
+  const maxTier = getWorldMaxResearchTier();
+  return describeTier(Math.min(Number(tier) + 1, maxTier)).label;
 }

@@ -135,3 +135,27 @@ test("a recovery-copy cleanup failure does not roll back a completed migration",
   assert.equal(await runMigrations(), false);
   assert.deepEqual(values, migrated);
 });
+
+test("migrateLegacyNeverTier upgrades legacy GM-only value 4 to NEVER_TIER once without affecting later custom tier 4", async (t) => {
+  t.mock.method(console, "info", () => {});
+  const values = setupLegacyWorld();
+  values.dataVersion = DATA_VERSION;
+  values.tierSchemaVersion = 0;
+  values.tierBlockConfig = { biography: 4, actions: 2 };
+  values.bestiaryData.sections[0].creatures[0].blockTiers = { alignment: 4, hp: 2 };
+  values.bestiaryData.sections[0].creatures[0].itemTiers = { "actions:bite": 4 };
+
+  assert.equal(await runMigrations(), true);
+  assert.equal(values.tierSchemaVersion, 1);
+  assert.deepEqual(values.tierBlockConfig, { biography: NEVER_TIER, actions: 2 });
+  assert.deepEqual(values.bestiaryData.sections[0].creatures[0].blockTiers, {
+    alignment: NEVER_TIER,
+    hp: 2,
+  });
+  assert.deepEqual(values.bestiaryData.sections[0].creatures[0].itemTiers, { "actions:bite": NEVER_TIER });
+
+  // Once migrated, a custom tier 4 is left untouched on subsequent runs.
+  values.tierBlockConfig.actions = 4;
+  assert.equal(await runMigrations(), false);
+  assert.equal(values.tierBlockConfig.actions, 4);
+});

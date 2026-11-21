@@ -538,6 +538,38 @@
   font-size: 0.62rem;
 }
 
+/* Tier palette tokens mapped by preset name */
+:where(.bestiary-app) [data-tier-color="unknown"] {
+  --tier-color: var(--tier-unknown);
+}
+:where(.bestiary-app) [data-tier-color="rumors"] {
+  --tier-color: var(--tier-rumors);
+}
+:where(.bestiary-app) [data-tier-color="studied"] {
+  --tier-color: var(--tier-studied);
+}
+:where(.bestiary-app) [data-tier-color="mastered"] {
+  --tier-color: var(--tier-mastered);
+}
+:where(.bestiary-app) [data-tier-color="embers"] {
+  --tier-color: var(--acc-embers);
+}
+:where(.bestiary-app) [data-tier-color="arcane"] {
+  --tier-color: var(--acc-arcane);
+}
+:where(.bestiary-app) [data-tier-color="forest"] {
+  --tier-color: var(--acc-forest);
+}
+:where(.bestiary-app) [data-tier-color="frost"] {
+  --tier-color: var(--acc-frost);
+}
+:where(.bestiary-app) [data-tier-color="rose"] {
+  --tier-color: var(--acc-rose);
+}
+:where(.bestiary-app) [data-tier-color="crimson"] {
+  --tier-color: var(--tier-never);
+}
+
 /* Tier chips */
 .tier-chip {
   display: inline-flex;
@@ -545,10 +577,10 @@
   gap: 6px;
   padding: 2px 8px 2px 7px;
   border: 0;
-  border-left: 3px solid var(--chip-color, var(--tier-unknown));
+  border-left: 3px solid var(--chip-color, var(--tier-color, var(--tier-unknown)));
   border-radius: 3px;
-  background: color-mix(in srgb, var(--chip-color, var(--tier-unknown)) 13%, transparent);
-  color: var(--chip-color, var(--tier-unknown));
+  background: color-mix(in srgb, var(--chip-color, var(--tier-color, var(--tier-unknown))) 13%, transparent);
+  color: var(--chip-color, var(--tier-color, var(--tier-unknown)));
   font-size: 0.74rem;
   font-weight: 600;
   white-space: nowrap;
@@ -574,6 +606,9 @@
 }
 .tier-chip.is-never {
   --chip-color: var(--tier-never);
+}
+.tier-chip[data-tier-color] {
+  --chip-color: var(--tier-color);
 }
 
 /* Context menu */

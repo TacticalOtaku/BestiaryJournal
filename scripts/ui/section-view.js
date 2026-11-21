@@ -8,11 +8,13 @@ import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store
 import { runCommand } from "../foundry/command-feedback.js";
 import {
   getLibraryViewMode,
+  getShowOnboardingHints,
   setLibraryViewMode,
   toggleCollapsedFamily,
 } from "../foundry/client-preferences.js";
 import { postCreatureToChat } from "./creature-cards.js";
 import { PARTY_VIEWER } from "../core/knowledge-lens.js";
+import { BestiaryGuideApp, maybeShowFirstTimeGuide } from "./guide-app.js";
 import { BestiaryKnowledgeBoard } from "./knowledge-board.js";
 import { confirmDialog, formatCount, localize, resolveUuid } from "../foundry/foundry-runtime.js";
 import { BestiaryTileEditor } from "./tile-editor.js";
@@ -114,6 +116,9 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       exportEntry: function (event, target) {
         this._onExportEntry(event, target);
       },
+      openGuide: function (event, target) {
+        BestiaryGuideApp.open({ tab: target?.dataset?.tab || "quickstart" });
+      },
     },
   };
 
@@ -184,6 +189,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       isGrid: this._viewMode === "grid",
       filtersOpen: this._filtersOpen,
       hasFamilies: families.length > 0,
+      showHints: getShowOnboardingHints(),
     };
   }
 
@@ -225,6 +231,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     this._applyClientState();
     this._restoreSelection();
     playApplicationEntrance(this, ".section-shell");
+    maybeShowFirstTimeGuide(this);
   }
 
   /** The frame is built once; keep its title in step with the collection. */
@@ -928,7 +935,7 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       (changed.creatures || changed.seen) &&
       (!Array.isArray(payload.uuids) ||
         payload.uuids.some((uuid) => this.element?.querySelector(`[data-uuid="${CSS.escape(uuid)}"]`)));
-    if (!changed.data && !changed.knowledge && !showsChangedCreature) return;
+    if (!changed.data && !changed.knowledge && !changed.settings && !showsChangedCreature) return;
     await this.render();
   }
 

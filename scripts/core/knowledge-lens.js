@@ -6,6 +6,7 @@ import {
 } from "./bestiary-domain.js";
 import {
   GM_TIER,
+  MAX_RESEARCH_TIER,
   MIN_RESEARCH_TIER,
   isBlockVisible,
   isItemVisible,
@@ -20,14 +21,14 @@ export const PARTY_VIEWER = Object.freeze({ id: "", isGM: false, isParty: true }
  * A viewer's knowledge tier of one creature. The party knows only what its least-informed player does, and a
  * world without players knows nothing, so a public post never shows more than the party knows.
  */
-export function viewerTier(knowledge, viewer, uuid, players = []) {
+export function viewerTier(knowledge, viewer, uuid, players = [], maxTier = MAX_RESEARCH_TIER) {
   if (viewer?.isGM) return GM_TIER;
   if (viewer?.isParty) {
     return players.length
-      ? Math.min(...players.map((user) => getUserTier(knowledge, user.id, uuid)))
+      ? Math.min(...players.map((user) => getUserTier(knowledge, user.id, uuid, maxTier)))
       : MIN_RESEARCH_TIER;
   }
-  return getUserTier(knowledge, viewer?.id, uuid);
+  return getUserTier(knowledge, viewer?.id, uuid, maxTier);
 }
 
 /** The (collection, entry) pairs players can see: the ones whose reveal thresholds count. */
@@ -42,12 +43,14 @@ export function playerEntryContexts(data, uuid) {
  * Reveal thresholds of a creature that sits in several collections: per block and per item, the lowest among
  * the entries players can see (docs/adr/0001). With no entry the world thresholds apply.
  */
-function mergeRevealThresholds(worldTiers, entries) {
+function mergeRevealThresholds(worldTiers, entries, maxTier = MAX_RESEARCH_TIER) {
   const resolved = entries.map((entry) => ({
-    blocks: resolveBlockTiers(worldTiers, entry?.blockTiers),
+    blocks: resolveBlockTiers(worldTiers, entry?.blockTiers, maxTier),
     items: entry?.itemTiers ?? {},
   }));
-  if (!resolved.length) return { blockTiers: resolveBlockTiers(worldTiers, null), itemTiers: {} };
+  if (!resolved.length) {
+    return { blockTiers: resolveBlockTiers(worldTiers, null, maxTier), itemTiers: {} };
+  }
 
   const blockTiers = {};
   for (const key of Object.keys(resolved[0].blocks)) {
@@ -60,7 +63,7 @@ function mergeRevealThresholds(worldTiers, entries) {
     const blockKey = key.slice(0, split);
     const itemId = key.slice(split + 1);
     itemTiers[key] = Math.min(
-      ...resolved.map(({ blocks, items }) => requiredTierForItem(blockKey, itemId, blocks, items)),
+      ...resolved.map(({ blocks, items }) => requiredTierForItem(blockKey, itemId, blocks, items, maxTier)),
     );
   }
   return { blockTiers, itemTiers };
@@ -70,15 +73,15 @@ function mergeRevealThresholds(worldTiers, entries) {
  * What one viewer knows about one creature. Every page asks the lens what to show, so a block or an item
  * appears on all of them at the same tier.
  */
-export function createKnowledgeLens({ tier, worldTiers, entries = [] }) {
-  const { blockTiers, itemTiers } = mergeRevealThresholds(worldTiers, entries);
-  const show = (blockKey) => isBlockVisible(blockKey, tier, blockTiers);
+export function createKnowledgeLens({ tier, worldTiers, entries = [], maxTier = MAX_RESEARCH_TIER }) {
+  const { blockTiers, itemTiers } = mergeRevealThresholds(worldTiers, entries, maxTier);
+  const show = (blockKey) => isBlockVisible(blockKey, tier, blockTiers, maxTier);
   return {
     tier,
     blockTiers,
     itemTiers,
     show,
-    showItem: (blockKey, itemId) => isItemVisible(blockKey, itemId, tier, blockTiers, itemTiers),
+    showItem: (blockKey, itemId) => isItemVisible(blockKey, itemId, tier, blockTiers, itemTiers, maxTier),
     knowsName: show("name"),
     // An automatic DC follows CR and an automatic skill the creature type: known once those are.
     knowsDc: (config) => !!config?.isDcExplicit || show("cr"),

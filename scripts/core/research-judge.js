@@ -14,7 +14,8 @@ export function judgeResearchRoll({ requester, uuid, roll, data, knowledge, crea
   if (!settings.enabled) throw new BestiaryCommandError("BESTIARY.Errors.ResearchDisabled");
   const entries = playerEntryContexts(data, uuid).map((context) => context.entry);
   if (!entries.length) throw new BestiaryCommandError("BESTIARY.CreatureUnavailable");
-  if (getUserTier(knowledge, requester.id, uuid) >= MAX_RESEARCH_TIER) {
+  const maxTier = settings.maxTier ?? MAX_RESEARCH_TIER;
+  if (getUserTier(knowledge, requester.id, uuid, maxTier) >= maxTier) {
     throw new BestiaryCommandError("BESTIARY.Research.Complete");
   }
 

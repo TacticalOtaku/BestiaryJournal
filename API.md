@@ -17,14 +17,15 @@ no right to make rejects with a `BestiaryCommandError`; its `key` is a localisat
 | `openCreature(uuid, { sectionId, rail })` | A creature's card. `rail` is `"knowledge"`, `"comments"` or `"config"`. Warns and returns nothing when the user may not open it. |
 | `openCollection(sectionRef)`              | A collection's window, or `null` when there is no such collection.                                                               |
 | `openKnowledgeBoard(sectionRef?)`         | GM: the party knowledge board, on one collection or on all of them.                                                              |
+| `openGuide(tab = "quickstart")`           | The interactive onboarding guide (`"quickstart"`, `"gm"`, `"research"`, or `"shortcuts"`).                                       |
 
 ## Reading
 
-| Call                                   | Returns                                                               |
-| -------------------------------------- | --------------------------------------------------------------------- |
-| `isInBestiary(uuid)`                   | Whether the actor has an entry in any collection.                     |
-| `canView(uuid)`                        | Whether the current user may open the creature.                       |
-| `getTier(uuid, userId = game.user.id)` | The user's tier: `0` unknown, `1` rumours, `2` studied, `3` mastered. |
+| Call                                   | Returns                                                                                                                                       |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `isInBestiary(uuid)`                   | Whether the actor has an entry in any collection.                                                                                             |
+| `canView(uuid)`                        | Whether the current user may open the creature.                                                                                               |
+| `getTier(uuid, userId = game.user.id)` | The user's numeric research tier (`0` is unknown, `1..N` follow the world's tier ladder — by default `1` rumours, `2` studied, `3` mastered). |
 
 ## Changing (GM)
 

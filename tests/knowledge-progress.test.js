@@ -8,12 +8,30 @@ test("progress counts the known creatures and each tier, leaving empty tiers out
     total: 4,
     known: 2,
     segments: [
-      { key: "unknown", count: 2 },
-      { key: "rumors", count: 1 },
-      { key: "mastered", count: 1 },
+      { key: "unknown", color: "unknown", count: 2 },
+      { key: "rumors", color: "rumors", count: 1 },
+      { key: "mastered", color: "mastered", count: 1 },
     ],
   });
   assert.deepEqual(tierProgress([]), { total: 0, known: 0, segments: [] });
+});
+
+test("progress supports custom tier definitions past tier 3", () => {
+  const custom = [
+    { key: "unknown", color: "unknown" },
+    { key: "rumors", color: "rumors" },
+    { key: "studied", color: "studied" },
+    { key: "mastered", color: "mastered" },
+    { key: "arcane", color: "arcane" },
+  ];
+  assert.deepEqual(tierProgress([0, 4, 4], custom), {
+    total: 3,
+    known: 2,
+    segments: [
+      { key: "unknown", color: "unknown", count: 1 },
+      { key: "arcane", color: "arcane", count: 2 },
+    ],
+  });
 });
 
 test("only a rise in tier is news, a first record counts from unknown", () => {

@@ -1,13 +1,17 @@
 import { formatMod, formatCR, localizeDndLabel, formatDistanceUnit } from "../integrations/dnd5e.js";
 import {
-  MAX_RESEARCH_TIER,
   isBlockVisible,
   isGmTier,
   isItemVisible,
   itemTierKey,
+  maxResearchTier,
   requiredTierForItem,
 } from "../core/research-model.js";
-import { localizedTierChoices } from "../foundry/creature-display.js";
+import {
+  getWorldMaxResearchTier,
+  getWorldResearchTiers,
+  localizedTierChoices,
+} from "../foundry/creature-display.js";
 import { buildImageView } from "../core/image-framing.js";
 import { describeTier } from "../foundry/research.js";
 import { getDnd5eConfig, localize } from "../foundry/foundry-runtime.js";
@@ -154,16 +158,19 @@ function decorateCreature(known, creature, lens) {
   };
 }
 
-export function buildTierSteps(tier) {
-  const current = isGmTier(tier) ? MAX_RESEARCH_TIER : tier;
-  return [0, 1, 2, 3].map((value) => {
-    const definition = describeTier(value);
+export function buildTierSteps(tier, tiers = getWorldResearchTiers()) {
+  const gmView = isGmTier(tier);
+  const maxTier = maxResearchTier(tiers);
+  const current = gmView ? maxTier : tier;
+  return tiers.map((definition) => {
+    const info = describeTier(definition.value, tiers);
     return {
-      value,
-      label: definition.label,
-      icon: definition.icon,
-      reached: value <= current,
-      isCurrent: value === current,
+      value: definition.value,
+      color: info.color,
+      label: info.label,
+      icon: info.icon,
+      reached: definition.value <= current,
+      isCurrent: !gmView && definition.value === current,
     };
   });
 }
@@ -212,8 +219,9 @@ function buildSenseEntries(creature, dnd5e) {
  * hidden ones stay obvious. `expanded` holds the open section and item keys.
  */
 function buildContentSections(creature, lens, entry, isGM, expanded) {
+  const maxTier = getWorldMaxResearchTier();
   // What players miss even at the top tier; the GM's own view shows everything, so it cannot tell.
-  const hiddenForPlayers = (key) => !isBlockVisible(key, MAX_RESEARCH_TIER, lens.blockTiers);
+  const hiddenForPlayers = (key) => !isBlockVisible(key, maxTier, lens.blockTiers, maxTier);
   const sections = [];
   for (const [key, label, icon] of CONTENT_SECTION_DEFS) {
     const source = creature[key] ?? [];
@@ -223,7 +231,7 @@ function buildContentSections(creature, lens, entry, isGM, expanded) {
 
     const items = source
       .filter((item) => isGM || lens.showItem(key, item.id ?? item.name))
-      .map((item) => decorateItem(item, key, lens, entry, isGM, expanded.items));
+      .map((item) => decorateItem(item, key, lens, entry, isGM, expanded.items, maxTier));
     if (!items.length) continue;
 
     sections.push({
@@ -256,11 +264,11 @@ function buildContentSections(creature, lens, entry, isGM, expanded) {
 }
 
 /** `override` is this entry's own pick for the GM's control; what players get comes from the lens. */
-function decorateItem(item, blockKey, lens, entry, isGM, expandedItems) {
+function decorateItem(item, blockKey, lens, entry, isGM, expandedItems, maxTier) {
   const itemId = item.id ?? item.name;
   const itemKey = `${blockKey}:${itemId}`;
   const override = entry.itemTiers?.[itemTierKey(blockKey, itemId)];
-  const required = requiredTierForItem(blockKey, itemId, lens.blockTiers, lens.itemTiers);
+  const required = requiredTierForItem(blockKey, itemId, lens.blockTiers, lens.itemTiers, maxTier);
   return {
     ...item,
     itemKey,
@@ -269,7 +277,7 @@ function decorateItem(item, blockKey, lens, entry, isGM, expandedItems) {
     expanded: expandedItems.has(itemKey),
     primaryActivity: item.activities?.[0] ?? null,
     hasActivity: (item.activities?.length ?? 0) > 0,
-    hiddenForPlayers: !isItemVisible(blockKey, itemId, MAX_RESEARCH_TIER, lens.blockTiers, lens.itemTiers),
+    hiddenForPlayers: !isItemVisible(blockKey, itemId, maxTier, lens.blockTiers, lens.itemTiers, maxTier),
     requiredTier: required,
     requiredTierLabel: describeTier(required).label,
     tierChoices: isGM

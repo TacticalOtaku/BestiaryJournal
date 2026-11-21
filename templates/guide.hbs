@@ -1,0 +1,122 @@
+<section class="guide-shell">
+  <header class="guide-header">
+    <div class="guide-header-copy">
+      <div class="guide-kicker-row">
+        <p class="library-eyebrow">{{localize "BESTIARY.Title"}}</p>
+        <span class="guide-role-pill">{{roleBadge}}</span>
+      </div>
+      <h1>{{localize "BESTIARY.Guide.Title"}}</h1>
+      <p class="guide-lead">{{roleLead}}</p>
+    </div>
+  </header>
+
+  <div class="guide-tabs rail-tabs" role="tablist" aria-label="{{localize 'BESTIARY.Guide.Title'}}">
+    {{#each tabs}}
+      <button type="button" role="tab" aria-selected="{{#if this.active}}true{{else}}false{{/if}}" tabindex="{{#if this.active}}0{{else}}-1{{/if}}" class="{{#if this.active}}is-active{{/if}}" data-action="setTab" data-tab="{{this.key}}">
+        <i class="fa-solid {{this.icon}}" aria-hidden="true"></i>{{this.label}}
+      </button>
+    {{/each}}
+  </div>
+
+  <div class="guide-scroll bestiary-scrollable" role="tabpanel">
+    {{#if isQuickstart}}
+      <ol class="guide-step-list">
+        {{#each steps}}
+          <li class="guide-step-card">
+            <span class="guide-step-num" aria-hidden="true">{{this.step}}</span>
+            <div class="guide-step-body">
+              <h2><i class="fa-solid {{this.icon}}" aria-hidden="true"></i>{{this.title}}</h2>
+              <p>{{this.body}}</p>
+              {{#if this.action}}
+                <button type="button" class="suite-secondary-button guide-action-btn" data-action="runAction" data-guide-action="{{this.action}}">
+                  <i class="fa-solid {{this.actionIcon}}" aria-hidden="true"></i>{{this.actionLabel}}
+                </button>
+              {{/if}}
+            </div>
+          </li>
+        {{/each}}
+      </ol>
+    {{/if}}
+
+    {{#if isGmTab}}
+      <div class="guide-card-grid">
+        {{#each gmFeatures}}
+          <article class="guide-feature-card">
+            <header>
+              <span class="guide-feature-icon" aria-hidden="true"><i class="fa-solid {{this.icon}}"></i></span>
+              <h2>{{this.title}}</h2>
+            </header>
+            <p>{{this.body}}</p>
+            {{#if this.action}}
+              <button type="button" class="suite-secondary-button guide-action-btn" data-action="runAction" data-guide-action="{{this.action}}">
+                <i class="fa-solid {{this.actionIcon}}" aria-hidden="true"></i>{{this.actionLabel}}
+              </button>
+            {{/if}}
+          </article>
+        {{/each}}
+      </div>
+    {{/if}}
+
+    {{#if isResearch}}
+      <section class="guide-ladder-block">
+        <h2>{{localize "BESTIARY.Guide.LiveLadderTitle"}}</h2>
+        <p class="guide-section-hint">{{localize "BESTIARY.Guide.LiveLadderHint"}}</p>
+        <ol class="guide-ladder-list">
+          {{#each tiers}}
+            <li class="guide-ladder-item" data-tier-color="{{this.color}}">
+              <span class="tier-chip" data-tier-color="{{this.color}}"><i class="fa-solid {{this.icon}}" aria-hidden="true"></i>{{this.label}}</span>
+              <span class="guide-ladder-level">{{this.value}}</span>
+              <p>{{this.hint}}</p>
+            </li>
+          {{/each}}
+        </ol>
+      </section>
+
+      <div class="guide-card-grid">
+        {{#each researchCards}}
+          <article class="guide-feature-card">
+            <header>
+              <span class="guide-feature-icon" aria-hidden="true"><i class="fa-solid {{this.icon}}"></i></span>
+              <h2>{{this.title}}</h2>
+            </header>
+            <p>{{this.body}}</p>
+          </article>
+        {{/each}}
+      </div>
+    {{/if}}
+
+    {{#if isShortcuts}}
+      <div class="guide-card-grid">
+        {{#each shortcutCards}}
+          <article class="guide-feature-card">
+            <header>
+              <span class="guide-feature-icon" aria-hidden="true"><i class="fa-solid {{this.icon}}"></i></span>
+              <div>
+                <h2>{{this.title}}</h2>
+                {{#if this.badge}}<kbd class="guide-kbd">{{this.badge}}</kbd>{{/if}}
+              </div>
+            </header>
+            <p>{{this.body}}</p>
+          </article>
+        {{/each}}
+      </div>
+    {{/if}}
+  </div>
+
+  <footer class="guide-footer">
+    <label class="guide-hints-label">
+      <input type="checkbox" class="guide-hints-toggle" {{#if hintsEnabled}}checked{{/if}} />
+      <span>{{localize "BESTIARY.Guide.ShowInlineHints"}}</span>
+    </label>
+    <div class="guide-footer-actions">
+      {{#if bannerDismissed}}
+        <button type="button" class="suite-secondary-button" data-action="restoreTips">
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>{{localize "BESTIARY.Guide.RestoreBanners"}}
+        </button>
+      {{/if}}
+      <button type="button" class="suite-primary-button" data-action="finishGuide">
+        <i class="fa-solid fa-check" aria-hidden="true"></i>{{localize "BESTIARY.Guide.Done"}}
+      </button>
+    </div>
+  </footer>
+</section>
