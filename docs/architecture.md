@@ -9,11 +9,13 @@ scripts/
   main.js            composition root: menus, Handlebars helpers, refresh coalescing, lifecycle hooks
   core/              pure logic — no game/ui/Hooks access, unit tested in plain Node
     research-model.js    knowledge tiers: blocks, thresholds, visibility of blocks and single items
+    research-judge.js    GM-side research roll verdict (author, character owner, skill, freshness, DC)
     knowledge-lens.js    what one viewer (GM, player, party) knows of one creature; every page asks it
                          (thresholds across collections: docs/adr/0001)
     bestiary-domain.js   normalisation, selectors, the command reducer (which also decides who may run a command);
                          a viewer is always `{ id, isGM }`
     snapshot-import.js   importing a bestiary snapshot, and the plan the GM confirms (the import run on a copy)
+    guide-model.js       onboarding guide tabs, quick-start steps, and contextual quick tips
     display-names.js     splitting display names
     image-framing.js     image framing and focal point
     theme.js             window look rules: theme, accent and motion level with the OS and Foundry caps
@@ -34,12 +36,24 @@ scripts/
     research-authority.js  GM-side check of a research roll
     research.js, research-skills.js, migrations.js, transfer.js, creature-cache.js,
     creature-display.js, client-preferences.js, command-feedback.js,
-    knowledge-watch.js, encounter.js
+    knowledge-watch.js, encounter.js, sharing-window.js
   ui/                ApplicationV2 windows and view helpers: view-model preparation and DOM only
+    bestiary-app.js      the library window; section-view.js a collection (groups/filters in section-model.js)
+    creature-view.js     a creature's card (filtered statblock in creature-statblock.js)
     creature-rows.js     the creature rows of the library and of a collection, their count and progress
-    bestiary-app.js      the library; section-view.js a collection (family groups and filters in section-model.js);
-    creature-view.js     a creature's card (its statblock, cut down to what the viewer knows, in creature-statblock.js);
-    knowledge-board.js   the GM's party knowledge table; api.js the public API (API.md)
+    creature-cards.js    view-model builder, name sort, and chat posting for creature cards
+    knowledge-board.js   the GM's party knowledge table; knowledge-ui.js roster, sharing dialog and tier actions
+    comments.js          note channel view-model, submission, and party notes feed
+    entry-editor.js      creature entry, research DC/skills, and block/item reveal threshold editor
+    tile-editor.js       collection and family editor dialog
+    bulk-import.js       world-actor and compendium bulk import dialog
+    bulk-research.js     batch research DC and allowed-skills editor
+    tier-settings.js     custom world research tiers and global block threshold editor
+    guide-app.js         role-aware interactive onboarding guide window (`BestiaryGuideApp`)
+    actor-integration.js "Bestiary…" menus in Actor Directory, NPC sheet header, and Token HUD
+    artwork.js           still poster frames and hover/focus animated GIF/WebP playback
+    ui-effects.js        entrance/disclosure animations, ARIA tablist keys, context menus, cursor light
+    api.js               the public API `game.bestiaryJournal` (API.md)
 ```
 
 The dependency direction is an acyclic hierarchy: `ui` → `foundry` → `integrations` → `core`, with
