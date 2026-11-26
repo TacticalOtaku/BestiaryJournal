@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.1
+
+### Changed
+
+- **Unified Onest Typography**: Switched display headings across Bestiary windows and chat cards to the bundled **Onest** variable font (`Latin` + `Cyrillic`), replacing `Palatino` for Latin headings, and enabled `tabular-nums` on chat cards.
+- **AIM Palette & Depth Alignment**: Updated **Night** and **Parchment** surface, text, status, tier, and accent tokens (lifting **Parchment** cards `#f8f4ea` over the `#efe8d8` canvas), added 3-tier depth shadows and `--suite-scrim`, and synced chat card palettes.
+- **Documentation & Packaging**: Unified bilingual README layouts with manifest installation near the top, added AI disclosure sections, aligned architecture docs, and included `README.ru.md` in release archives.
+
+### Fixed & Polished
+
+- **Compositor-Only Motion & Accessibility**: Replaced `height`, `grid-template-columns`, and `box-shadow` transitions with `transform`/`opacity` animations (`animateDisclosure` and collection preview), suppressed `.ability-score` hover lift under `Reduced`/`Off` motion, added `280ms` `.aim-theme-fade` transitions on live theme switches, added `@media (forced-colors: active)` rules, tinted selected collection grid cards with `--suite-accent-soft`, and narrowed custom WebKit scrollbars to `6px`.
+
+### Validation
+
+- 201 automated unit tests pass, together with ESLint, Prettier, project/manifest validation, and Night/Parchment contrast checks.
+
 ## 0.5.0
 
 ### Added
