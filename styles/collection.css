@@ -90,7 +90,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 0;
   min-height: 0;
-  transition: grid-template-columns var(--suite-normal) var(--suite-ease);
 }
 .collection-layout.has-preview {
   grid-template-columns: minmax(0, 1fr) 316px;
@@ -268,6 +267,7 @@
 }
 .collection-creature-card.is-selected {
   border-color: var(--suite-accent);
+  background: var(--suite-accent-soft);
   box-shadow: 0 0 0 1px var(--suite-accent);
 }
 .collection-creature-card.is-hidden {
@@ -413,8 +413,19 @@
   display: none;
   padding: 16px;
 }
-.collection-preview-panel .creature-preview-content.is-active {
+@keyframes suite-preview-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.collection-layout.has-preview .collection-preview-panel .creature-preview-content.is-active {
   display: block;
+  animation: suite-preview-in var(--suite-normal) var(--suite-ease) both;
 }
 .collection-preview-panel.has-selection .preview-placeholder {
   display: none;
@@ -549,7 +560,7 @@
   position: absolute;
   inset: 0;
   z-index: 4;
-  background: rgb(10 8 6 / 34%);
+  background: var(--suite-scrim);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--suite-normal);
@@ -669,12 +680,13 @@
   gap: 10px;
   border: 2px dashed var(--suite-accent);
   border-radius: var(--suite-radius-lg);
-  background: color-mix(in srgb, var(--suite-accent) 12%, rgb(255 255 255 / 60%));
+  background: color-mix(
+    in srgb,
+    var(--suite-accent) 14%,
+    color-mix(in srgb, var(--suite-surface) 88%, transparent)
+  );
   color: var(--suite-accent);
   pointer-events: none;
-}
-.bestiary-app:not([data-theme="parchment"]) .collection-drop-overlay {
-  background: color-mix(in srgb, var(--suite-accent) 14%, rgb(0 0 0 / 62%));
 }
 .collection-drop-overlay i {
   font-size: 1.8rem;

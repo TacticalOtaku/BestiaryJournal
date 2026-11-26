@@ -12,9 +12,9 @@
   cursor: pointer;
   font-size: 0.85rem;
   transition:
-    border-color 160ms ease,
-    color 160ms ease,
-    background 160ms ease;
+    border-color var(--suite-fast, 140ms) ease,
+    color var(--suite-fast, 140ms) ease,
+    background var(--suite-fast, 140ms) ease;
 }
 
 .bestiary-sidebar-btn:hover {
@@ -30,45 +30,45 @@
 .bestiary-sidebar-btn,
 .bestiary-chat-card,
 .bestiary-research-card {
-  --bj-chat-accent: #745017;
-  --bj-chat-ink: #1f180e;
-  --bj-chat-muted: #605544;
-  --bj-chat-paper: rgb(250 246 236 / 70%);
-  --bj-chat-line: rgb(70 45 15 / 18%);
-  --bj-chat-positive: #1f613c;
-  --bj-chat-danger: #a4241d;
-  --bj-tier-unknown: #5d5548;
+  --bj-chat-accent: #714e16;
+  --bj-chat-ink: #1c160d;
+  --bj-chat-muted: #5f5342;
+  --bj-chat-paper: rgb(248 244 234 / 72%);
+  --bj-chat-line: rgb(65 42 14 / 16%);
+  --bj-chat-positive: #1e5e3a;
+  --bj-chat-danger: #a1231c;
+  --bj-tier-unknown: #5c5446;
   --bj-tier-rumors: #8a4513;
   --bj-tier-studied: #1e5f59;
   --bj-tier-mastered: #6f4f12;
-  --bj-tier-embers: #933a1a;
-  --bj-tier-arcane: #592fda;
-  --bj-tier-forest: #216141;
-  --bj-tier-frost: #185a87;
-  --bj-tier-rose: #a41d4f;
-  --bj-tier-crimson: #a4241d;
+  --bj-tier-embers: #903819;
+  --bj-tier-arcane: #562cd4;
+  --bj-tier-forest: #1f5e3e;
+  --bj-tier-frost: #175783;
+  --bj-tier-rose: #a01c4c;
+  --bj-tier-crimson: #a1231c;
 }
 
 /* The nearest theme wins: Foundry draws chat messages light inside a dark interface. */
 @scope (.theme-dark) to (.theme-light) {
   :is(.bestiary-sidebar-btn, .bestiary-chat-card, .bestiary-research-card) {
-    --bj-chat-accent: #d4a55a;
-    --bj-chat-ink: #ece6da;
-    --bj-chat-muted: #aaa499;
-    --bj-chat-paper: rgb(22 25 34 / 72%);
+    --bj-chat-accent: #d8aa5f;
+    --bj-chat-ink: #f0ece1;
+    --bj-chat-muted: #bfb9ab;
+    --bj-chat-paper: rgb(21 24 33 / 74%);
     --bj-chat-line: rgb(255 255 255 / 10%);
-    --bj-chat-positive: #5fc28a;
-    --bj-chat-danger: #e56f69;
-    --bj-tier-unknown: #a19c92;
+    --bj-chat-positive: #62c78e;
+    --bj-chat-danger: #ea7670;
+    --bj-tier-unknown: #b8b2a7;
     --bj-tier-rumors: #d8955a;
     --bj-tier-studied: #63b3c2;
     --bj-tier-mastered: #ddb659;
-    --bj-tier-embers: #e2734a;
-    --bj-tier-arcane: #9d7eff;
-    --bj-tier-forest: #5fbf8f;
-    --bj-tier-frost: #6fb7e8;
-    --bj-tier-rose: #e07aa0;
-    --bj-tier-crimson: #ef7079;
+    --bj-tier-embers: #e5784f;
+    --bj-tier-arcane: #a486ff;
+    --bj-tier-forest: #63c393;
+    --bj-tier-frost: #72baea;
+    --bj-tier-rose: #e37fa4;
+    --bj-tier-crimson: #ea7670;
   }
   .bestiary-chat-card img.is-silhouette {
     filter: brightness(0) invert(1) opacity(0.35);
@@ -88,6 +88,7 @@
   box-shadow: inset 3px 0 0 var(--bj-chat-edge);
   color: var(--bj-chat-ink);
   font-family: "Bestiary Onest", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 .bestiary-chat-card {
@@ -157,7 +158,7 @@
 .bestiary-chat-card strong {
   display: block;
   overflow-wrap: anywhere;
-  font-family: "Bestiary Display", "Bestiary Onest", serif;
+  font-family: inherit;
   font-size: 1rem;
   font-weight: 700;
   line-height: 1.2;
@@ -268,4 +269,10 @@
 .bestiary-chat-card img.is-silhouette {
   filter: brightness(0) opacity(0.45);
   background: rgb(0 0 0 / 6%);
+}
+
+@media (forced-colors: active) {
+  :is(.bestiary-sidebar-btn, .bestiary-chat-card, .bestiary-research-card) {
+    border: 1px solid ButtonText;
+  }
 }

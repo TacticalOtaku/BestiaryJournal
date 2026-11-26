@@ -2,13 +2,13 @@
  * Live check of the open Bestiary windows, for the browser console of a running Foundry (see docs/live-check.md).
  * Paste the whole file; it resolves to a report and prints each finding as a table. It reads the page only.
  *
- * - fonts: visible text not set in the module's faces (Bestiary Onest, Bestiary Display);
+ * - fonts: visible text not set in the module's face (Bestiary Onest);
  * - clipped: text cut off by its box without an ellipsis;
  * - overflow: an element that sticks out of its window sideways;
  * - unlabeled: a button or link with no text, aria-label or tooltip.
  */
 (async () => {
-  const FACES = ["Bestiary Onest", "Bestiary Display"];
+  const FACES = ["Bestiary Onest"];
   const roots = [
     ...document.querySelectorAll(".bestiary-app"),
     ...document.querySelectorAll(".bestiary-chat-card, .bestiary-research-card"),

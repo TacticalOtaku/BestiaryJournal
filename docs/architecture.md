@@ -102,10 +102,9 @@ accents are named (`data-accent`), each with its own value per theme. The user p
 theme and accent. `foundry/theme-root.js` stamps the attributes on render and restamps open windows when a choice,
 Foundry's scheme or AIM's settings change. The OS «reduce motion» caps the level at «off», Foundry's
 `performance-low` at «reduced». `tests/theme-contrast.test.js` keeps text and tier colours at 4.5:1 on every surface
-in both themes. Type follows AIM too: the interface is Onest (OFL, `assets/fonts`, copied from AIM), the
-display face is Palatino for Latin only (`local()`, nothing downloaded), and Cyrillic headings fall through to Onest.
-Cards, ability tiles, the row accent edge, the tab ink, the art sweep and the cursor light (`.bestiary-spot`,
-`ui/ui-effects.js`) are AIM's recipes.
+in both themes. Type follows AIM's unified typography too: both Latin and Cyrillic UI and headings use Onest (OFL,
+`assets/fonts`, copied from AIM) with `tabular-nums` for numbers. Cards, ability tiles, the row accent edge, the tab
+ink, the art sweep and the cursor light (`.bestiary-spot`, `ui/ui-effects.js`) are AIM's recipes.
 
 Stylesheets, in the order `module.json` loads them: `tokens.css` (type, palettes, accents), `frame.css` (every
 window: frame, resets, artwork, shared controls, the context menu), `library.css`, `collection.css`, `creature.css`,

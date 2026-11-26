@@ -100,7 +100,7 @@ Creature knowledge is tracked per player along a customizable research ladder (4
 ### Interface & Artwork
 
 - **Look drawer** inside the library (user & client preferences): **Night**, **Parchment**, **Auto**, and **Match AIM** (integrates with _AIM: Actor Window_), 6 accent colors, 2 density modes (**Comfortable** / **Compact**), 3 collection cover sizes (**Small** / **Medium** / **Large**), and motion levels respecting OS reduced-motion and Foundry low-performance mode.
-- **Bundled typography:** Built on **Onest** (Latin + Cyrillic) and **Palatino** for Latin display headings.
+- **Bundled typography:** Built on the unified **Onest** variable font (`Latin` + `Cyrillic`) across headings, UI, and tabular numeric metrics.
 - **Smart framing & animated art:** Square collection covers show the full artwork over a blurred backdrop with adaptive captions; creature portraits and tokens support focal-point cropping, and animated GIF/WebP art plays on hover or keyboard focus.
 
 ### Built for GMs & Players

@@ -3,6 +3,21 @@ import { log } from "../core/logger.js";
 
 const MODULE_ID = "bestiary-journal";
 const AIM_ID = "actor-inventory-manager";
+const THEME_FADE_MS = 280;
+const themeFadeTimers = new WeakMap();
+
+/** Temporarily animates surface/text/border colors when toggling Night <-> Parchment. */
+function triggerThemeFade(element, motion) {
+  if (motion === "off" || typeof element.classList?.add !== "function") return;
+  clearTimeout(themeFadeTimers.get(element));
+  element.classList.add("aim-theme-fade");
+  const timer = setTimeout(() => {
+    element.classList?.remove?.("aim-theme-fade");
+    themeFadeTimers.delete(element);
+  }, THEME_FADE_MS);
+  timer?.unref?.();
+  themeFadeTimers.set(element, timer);
+}
 
 /** «Как в AIM» borrows AIM's own theme and accent while AIM is active; otherwise it acts as «Авто». */
 function chosenLook() {
@@ -31,17 +46,21 @@ function schemeIsLight(element) {
 
 /** Theme, accent, density and motion as data attributes on a bestiary window root. */
 export function stampTheme(element) {
-  if (!element?.classList.contains("bestiary-app")) return;
+  if (!element?.classList?.contains("bestiary-app")) return;
   const { theme, accent } = chosenLook();
-  element.dataset.theme = resolveTheme(theme, schemeIsLight(element));
+  const prevTheme = element.dataset.theme;
+  const nextTheme = resolveTheme(theme, schemeIsLight(element));
+  const nextMotion = effectiveMotion(game.settings.get(MODULE_ID, "uiMotion"), {
+    reducedMotion: globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
+    performanceLow: document.body.classList.contains("performance-low"),
+  });
+  if (prevTheme && prevTheme !== nextTheme) triggerThemeFade(element, nextMotion);
+  element.dataset.theme = nextTheme;
   element.dataset.accent = normalizeAccent(accent);
   element.dataset.tooltipClass = "bestiary-tooltip";
   element.dataset.density = game.settings.get(MODULE_ID, "uiDensity");
   element.dataset.coverSize = normalizeCoverSize(game.settings.get(MODULE_ID, "uiCoverSize"));
-  element.dataset.motion = effectiveMotion(game.settings.get(MODULE_ID, "uiMotion"), {
-    reducedMotion: globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
-    performanceLow: document.body.classList.contains("performance-low"),
-  });
+  element.dataset.motion = nextMotion;
 }
 
 /** Restamps every open bestiary window, dialogs included, after a look setting changed. */

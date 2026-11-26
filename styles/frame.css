@@ -12,7 +12,6 @@
     system-ui,
     -apple-system,
     "Segoe UI",
-    Roboto,
     sans-serif;
 }
 .bestiary-app > .window-header {
@@ -62,7 +61,7 @@
   cursor: pointer;
 }
 .bestiary-app .window-content button:active:not(:disabled) {
-  transform: translateY(1px) scale(0.99);
+  transform: scale(0.985);
 }
 .bestiary-app .window-content button:disabled {
   opacity: 0.45;
@@ -131,8 +130,8 @@
 }
 @supports not (scrollbar-color: auto) {
   .bestiary-scrollable::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
   .bestiary-scrollable::-webkit-scrollbar-track {
     background: transparent;
@@ -185,7 +184,7 @@
   height: 100%;
   display: block;
   border: 0;
-  transition: transform 520ms var(--suite-ease);
+  transition: transform calc(var(--suite-art-duration, 700ms) * 0.75) var(--suite-ease);
 }
 .bestiary-frame.is-silhouette > img {
   filter: brightness(0) invert(1) opacity(0.32);
@@ -215,7 +214,7 @@
 }
 :is(.collection-creature-card, .library-creature-card, .recent-creature-card):hover .bestiary-frame::after {
   transform: translateX(120%);
-  transition: transform 700ms var(--suite-ease);
+  transition: transform var(--suite-art-duration, 700ms) var(--suite-ease);
 }
 .bestiary-app:not([data-motion="full"]) .bestiary-frame::after {
   display: none;
@@ -250,8 +249,8 @@
   opacity: 0.45;
   pointer-events: none;
   transition:
-    transform 700ms var(--suite-ease),
-    opacity 700ms var(--suite-ease);
+    transform var(--suite-art-duration, 700ms) var(--suite-ease),
+    opacity var(--suite-art-duration, 700ms) var(--suite-ease);
 }
 .bestiary-art.is-art-bound > img {
   opacity: 0;
@@ -372,8 +371,7 @@
   transition:
     background var(--suite-fast),
     border-color var(--suite-fast),
-    box-shadow var(--suite-fast),
-    transform var(--suite-fast);
+    transform var(--suite-fast) var(--suite-ease-snap);
 }
 .suite-primary-button {
   border-color: transparent;
@@ -711,4 +709,60 @@
 .recent-creature-card .bestiary-new-dot {
   top: 5px;
   left: 5px;
+}
+
+/* Smooth synchronous cross-fade when switching Night <-> Parchment (removed by theme-root.js after 280ms). */
+.bestiary-app.aim-theme-fade,
+.bestiary-app.aim-theme-fade * {
+  transition:
+    background-color 280ms var(--suite-ease),
+    color 280ms var(--suite-ease),
+    border-color 280ms var(--suite-ease) !important;
+}
+
+@media (forced-colors: active) {
+  .bestiary-app
+    :is(
+      button,
+      input,
+      select,
+      textarea,
+      .library-search,
+      .preview-as,
+      .item-tier-control,
+      .collection-card,
+      .library-creature-card,
+      .recent-creature-card,
+      .collection-creature-card,
+      .collection-creature-row,
+      .creature-content-card,
+      .creature-items-accordion,
+      .creature-rail,
+      .key-stat,
+      .ability-score,
+      .notes-feed-item,
+      .guide-step-card,
+      .guide-feature-card,
+      .tier-def-row,
+      .bestiary-context-menu,
+      .look-drawer,
+      .collection-filter-panel,
+      .tier-chip,
+      .board-tier,
+      .suite-badge
+    ) {
+    border: 1px solid ButtonText;
+  }
+  .bestiary-app :is(.is-active, .is-selected, .is-expanded) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+  .bestiary-app .window-content :is(button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+  .bestiary-app .bestiary-new-dot {
+    border: 2px solid Highlight;
+    background: Highlight;
+  }
 }

@@ -481,24 +481,44 @@
 }
 
 .creature-item {
+  position: relative;
   border: 0;
   border-radius: var(--suite-radius-sm);
   background: transparent;
+  transition: background var(--suite-fast);
+}
+.creature-item::before {
+  content: "";
+  position: absolute;
+  inset: 4px auto 4px 0;
+  width: 2px;
+  border-radius: 99px;
+  background: var(--suite-accent-line);
+  opacity: 0;
+  pointer-events: none;
   transition:
-    background var(--suite-fast),
-    box-shadow var(--suite-fast);
+    opacity var(--suite-fast),
+    background-color var(--suite-fast);
 }
 .creature-item:hover {
   background: var(--suite-raised);
-  box-shadow: inset 2px 0 0 var(--suite-accent-line);
+}
+.creature-item:hover::before {
+  opacity: 1;
 }
 .creature-item.is-expanded {
   background: var(--suite-accent-soft);
-  box-shadow: inset 2px 0 0 var(--suite-accent);
+}
+.creature-item.is-expanded::before {
+  opacity: 1;
+  background: var(--suite-accent);
 }
 .creature-item.is-item-hidden {
   opacity: 0.72;
-  box-shadow: inset 2px 0 0 var(--tier-never);
+}
+.creature-item.is-item-hidden::before {
+  opacity: 1;
+  background: var(--tier-never);
 }
 .creature-item-header {
   display: flex;
@@ -678,7 +698,7 @@
   border: 1px solid var(--suite-border);
   border-radius: var(--suite-radius);
   background: var(--suite-surface);
-  box-shadow: var(--suite-shadow-card);
+  box-shadow: var(--suite-shadow-1);
   overflow: hidden;
 }
 .rail-tabs {

@@ -11,7 +11,7 @@ prints four tables; each should be empty:
 
 | Table | Means |
 | --- | --- |
-| `fonts` | Text not set in Bestiary Onest or Bestiary Display (a Foundry or system font leaking in). |
+| `fonts` | Text not set in Bestiary Onest (a Foundry or system font leaking in). |
 | `clipped` | Text cut off by its box with no ellipsis. |
 | `overflow` | Something sticking out of its window sideways. |
 | `unlabeled` | A button or link with no text, `aria-label` or tooltip. |

@@ -359,14 +359,14 @@
   cursor: pointer;
   transition:
     transform var(--suite-normal) var(--suite-ease),
-    box-shadow var(--suite-normal);
+    border-color var(--suite-fast);
 }
 .collection-card:not(.collection-card-new) {
   container: collection-card / inline-size;
 }
 .collection-card:hover {
   transform: translateY(-3px);
-  box-shadow: var(--suite-shadow);
+  border-color: var(--suite-border-strong);
 }
 .collection-cover {
   position: relative;

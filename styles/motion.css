@@ -6,6 +6,8 @@
 .bestiary-app[data-motion="off"] {
   --suite-fast: 0ms;
   --suite-normal: 0ms;
+  --suite-slow: 0ms;
+  --suite-art-duration: 0ms;
 }
 
 .bestiary-app[data-motion="off"] *,
@@ -22,8 +24,10 @@
     .recent-creature-card,
     .library-creature-card,
     .collection-creature-card,
-    .suite-primary-button
+    .suite-primary-button,
+    .ability-score
   ):hover,
+.bestiary-app:not([data-motion="full"]) .ability-score:hover :is(strong, small),
 .bestiary-app:not([data-motion="full"]) .collection-card:hover > img {
   transform: none;
 }

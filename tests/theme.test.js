@@ -61,3 +61,43 @@ test("cover sizes validate and stamp data-cover-size onto bestiary windows", () 
     globalThis.document = previousDocument;
   }
 });
+
+test("stampTheme applies aim-theme-fade only on live theme transitions when motion is enabled", () => {
+  const values = {
+    uiTheme: "night",
+    uiAccent: "brass",
+    uiDensity: "comfortable",
+    uiCoverSize: "medium",
+    uiMotion: "full",
+  };
+  const previousGame = globalThis.game;
+  const previousDocument = globalThis.document;
+  const classes = new Set(["bestiary-app"]);
+  const element = {
+    dataset: {},
+    classList: {
+      contains: (name) => classes.has(name),
+      add: (name) => classes.add(name),
+      remove: (name) => classes.delete(name),
+    },
+  };
+  globalThis.game = { settings: { get: (_scope, key) => values[key] } };
+  globalThis.document = { body: { classList: { contains: () => false } } };
+  try {
+    stampTheme(element);
+    assert.equal(classes.has("aim-theme-fade"), false);
+
+    values.uiTheme = "parchment";
+    stampTheme(element);
+    assert.equal(classes.has("aim-theme-fade"), true);
+
+    classes.delete("aim-theme-fade");
+    values.uiMotion = "off";
+    values.uiTheme = "night";
+    stampTheme(element);
+    assert.equal(classes.has("aim-theme-fade"), false);
+  } finally {
+    globalThis.game = previousGame;
+    globalThis.document = previousDocument;
+  }
+});

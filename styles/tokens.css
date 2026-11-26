@@ -1,31 +1,14 @@
 /* Bestiary Journal — tokens. Type, palettes, accents. Listed first in module.json. */
 
 /* Bestiary Journal — the window design system.
-   Palettes, accents, type and motion follow AIM: Actor Window (its styles/theme/tokens.css): «Ночь» is the
+   Palettes, accents, type and motion follow the AIM Visual Identity ("Nocturne & Parchment"): «Ночь» is the
    default, «Пергамент» overrides every colour, and the six accents are named so each theme keeps its own value.
    Tokens live on the window root, never on :root; foundry/theme-root.js stamps data-theme, data-accent and
    data-motion on it. Text and tier colours reach 4.5:1 on every surface in both themes
    (tests/theme-contrast.test.js), so every colour below stays a plain hex. */
 
-/* Type, as in AIM: Onest (OFL, assets/fonts, copied from AIM) for the interface, and a display face that is
-   Palatino for Latin only. Palatino's Cyrillic stands apart from the interface font, so Cyrillic and any glyph
-   Palatino lacks fall through to Onest. local() faces: nothing is downloaded for the display face. */
-@font-face {
-  font-family: "Bestiary Display";
-  font-weight: 400;
-  src:
-    local("Palatino Linotype"), local("PalatinoLinotype-Roman"), local("Book Antiqua"), local("Palatino"),
-    local("Palatino-Roman");
-  unicode-range: U+0000-024F, U+1E00-1EFF, U+2000-206F, U+20A0-20CF, U+2100-214F;
-}
-@font-face {
-  font-family: "Bestiary Display";
-  font-weight: 700;
-  src:
-    local("Palatino Linotype Bold"), local("PalatinoLinotype-Bold"), local("Book Antiqua Bold"),
-    local("Palatino Bold"), local("Palatino-Bold");
-  unicode-range: U+0000-024F, U+1E00-1EFF, U+2000-206F, U+20A0-20CF, U+2100-214F;
-}
+/* Unified bi-script typography: Onest (OFL, assets/fonts, copied from AIM) for both Latin and Cyrillic, UI and
+   display headings, with system-ui fallback. */
 /* onest-cyrillic-ext-wght-normal */
 @font-face {
   font-family: "Bestiary Onest";
@@ -72,86 +55,94 @@
 
 .bestiary-app {
   /* surfaces: window, panel, raised control, inset */
-  --suite-bg: #11131a;
-  --suite-surface: #161922;
-  --suite-raised: #1d212c;
+  --suite-bg: #0e1016;
+  --suite-surface: #151821;
+  --suite-raised: #1c202c;
   --suite-sunken: #0c0e13;
   --suite-border: rgb(255 255 255 / 8%);
-  --suite-border-strong: rgb(255 255 255 / 15%);
+  --suite-border-strong: rgb(255 255 255 / 16%);
   --suite-hover: rgb(255 255 255 / 6%);
+  --suite-scrim: rgb(5 6 10 / 58%);
   /* text */
-  --suite-text: #ece6da;
-  --suite-muted: #aaa499;
-  --suite-subtle: #96928a;
+  --suite-text: #f0ece1;
+  --suite-muted: #bfb9ab;
+  --suite-subtle: #9e988c;
   /* meaning */
-  --suite-danger: #e56f69;
-  --suite-positive: #5fc28a;
-  --suite-warning: #e7b04a;
+  --suite-danger: #ea7670;
+  --suite-positive: #62c78e;
+  --suite-warning: #eab450;
   /* the research ladder, carried across every screen */
-  --tier-unknown: #a19c92;
+  --tier-unknown: #b8b2a7;
   --tier-rumors: #d8955a;
   --tier-studied: #63b3c2;
   --tier-mastered: #ddb659;
-  --tier-never: #ef7079;
+  --tier-never: #ea7670;
   /* accents, picked by name (data-accent) */
-  --acc-brass: #d4a55a;
-  --acc-embers: #e2734a;
-  --acc-arcane: #9d7eff;
-  --acc-forest: #5fbf8f;
-  --acc-frost: #6fb7e8;
-  --acc-rose: #e07aa0;
+  --acc-brass: #d8aa5f;
+  --acc-embers: #e5784f;
+  --acc-arcane: #a486ff;
+  --acc-forest: #63c393;
+  --acc-frost: #72baea;
+  --acc-rose: #e37fa4;
   --suite-accent: var(--acc-brass);
-  --suite-on-accent: #1b1206;
+  --suite-on-accent: #191105;
   --suite-accent-bright: color-mix(in oklab, var(--suite-accent) 80%, white);
   --suite-accent-soft: color-mix(in oklab, var(--suite-accent) 16%, transparent);
-  --suite-accent-line: color-mix(in oklab, var(--suite-accent) 45%, transparent);
-  /* shape */
+  --suite-accent-line: color-mix(in oklab, var(--suite-accent) 46%, transparent);
+  /* shape & 3-tier depth */
   --suite-radius-sm: 6px;
   --suite-radius: 10px;
   --suite-radius-lg: 14px;
-  --suite-shadow: 0 18px 40px rgb(0 0 0 / 50%);
-  --suite-shadow-card: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 8px 24px rgb(0 0 0 / 35%);
-  /* type (AIM's): Onest, then the system font; headings in Palatino for Latin, Onest for Cyrillic */
-  --suite-font-body: "Bestiary Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --suite-font-display: "Bestiary Display", var(--suite-font-body);
+  --suite-shadow-card: 0 1px 0 rgb(255 255 255 / 4.5%) inset, 0 2px 6px rgb(0 0 0 / 22%);
+  --suite-shadow-1: 0 1px 0 rgb(255 255 255 / 5%) inset, 0 8px 24px rgb(0 0 0 / 36%);
+  --suite-shadow: 0 1px 0 rgb(255 255 255 / 6%) inset, 0 18px 40px rgb(0 0 0 / 52%);
+  /* type (AIM's): unified Onest for both Latin and Cyrillic, then the system font */
+  --suite-font-body: "Bestiary Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --suite-font-display: var(--suite-font-body);
   /* motion */
   --suite-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --suite-ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --suite-ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --suite-fast: 140ms;
   --suite-normal: 240ms;
+  --suite-slow: 420ms;
+  --suite-art-duration: 700ms;
   color-scheme: dark;
   color: var(--suite-text);
 }
 
 .bestiary-app[data-theme="parchment"] {
   color-scheme: light;
-  --suite-bg: #f4eedf;
-  --suite-surface: #ece3cf;
-  --suite-raised: #faf6ec;
-  --suite-sunken: #e3d8c0;
-  --suite-border: rgb(70 45 15 / 14%);
-  --suite-border-strong: rgb(70 45 15 / 26%);
-  --suite-hover: rgb(70 45 15 / 7%);
-  --suite-text: #1f180e;
-  --suite-muted: #43392d;
-  --suite-subtle: #605544;
-  --suite-danger: #a4241d;
-  --suite-positive: #1f613c;
-  --suite-warning: #725114;
-  --tier-unknown: #5d5548;
+  --suite-bg: #efe8d8;
+  --suite-surface: #f8f4ea;
+  --suite-raised: #e7decb;
+  --suite-sunken: #ddd1b8;
+  --suite-border: rgb(65 42 14 / 12%);
+  --suite-border-strong: rgb(65 42 14 / 24%);
+  --suite-hover: rgb(65 42 14 / 8%);
+  --suite-scrim: rgb(40 28 12 / 32%);
+  --suite-text: #1c160d;
+  --suite-muted: #43392b;
+  --suite-subtle: #5f5342;
+  --suite-danger: #a1231c;
+  --suite-positive: #1e5e3a;
+  --suite-warning: #6f4e13;
+  --tier-unknown: #5c5446;
   --tier-rumors: #8a4513;
   --tier-studied: #1e5f59;
   --tier-mastered: #6f4f12;
-  --tier-never: #a4241d;
-  --acc-brass: #745017;
-  --acc-embers: #933a1a;
-  --acc-arcane: #592fda;
-  --acc-forest: #216141;
-  --acc-frost: #185a87;
-  --acc-rose: #a41d4f;
+  --tier-never: #a1231c;
+  --acc-brass: #714e16;
+  --acc-embers: #903819;
+  --acc-arcane: #562cd4;
+  --acc-forest: #1f5e3e;
+  --acc-frost: #175783;
+  --acc-rose: #a01c4c;
   --suite-on-accent: #fffaf0;
   --suite-accent-bright: color-mix(in oklab, var(--suite-accent) 82%, black);
-  --suite-shadow: 0 16px 36px rgb(70 45 15 / 22%);
-  --suite-shadow-card: 0 1px 0 rgb(255 255 255 / 55%) inset, 0 6px 18px rgb(70 45 15 / 14%);
+  --suite-shadow-card: 0 1px 0 rgb(255 255 255 / 72%) inset, 0 1px 3px rgb(65 42 14 / 8%);
+  --suite-shadow-1: 0 1px 0 rgb(255 255 255 / 78%) inset, 0 6px 18px rgb(65 42 14 / 12%);
+  --suite-shadow: 0 16px 36px rgb(65 42 14 / 20%);
 }
 
 .bestiary-app[data-accent="embers"] {

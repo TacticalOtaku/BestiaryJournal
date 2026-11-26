@@ -44,7 +44,8 @@ const { BestiaryCreatureView } = await import("../scripts/ui/creature-view.js");
 const { sortByKnownName } = await import("../scripts/ui/creature-cards.js");
 const { confirmDialog } = await import("../scripts/foundry/foundry-runtime.js");
 const { registerThemeRoot } = await import("../scripts/foundry/theme-root.js");
-const { activateTablistKeyboard, showContextMenu } = await import("../scripts/ui/ui-effects.js");
+const { activateTablistKeyboard, animateDisclosure, showContextMenu } =
+  await import("../scripts/ui/ui-effects.js");
 
 test("BestiaryCreatureView marks the root wrapper part as scrollable using Foundry empty-string selector", () => {
   assert.deepEqual(BestiaryCreatureView.PARTS.creature.scrollable, ["", ".rail-body"]);
@@ -327,4 +328,49 @@ test("showContextMenu builds ARIA menu buttons, handles arrow keys and restores 
     globalThis.game = prevGame;
     globalThis.HTMLElement = prevHTMLElement;
   }
+});
+
+test("animateDisclosure animates only compositor properties and respects reduced/off motion", () => {
+  const makeTarget = (motion) => {
+    const classes = new Set(["is-collapsed"]);
+    const calls = [];
+    return {
+      classes,
+      calls,
+      classList: {
+        contains: (name) => classes.has(name),
+        toggle: (name, enabled) => (enabled ? classes.add(name) : classes.delete(name)),
+        remove: (name) => classes.delete(name),
+      },
+      closest: () => ({ dataset: { motion } }),
+      animate: (keyframes, options) => {
+        const anim = { keyframes, options, cancel() {} };
+        calls.push(anim);
+        return anim;
+      },
+    };
+  };
+
+  const fullEl = makeTarget("full");
+  animateDisclosure(fullEl, true);
+  assert.equal(fullEl.classes.has("is-collapsed"), false);
+  assert.equal(fullEl.calls.length, 1);
+  for (const frame of fullEl.calls[0].keyframes) {
+    assert.equal("height" in frame, false);
+    assert.ok("opacity" in frame);
+    assert.ok("transform" in frame);
+  }
+
+  const reducedEl = makeTarget("reduced");
+  animateDisclosure(reducedEl, true);
+  for (const frame of reducedEl.calls[0].keyframes) {
+    assert.equal("height" in frame, false);
+    assert.equal("transform" in frame, false);
+    assert.ok("opacity" in frame);
+  }
+
+  const offEl = makeTarget("off");
+  animateDisclosure(offEl, true);
+  assert.equal(offEl.calls.length, 0);
+  assert.equal(offEl.classes.has("is-collapsed"), false);
 });
