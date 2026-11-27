@@ -8,7 +8,7 @@
  * look for art that can take it.
  */
 
-const SILHOUETTE_PLACEHOLDER = "icons/svg/mystery-man.svg";
+const SILHOUETTE_PLACEHOLDER = "modules/bestiary-journal/assets/unknown-creature.svg";
 
 export function resolveCreatureImage(entry, creature) {
   const useToken = entry?.image?.source === "token";

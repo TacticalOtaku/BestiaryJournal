@@ -1,6 +1,6 @@
 import { getCollapsedFamilies } from "../foundry/client-preferences.js";
 import { localize } from "../foundry/foundry-runtime.js";
-import { UNGROUPED_ID, UNIDENTIFIED_ID } from "./creature-rows.js";
+import { UNGROUPED_ID, UNIDENTIFIED_ID, summarizeRows } from "./creature-rows.js";
 
 /** What a collection window shows around its rows: family groups and the filter choices. */
 
@@ -13,6 +13,7 @@ export function buildFamilyGroups(section, families, creatures, isGM) {
     image: family.image,
     hidden: !!family.hidden,
     isUngrouped: false,
+    isSystemGroup: false,
     collapsed: collapsed.has(`${section.id}:${family.id}`),
     creatures: creatures.filter((creature) => creature.familyId === family.id),
   }));
@@ -25,6 +26,7 @@ export function buildFamilyGroups(section, families, creatures, isGM) {
       image: "",
       hidden: false,
       isUngrouped: true,
+      isSystemGroup: true,
       collapsed: collapsed.has(`${section.id}:${UNGROUPED_ID}`),
       creatures: ungrouped,
     });
@@ -37,17 +39,24 @@ export function buildFamilyGroups(section, families, creatures, isGM) {
       image: "",
       hidden: false,
       isUngrouped: true,
+      isSystemGroup: true,
       collapsed: collapsed.has(`${section.id}:${UNIDENTIFIED_ID}`),
       creatures: unidentified,
     });
   }
   return groups
     .filter((group) => isGM || group.creatures.length)
-    .map((group) => ({
-      ...group,
-      count: group.creatures.length,
-      isEmpty: group.creatures.length === 0,
-    }));
+    .map((group) => {
+      const { progress } = summarizeRows(group.creatures);
+      return {
+        ...group,
+        count: group.creatures.length,
+        isEmpty: group.creatures.length === 0,
+        progress: progress
+          ? { ...progress, label: game.i18n.format("BESTIARY.Progress.Known", progress) }
+          : null,
+      };
+    });
 }
 
 export function buildFilterOptions(creatures) {

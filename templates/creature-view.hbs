@@ -69,17 +69,35 @@
           </ol>
 
           {{#if showVitals}}
-            <div class="creature-key-stats">
-              {{#if showBlock.ac}}<div class="key-stat bestiary-spot"><span>{{localize "BESTIARY.ACShort"}}</span><strong>{{creature.ac.value}}</strong></div>{{/if}}
-              {{#if showBlock.hp}}
-                <div class="key-stat bestiary-spot hp-stat {{#if creature.lowHp}}is-danger{{/if}}">
-                  <span>{{localize "BESTIARY.HP"}}</span><strong>{{creature.hp.max}}</strong>
-                  {{#if creature.hp.formula}}<small class="hp-formula">{{creature.hp.formula}}</small>{{/if}}
+            <dl class="creature-vitals-strip">
+              {{#if showBlock.ac}}
+                <div class="vital-cell">
+                  <dt>{{localize "BESTIARY.ACShort"}}</dt>
+                  <dd><strong>{{creature.ac.value}}</strong></dd>
                 </div>
               {{/if}}
-              {{#if showBlock.cr}}<div class="key-stat bestiary-spot"><span>{{localize "BESTIARY.CRShort"}}</span><strong>{{creature.crFormatted}}</strong></div>{{/if}}
-              {{#if showBlock.xp}}<div class="key-stat bestiary-spot"><span>{{localize "BESTIARY.XP"}}</span><strong>{{creature.xp}}</strong></div>{{/if}}
-            </div>
+              {{#if showBlock.hp}}
+                <div class="vital-cell {{#if creature.lowHp}}is-danger{{/if}}">
+                  <dt>{{localize "BESTIARY.HP"}}</dt>
+                  <dd>
+                    <strong>{{creature.hp.max}}</strong>
+                    {{#if creature.hp.formula}}<small class="hp-formula">{{creature.hp.formula}}</small>{{/if}}
+                  </dd>
+                </div>
+              {{/if}}
+              {{#if showBlock.cr}}
+                <div class="vital-cell">
+                  <dt>{{localize "BESTIARY.CRShort"}}</dt>
+                  <dd><strong>{{creature.crFormatted}}</strong></dd>
+                </div>
+              {{/if}}
+              {{#if showBlock.xp}}
+                <div class="vital-cell">
+                  <dt>{{localize "BESTIARY.XP"}}</dt>
+                  <dd><strong>{{creature.xp}}</strong></dd>
+                </div>
+              {{/if}}
+            </dl>
           {{/if}}
 
           {{#if showBlock.speed}}
@@ -110,55 +128,72 @@
               <div class="ability-scores-grid">
                 {{#each abilityEntries}}
                   <div class="ability-score bestiary-spot" title="{{this.fullLabel}}">
-                    <span>{{this.label}}</span><strong>{{this.value}}</strong><em>{{this.mod}}</em>
-                    <small>{{localize "BESTIARY.SaveShort"}} {{this.save}}</small>
+                    <span class="ability-label">{{this.label}}</span>
+                    <em class="ability-mod">{{this.mod}}</em>
+                    <small class="ability-meta">
+                      <strong>{{this.value}}</strong>
+                      <span class="ability-dot" aria-hidden="true">·</span>
+                      <span class="ability-save">{{localize "BESTIARY.SaveShort"}} {{this.save}}</span>
+                    </small>
                   </div>
                 {{/each}}
               </div>
             </section>
           {{/if}}
 
-          <div class="creature-info-grid">
-            {{#if showBlock.skills}}
-              <section class="creature-content-card compact-info-card bestiary-spot">
-                <header><h2>{{localize "BESTIARY.Skills"}}</h2></header>
-                <div class="trait-chip-list">{{#each skillEntries}}<span>{{this.label}} <strong>{{this.total}}</strong></span>{{/each}}</div>
-              </section>
-            {{/if}}
-            {{#if showBlock.senses}}
-              <section class="creature-content-card compact-info-card bestiary-spot">
-                <header><h2>{{localize "BESTIARY.Senses"}}</h2></header>
-                <div class="trait-chip-list">{{#each senseEntries}}<span>{{this.label}} <strong>{{this.value}}</strong></span>{{/each}}</div>
-              </section>
-            {{/if}}
-            {{#if showBlock.languages}}
-              <section class="creature-content-card compact-info-card bestiary-spot">
-                <header><h2>{{localize "BESTIARY.Languages"}}</h2></header>
-                <div class="trait-chip-list">{{#each creature.languages}}<span>{{this}}</span>{{/each}}</div>
-              </section>
-            {{/if}}
-            {{#if showDefenses}}
-              <section class="creature-content-card compact-info-card bestiary-spot">
-                <header><h2>{{localize "BESTIARY.Defenses"}}</h2></header>
-                {{#if damageDefenses.length}}
-                  <div class="defense-group">
-                    <h3>{{localize "BESTIARY.DefenseDamage"}}</h3>
-                    <div class="trait-chip-list">
-                      {{#each damageDefenses}}<span class="is-{{this.kind}}" data-tooltip="{{this.title}}"><i class="fa-solid {{this.icon}}" aria-hidden="true"></i><span class="sr-only">{{this.title}}: </span>{{this.label}}</span>{{/each}}
-                    </div>
+          {{#if (bjOr showBlock.skills showBlock.senses showBlock.languages showDefenses)}}
+            <section class="creature-content-card creature-traits-ledger">
+              <dl class="traits-ledger-list">
+                {{#if showBlock.skills}}
+                  <div class="traits-ledger-row">
+                    <dt>{{localize "BESTIARY.Skills"}}</dt>
+                    <dd class="traits-inline-list">
+                      {{#each skillEntries}}<span>{{this.label}} <strong>{{this.total}}</strong></span>{{/each}}
+                    </dd>
                   </div>
                 {{/if}}
-                {{#if showBlock.conditionImmunities}}
-                  <div class="defense-group">
-                    <h3>{{localize "BESTIARY.ConditionImmunities"}}</h3>
-                    <div class="trait-chip-list">
-                      {{#each creature.conditionImmunities}}<span>{{this}}</span>{{/each}}
-                    </div>
+                {{#if showBlock.senses}}
+                  <div class="traits-ledger-row">
+                    <dt>{{localize "BESTIARY.Senses"}}</dt>
+                    <dd class="traits-inline-list">
+                      {{#each senseEntries}}<span>{{this.label}} <strong>{{this.value}}</strong></span>{{/each}}
+                    </dd>
                   </div>
                 {{/if}}
-              </section>
-            {{/if}}
-          </div>
+                {{#if showBlock.languages}}
+                  <div class="traits-ledger-row">
+                    <dt>{{localize "BESTIARY.Languages"}}</dt>
+                    <dd class="traits-inline-list">
+                      {{#each creature.languages}}<span>{{this}}</span>{{/each}}
+                    </dd>
+                  </div>
+                {{/if}}
+                {{#if showDefenses}}
+                  <div class="traits-ledger-row">
+                    <dt>{{localize "BESTIARY.Defenses"}}</dt>
+                    <dd class="traits-defenses">
+                      {{#if damageDefenses.length}}
+                        <div class="defense-group">
+                          <span class="defense-group-label">{{localize "BESTIARY.DefenseDamage"}}</span>
+                          <div class="trait-chip-list">
+                            {{#each damageDefenses}}<span class="is-{{this.kind}}" data-tooltip="{{this.title}}"><i class="fa-solid {{this.icon}}" aria-hidden="true"></i><span class="sr-only">{{this.title}}: </span>{{this.label}}</span>{{/each}}
+                          </div>
+                        </div>
+                      {{/if}}
+                      {{#if showBlock.conditionImmunities}}
+                        <div class="defense-group">
+                          <span class="defense-group-label">{{localize "BESTIARY.ConditionImmunities"}}</span>
+                          <div class="traits-inline-list">
+                            {{#each creature.conditionImmunities}}<span>{{this}}</span>{{/each}}
+                          </div>
+                        </div>
+                      {{/if}}
+                    </dd>
+                  </div>
+                {{/if}}
+              </dl>
+            </section>
+          {{/if}}
 
           {{#if hasContent}}
             <div class="creature-expanded-layout">

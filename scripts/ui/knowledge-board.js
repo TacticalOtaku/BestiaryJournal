@@ -10,20 +10,33 @@ import { playApplicationEntrance } from "./ui-effects.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const ALL = "";
+const UNGROUPED = "__ungrouped__";
 
 /**
- * The GM's view of what the party knows: one row per creature, one column per player, a tier in each cell.
- * A cell changes one player's tier; the bar above sets one tier for every creature in the selection.
+ * The GM's view of what the party knows: one row per creature, a whole-party
+ * quick-set column, and one column per player. Supports search, family filter,
+ * and checkbox multi-select for batch updates.
  */
 export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "bestiary-knowledge-board",
     classes: ["bestiary-journal", "bestiary-app", "bestiary-knowledge-board"],
-    window: { title: "BESTIARY.Board.Title", icon: "fa-solid fa-table-cells", resizable: true },
-    position: { width: 820, height: 640 },
+    window: {
+      title: "BESTIARY.Board.Title",
+      icon: "fa-solid fa-table-cells",
+      resizable: true,
+      minimizable: true,
+    },
+    position: { width: 960, height: 680 },
     actions: {
-      applyBulk: function () {
-        this._onApplyBulk();
+      applySelected: function () {
+        this._onApplySelected();
+      },
+      applyAll: function () {
+        this._onApplyAll();
+      },
+      clearSelection: function () {
+        this._clearSelection();
       },
     },
   };
@@ -38,13 +51,20 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
   constructor(options = {}) {
     super(options);
     this._scope = options.sectionId ?? ALL;
+    this._family = ALL;
+    this._searchQuery = "";
+    this._selectedUuids = new Set();
   }
 
   /** Opens the board, or brings it forward on the given collection. */
   static open(sectionId = ALL) {
     const current = foundry.applications.instances.get(this.DEFAULT_OPTIONS.id);
     if (current) {
-      current._scope = sectionId;
+      if (current._scope !== sectionId) {
+        current._scope = sectionId;
+        current._family = ALL;
+        current._selectedUuids.clear();
+      }
       current.render({ force: true });
       current.bringToFront();
       return current;
@@ -63,7 +83,28 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
     const sections = this._scope
       ? data.sections.filter((section) => section.id === this._scope)
       : data.sections;
-    const uuids = [...new Set(sections.flatMap((section) => section.creatures.map((entry) => entry.uuid)))];
+    const families = this._scope ? (sections[0]?.families ?? []) : [];
+    if (
+      this._family &&
+      this._family !== UNGROUPED &&
+      !families.some((family) => family.id === this._family)
+    ) {
+      this._family = ALL;
+    }
+
+    const uuids = [
+      ...new Set(
+        sections.flatMap((section) =>
+          section.creatures
+            .filter((entry) => {
+              if (!this._family) return true;
+              if (this._family === UNGROUPED) return !entry.familyId;
+              return entry.familyId === this._family;
+            })
+            .map((entry) => entry.uuid),
+        ),
+      ),
+    ];
     const resolved = await getCreatureDataMany(uuids);
     const tierChoice = (selected) =>
       tiers.map((definition) => ({
@@ -71,17 +112,34 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
         label: translateTierText(definition.label),
         selected: definition.value === selected,
       }));
+
     const rows = uuids
       .filter((uuid) => resolved.get(uuid))
       .map((uuid) => {
         const creature = resolved.get(uuid);
+        const locked = isCreatureLocked(data, uuid);
+        const playerTiers = players.map((user) => getUserTier(knowledge, user.id, uuid, maxTier));
+        const uniform =
+          playerTiers.length > 0 && playerTiers.every((value) => value === playerTiers[0])
+            ? playerTiers[0]
+            : null;
+        const uniformDef = uniform !== null ? (tiers[uniform] ?? tiers[0]) : null;
         return {
           uuid,
           name: creature.name,
+          searchText: creature.name.toLocaleLowerCase(),
           img: creature.img,
-          locked: isCreatureLocked(data, uuid),
-          cells: players.map((user) => {
-            const tier = getUserTier(knowledge, user.id, uuid, maxTier);
+          locked,
+          selected: !locked && this._selectedUuids.has(uuid),
+          partyKey: uniformDef?.key ?? "unknown",
+          partyColor: uniformDef ? (uniformDef.color ?? uniformDef.key) : "",
+          partyIsMixed: uniform === null,
+          partyOptions: [
+            { value: "", label: localize("BESTIARY.Board.Mixed"), selected: uniform === null },
+            ...tierChoice(uniform),
+          ],
+          cells: players.map((user, index) => {
+            const tier = playerTiers[index];
             const definition = tiers[tier] ?? tiers[0];
             return {
               userId: user.id,
@@ -93,10 +151,36 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
         };
       })
       .sort((left, right) => left.name.localeCompare(right.name));
+
+    const validUnlocked = new Set(rows.filter((row) => !row.locked).map((row) => row.uuid));
+    for (const uuid of [...this._selectedUuids]) {
+      if (!validUnlocked.has(uuid)) this._selectedUuids.delete(uuid);
+    }
     this._rows = rows;
+
+    const selectedCount = this._selectedUuids.size;
+    const unlockedCount = validUnlocked.size;
     return {
       players,
       rows,
+      hasFamilies: families.length > 0,
+      families: [
+        { id: ALL, label: localize("BESTIARY.Board.AllFamilies"), selected: !this._family },
+        ...families.map((family) => ({
+          id: family.id,
+          label: family.name,
+          selected: family.id === this._family,
+        })),
+        ...(families.length
+          ? [
+              {
+                id: UNGROUPED,
+                label: localize("BESTIARY.Families.Ungrouped"),
+                selected: this._family === UNGROUPED,
+              },
+            ]
+          : []),
+      ],
       scopes: [
         { id: ALL, label: localize("BESTIARY.Board.AllCollections"), selected: !this._scope },
         ...data.sections.map((section) => ({
@@ -106,6 +190,11 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
         })),
       ],
       tierOptions: tierChoice(Math.min(1, maxTier)),
+      selectedCount,
+      unlockedCount,
+      applySelectedLabel: game.i18n.format("BESTIARY.Board.ApplySelected", { count: selectedCount }),
+      applyAllLabel: game.i18n.format("BESTIARY.Board.ApplyAll", { count: unlockedCount }),
+      selectedLabel: game.i18n.format("BESTIARY.Board.SelectedCount", { count: selectedCount }),
     };
   }
 
@@ -113,8 +202,70 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
     super._onRender(context, options);
     this.element.querySelector(".board-scope")?.addEventListener("change", (event) => {
       this._scope = event.currentTarget.value;
+      this._family = ALL;
+      this._selectedUuids.clear();
       this.render();
     });
+    this.element.querySelector(".board-family")?.addEventListener("change", (event) => {
+      this._family = event.currentTarget.value;
+      this._selectedUuids.clear();
+      this.render();
+    });
+
+    const searchInput = this.element.querySelector(".board-search-input");
+    if (searchInput) {
+      searchInput.value = this._searchQuery;
+      searchInput.addEventListener("input", () => {
+        this._searchQuery = searchInput.value.trim().toLocaleLowerCase();
+        this._applySearchFilter();
+      });
+    }
+
+    this.element.querySelector(".board-select-all")?.addEventListener("change", (event) => {
+      const checked = event.currentTarget.checked;
+      for (const row of this.element.querySelectorAll("tbody tr[data-uuid]")) {
+        if (row.classList.contains("is-filtered-out")) continue;
+        const checkbox = row.querySelector(".board-row-check");
+        if (!checkbox || checkbox.disabled) continue;
+        checkbox.checked = checked;
+        if (checked) this._selectedUuids.add(row.dataset.uuid);
+        else this._selectedUuids.delete(row.dataset.uuid);
+        row.classList.toggle("is-selected", checked);
+      }
+      this._syncSelectionControls();
+    });
+
+    for (const checkbox of this.element.querySelectorAll(".board-row-check")) {
+      checkbox.addEventListener("change", (event) => {
+        const uuid = event.currentTarget.dataset.uuid;
+        if (event.currentTarget.checked) this._selectedUuids.add(uuid);
+        else this._selectedUuids.delete(uuid);
+        event.currentTarget.closest("tr")?.classList.toggle("is-selected", event.currentTarget.checked);
+        this._syncSelectionControls();
+      });
+    }
+
+    for (const select of this.element.querySelectorAll(".board-party-tier")) {
+      select.addEventListener("change", (event) => {
+        const value = event.currentTarget.value;
+        if (value === "") return;
+        const uuid = event.currentTarget.dataset.uuid;
+        const userIds = getPlayerUsers().map((user) => user.id);
+        if (!userIds.length) return;
+        runCommand(
+          {
+            type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
+            uuids: [uuid],
+            userIds,
+            tier: Number(value),
+            source: "gm",
+            grantedBy: game.user.id,
+          },
+          { unchanged: "BESTIARY.Lock.Blocked" },
+        );
+      });
+    }
+
     for (const select of this.element.querySelectorAll(".board-tier")) {
       select.addEventListener("change", (event) => {
         const { uuid, userId } = event.currentTarget.dataset;
@@ -130,15 +281,101 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
         );
       });
     }
+
+    this._applySearchFilter();
     playApplicationEntrance(this, ".knowledge-board-shell");
   }
 
-  /** One tier for every unlocked creature in the selection, for the whole party or one player. */
-  async _onApplyBulk() {
+  _visibleUnlockedRows() {
+    return [...(this.element?.querySelectorAll("tbody tr[data-uuid]") ?? [])].filter(
+      (row) => !row.classList.contains("is-filtered-out") && !row.classList.contains("is-locked"),
+    );
+  }
+
+  _applySearchFilter() {
+    const query = this._searchQuery;
+    let shown = 0;
+    for (const row of this.element?.querySelectorAll("tbody tr[data-uuid]") ?? []) {
+      const match = !query || (row.dataset.searchText ?? "").includes(query);
+      row.classList.toggle("is-filtered-out", !match);
+      if (match) shown += 1;
+    }
+    const empty = this.element?.querySelector(".board-search-empty");
+    if (empty) empty.hidden = shown > 0 || !(this._rows?.length > 0);
+    this._syncSelectionControls();
+  }
+
+  _syncSelectionControls() {
+    const visibleUnlocked = this._visibleUnlockedRows();
+    const checkedVisible = visibleUnlocked.filter((row) => this._selectedUuids.has(row.dataset.uuid)).length;
+    const selectAll = this.element?.querySelector(".board-select-all");
+    if (selectAll) {
+      selectAll.disabled = visibleUnlocked.length === 0;
+      selectAll.checked = visibleUnlocked.length > 0 && checkedVisible === visibleUnlocked.length;
+      selectAll.indeterminate = checkedVisible > 0 && checkedVisible < visibleUnlocked.length;
+    }
+
+    const selectedCount = this._selectedUuids.size;
+    const applySelected = this.element?.querySelector('[data-action="applySelected"]');
+    if (applySelected) {
+      applySelected.disabled = selectedCount === 0;
+      applySelected.querySelector("span").textContent = game.i18n.format("BESTIARY.Board.ApplySelected", {
+        count: selectedCount,
+      });
+    }
+    const applyAll = this.element?.querySelector('[data-action="applyAll"]');
+    if (applyAll) {
+      applyAll.disabled = visibleUnlocked.length === 0;
+      applyAll.querySelector("span").textContent = game.i18n.format("BESTIARY.Board.ApplyAll", {
+        count: visibleUnlocked.length,
+      });
+    }
+    const clearBtn = this.element?.querySelector('[data-action="clearSelection"]');
+    if (clearBtn) clearBtn.hidden = selectedCount === 0;
+    const summary = this.element?.querySelector(".board-selection-status");
+    if (summary) {
+      summary.textContent =
+        selectedCount > 0
+          ? game.i18n.format("BESTIARY.Board.SelectedCount", { count: selectedCount })
+          : localize("BESTIARY.Board.SelectHint");
+    }
+  }
+
+  _clearSelection() {
+    this._selectedUuids.clear();
+    for (const checkbox of this.element?.querySelectorAll(".board-row-check") ?? []) {
+      checkbox.checked = false;
+      checkbox.closest("tr")?.classList.remove("is-selected");
+    }
+    this._syncSelectionControls();
+  }
+
+  _bulkTarget() {
     const tier = Number(this.element.querySelector(".board-bulk-tier").value);
     const userId = this.element.querySelector(".board-bulk-user").value;
     const userIds = userId ? [userId] : getPlayerUsers().map((user) => user.id);
-    const uuids = (this._rows ?? []).filter((row) => !row.locked).map((row) => row.uuid);
+    return { tier, userIds };
+  }
+
+  async _onApplySelected() {
+    const { tier, userIds } = this._bulkTarget();
+    const unlockedSet = new Set((this._rows ?? []).filter((row) => !row.locked).map((row) => row.uuid));
+    const uuids = [...this._selectedUuids].filter((uuid) => unlockedSet.has(uuid));
+    if (!uuids.length || !userIds.length) return;
+    await runCommand({
+      type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
+      uuids,
+      userIds,
+      tier,
+      source: "gm",
+      grantedBy: game.user.id,
+    });
+    this._clearSelection();
+  }
+
+  async _onApplyAll() {
+    const { tier, userIds } = this._bulkTarget();
+    const uuids = this._visibleUnlockedRows().map((row) => row.dataset.uuid);
     if (!uuids.length || !userIds.length) return;
     const tierLabel = describeTier(tier).label;
     const confirmed = await confirmDialog({
@@ -152,6 +389,13 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
       )}</p>`,
     });
     if (!confirmed) return;
-    await runCommand({ type: BESTIARY_COMMANDS.SET_KNOWLEDGE, uuids, userIds, tier, source: "gm" });
+    await runCommand({
+      type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
+      uuids,
+      userIds,
+      tier,
+      source: "gm",
+      grantedBy: game.user.id,
+    });
   }
 }

@@ -186,11 +186,17 @@
   border: 0;
   transition: transform calc(var(--suite-art-duration, 700ms) * 0.75) var(--suite-ease);
 }
+.bestiary-frame.is-silhouette {
+  background: radial-gradient(circle at 50% 44%, var(--suite-accent-soft), var(--suite-sunken) 78%);
+}
 .bestiary-frame.is-silhouette > img {
-  filter: brightness(0) invert(1) opacity(0.32);
+  padding: 12%;
+  object-fit: contain;
+  opacity: 0.82;
 }
 .bestiary-app[data-theme="parchment"] .bestiary-frame.is-silhouette > img {
-  filter: brightness(0) opacity(0.42);
+  opacity: 1;
+  filter: brightness(0) opacity(0.68);
 }
 /* Foundry's placeholder art is white: it glares at night and vanishes on parchment, so it takes the silhouette ink. */
 .bestiary-app img[src$="mystery-man.svg"] {
@@ -674,10 +680,19 @@
   color: var(--suite-muted);
 }
 
-/* Below this the big windows stop being usable: Foundry clamps resizing to these minimums. */
-.bestiary-app:is(.bestiary-main, .bestiary-section-view, .bestiary-creature-view, .bestiary-knowledge-board) {
+/* Below this the big windows stop being usable: Foundry clamps resizing to these minimums when expanded. */
+.bestiary-app:is(
+    .bestiary-main,
+    .bestiary-section-view,
+    .bestiary-creature-view,
+    .bestiary-knowledge-board
+  ):not(.minimized, .minimizing) {
   min-width: 540px;
   min-height: 420px;
+}
+.bestiary-app:is(.minimized, .minimizing) {
+  min-width: 0;
+  min-height: 0;
 }
 
 :where(.bestiary-app) .context-item.is-disabled {
@@ -731,14 +746,14 @@
       .preview-as,
       .item-tier-control,
       .collection-card,
-      .library-creature-card,
-      .recent-creature-card,
-      .collection-creature-card,
-      .collection-creature-row,
+      .creature-card,
+      .collection-list-row,
+      .family-header,
+      .family-showcase-card,
       .creature-content-card,
+      .creature-vitals-strip,
       .creature-items-accordion,
       .creature-rail,
-      .key-stat,
       .ability-score,
       .notes-feed-item,
       .guide-step-card,

@@ -11,7 +11,6 @@ import { BestiaryApp } from "./bestiary-app.js";
 import { BestiaryCreatureView } from "./creature-view.js";
 import { BestiaryGuideApp } from "./guide-app.js";
 import { BestiaryKnowledgeBoard } from "./knowledge-board.js";
-import { BestiarySectionView } from "./section-view.js";
 
 /** The section a caller named by id or by its exact name. */
 function findSectionRef(sectionRef) {
@@ -68,13 +67,13 @@ export function createApi() {
       return BestiaryGuideApp.open({ tab });
     },
 
-    /** Opens a collection by id or by name. */
+    /** Opens a collection inside the unified Bestiary window by id or exact name. */
     openCollection(sectionRef) {
       const section = findSectionRef(sectionRef);
       if (!section) return null;
-      const app = new BestiarySectionView({ sectionId: section.id });
-      app.render({ force: true });
-      return app;
+      if (!this.mainApp) this.mainApp = new BestiaryApp();
+      this.mainApp.openCollection(section.id);
+      return this.mainApp;
     },
 
     /** GM: the party knowledge board, optionally on one collection. */

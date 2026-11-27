@@ -16,11 +16,11 @@ import { ACCENTS, COVER_SIZES, DENSITIES, MOTION_LEVELS, THEMES } from "../core/
 import { MIN_RESEARCH_TIER } from "../core/research-model.js";
 import { confirmDialog, localize, resolveUuid } from "../foundry/foundry-runtime.js";
 import { BestiaryTileEditor } from "./tile-editor.js";
-import { BestiarySectionView } from "./section-view.js";
 import { BestiaryTierSettings } from "./tier-settings.js";
 import { BestiaryKnowledgeBoard } from "./knowledge-board.js";
 import { BestiaryGuideApp, maybeShowFirstTimeGuide } from "./guide-app.js";
 import { exportBestiary, importBestiaryFromFile } from "../foundry/transfer.js";
+import { CollectionWorkspaceController, prepareCollectionContext } from "./collection-workspace.js";
 import { playApplicationEntrance, showContextMenu } from "./ui-effects.js";
 import { bindArtwork } from "./artwork.js";
 
@@ -30,6 +30,11 @@ const MODULE_ID = "bestiary-journal";
 const LIBRARY_VIEWS = ["overview", "all", "recent", "favorites", "notes"];
 const RECENT_LIMIT = 24;
 const CARD_DRAG_TYPE = "application/x-bestiary-card";
+
+function buttonMenuEvent(target) {
+  const bounds = target.getBoundingClientRect();
+  return { target, currentTarget: target, clientX: bounds.left, clientY: bounds.bottom + 4 };
+}
 
 export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
@@ -52,13 +57,15 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
         this._onSetLibraryView(event, target);
       },
       openCreature: function (event, target) {
-        this._onOpenCreature(event, target);
+        if (this._activeView === "collection") this._collection.openCreature(event, target);
+        else this._onOpenCreature(event, target);
       },
       openCreatureNotes: function (event, target) {
         game.bestiaryJournal?.openCreature(target.dataset.uuid, { rail: "comments" });
       },
       openSheet: function (event, target) {
-        this._onOpenSheet(event, target);
+        if (this._activeView === "collection") this._collection.openSheet(event, target);
+        else this._onOpenSheet(event, target);
       },
       toggleFavorite: function (event, target) {
         this._onToggleFavorite(event, target);
@@ -68,6 +75,9 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       },
       clearSearch: function () {
         this._clearSearch();
+      },
+      openManageMenu: function (event, target) {
+        this._onOpenManageMenu(event, target);
       },
       exportAll: function () {
         exportBestiary({});
@@ -79,7 +89,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
         new BestiaryTierSettings().render({ force: true });
       },
       openKnowledgeBoard: function () {
-        BestiaryKnowledgeBoard.open();
+        BestiaryKnowledgeBoard.open(this._activeView === "collection" ? this._activeSectionId : "");
       },
       toggleLookDrawer: function () {
         this._onToggleLookDrawer();
@@ -100,22 +110,106 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
         await setDismissedTipBanner(true);
         await this.render();
       },
+      toggleView: function (event, target) {
+        this._collection.toggleView(target.dataset.viewMode);
+      },
+      toggleFilters: function () {
+        this._collection.toggleFilters();
+      },
+      resetFilters: function () {
+        this._collection.resetFilters();
+      },
+      selectCreature: function (event, target) {
+        this._collection.selectCreature(event, target);
+      },
+      closePreview: function () {
+        this._collection.closePreview();
+      },
+      toggleFamily: function (event, target) {
+        this._collection.toggleFamily(target);
+      },
+      createFamily: function () {
+        this._collection.createFamily();
+      },
+      editFamily: function (event, target) {
+        this._collection.editFamily(target);
+      },
+      deleteFamily: function (event, target) {
+        this._collection.deleteFamily(target);
+      },
+      focusFamily: function (event, target) {
+        const familyId = target.closest("[data-family-id]")?.dataset.familyId;
+        if (familyId) this._collection.focusFamily(familyId);
+      },
+      openCollectionMenu: function (event, target) {
+        event.stopPropagation();
+        this._collection.showCollectionMenu(buttonMenuEvent(target));
+      },
+      openFamilyMenu: function (event, target) {
+        event.stopPropagation();
+        const familyId = target.closest("[data-family-id]")?.dataset.familyId;
+        if (familyId) this._collection.showFamilyMenu(buttonMenuEvent(target), familyId);
+      },
+      openBulkImport: function (event, target) {
+        this._collection.openBulkImport(target.dataset.familyId || "");
+      },
+      openBulkResearch: function (event, target) {
+        this._collection.openBulkResearch(target.dataset.familyId || null);
+      },
+      exportSection: function () {
+        this._collection.exportSection();
+      },
+      exportEntry: function (event, target) {
+        this._collection.exportEntry(event, target);
+      },
+      removeCreature: function (event, target) {
+        this._collection.removeCreature(event, target);
+      },
+      toggleCreatureVisibility: function (event, target) {
+        this._collection.toggleCreatureVisibility(event, target);
+      },
+      toggleCreatureLock: function (event, target) {
+        this._collection.toggleCreatureLock(event, target);
+      },
+      openEntryEditor: function (event, target) {
+        this._collection.openEntryEditor(event, target);
+      },
+      clearCollectionSearch: function () {
+        this._collection.clearSearch();
+      },
     },
   };
 
   static PARTS = {
     main: {
       template: "modules/bestiary-journal/templates/bestiary-main.hbs",
-      scrollable: [".library-scroll", ".library-collection-nav"],
+      scrollable: [
+        ".library-scroll",
+        ".library-collection-nav",
+        ".collection-results-scroll",
+        ".filter-panel-scroll",
+      ],
     },
   };
 
   constructor(options = {}) {
     super(options);
     this._activeView = "overview";
+    this._activeSectionId = null;
     this._creatureLayout = getLibraryViewMode();
     this._searchQuery = "";
     this._tipIndex = 0;
+    this._collection = new CollectionWorkspaceController(this, null);
+  }
+
+  async openCollection(sectionId) {
+    if (!sectionId) return this;
+    this._activeView = "collection";
+    this._activeSectionId = sectionId;
+    this._collection.setSection(sectionId);
+    await this.render({ force: true });
+    this.bringToFront?.();
+    return this;
   }
 
   async _prepareContext() {
@@ -123,18 +217,35 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const knowledge = getBestiaryKnowledge();
     const isGM = game.user.isGM;
     const visibleSections = selectVisibleSections(data, game.user);
+    if (this._activeView === "collection" && !visibleSections.some((s) => s.id === this._activeSectionId)) {
+      this._activeView = "overview";
+      this._activeSectionId = null;
+    }
+
     const inputs = await rowInputs(visibleSections, { data, knowledge });
     const sections = this._buildSectionCards(visibleSections, inputs);
     const creatures = buildCreatureRows(visibleSections, inputs);
     const byDate = creatures.toSorted((a, b) => b.addedAt - a.addedAt);
     const favoriteCreatures = byDate.filter((creature) => creature.isFavorite);
-    const displayed = {
-      overview: creatures,
-      all: creatures,
-      recent: byDate.slice(0, RECENT_LIMIT),
-      favorites: favoriteCreatures,
-      notes: [],
-    }[this._activeView];
+    const isCollection = this._activeView === "collection";
+    const displayed = isCollection
+      ? []
+      : {
+          overview: creatures,
+          all: creatures,
+          recent: byDate.slice(0, RECENT_LIMIT),
+          favorites: favoriteCreatures,
+          notes: [],
+        }[this._activeView];
+
+    const collection = isCollection
+      ? await prepareCollectionContext({
+          sectionId: this._activeSectionId,
+          state: this._collection.state,
+          inputs,
+        })
+      : null;
+
     // Notes are named as the viewer knows each creature; only open creatures take part.
     const viewer = { id: game.user.id, isGM };
     const names = new Map(creatures.map((creature) => [creature.uuid, creature.name]));
@@ -157,22 +268,26 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isRecent: this._activeView === "recent",
       isFavorites: this._activeView === "favorites",
       isNotes: this._activeView === "notes",
+      isCollection,
+      collection,
       look: this._buildLook(),
       lookOpen: !!this._lookOpen,
-      viewTitle: localize(
-        {
-          all: "BESTIARY.AllCreatures",
-          recent: "BESTIARY.Recent",
-          favorites: "BESTIARY.Favorites",
-          notes: "BESTIARY.Notes.Title",
-        }[this._activeView] ?? "BESTIARY.Title",
-      ),
+      viewTitle: isCollection
+        ? collection?.sectionName || localize("BESTIARY.Title")
+        : localize(
+            {
+              all: "BESTIARY.AllCreatures",
+              recent: "BESTIARY.Recent",
+              favorites: "BESTIARY.Favorites",
+              notes: "BESTIARY.Notes.Title",
+            }[this._activeView] ?? "BESTIARY.Title",
+          ),
       creatureLayout: this._creatureLayout,
       isGrid: this._creatureLayout === "grid",
       isGM,
       noSections: sections.length === 0,
       tipBanner: this._buildTipBanner(isGM),
-      emptyState: displayed.length ? null : this._emptyState(isGM, sections.length),
+      emptyState: isCollection || displayed.length ? null : this._emptyState(isGM, sections.length),
     };
   }
 
@@ -243,6 +358,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
           : null,
         isHidden: !!section.hidden,
         isLocked: !!section.locked,
+        isActive: this._activeView === "collection" && section.id === this._activeSectionId,
         searchText: section.name.toLocaleLowerCase(),
         updatedLabel: updatedAt ? new Date(updatedAt).toLocaleDateString(game.i18n.lang) : "",
       };
@@ -253,16 +369,22 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onFirstRender(context, options) {
     super._onFirstRender(context, options);
-    // The outer element survives re-renders, so bind element-level keys once.
+    // The outer element survives re-renders, so bind element-level listeners once.
     this.element.addEventListener("keydown", (event) => this._onShellKeydown(event));
+    this.element.addEventListener("drop", () => this._collection.clearDragState(), true);
+    this.element.addEventListener("dragend", () => this._collection.clearDragState(), true);
   }
 
   _onRender(context, options) {
     super._onRender(context, options);
     this._disposeArtwork?.();
-    this._activateSearch();
-    this._activateContextMenus();
-    this._activateCreatureCards();
+    this._activateSectionContextMenus();
+    if (context.isCollection) {
+      this._collection.activate({ missing: context.collection?.missing });
+    } else {
+      this._activateSearch();
+      this._activateCreatureCards();
+    }
     playApplicationEntrance(this, ".bestiary-shell");
     this._disposeArtwork = bindArtwork(this.element);
     maybeShowFirstTimeGuide(this);
@@ -287,6 +409,10 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _onShellKeydown(event) {
+    if (this._activeView === "collection") {
+      this._collection.handleKeydown(event);
+      return;
+    }
     const input = this.element.querySelector(".library-search-input");
     if (!input) return;
     if (event.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
@@ -319,7 +445,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.element.querySelector(".library-scroll")?.classList.toggle("is-searching", !!query);
     const results = this.element.querySelector(".library-search-results, .library-creature-results");
     if (results) {
-      const cards = results.querySelectorAll(".library-creature-card");
+      const cards = results.querySelectorAll(".creature-card");
       const shown = [...cards].filter((card) => !card.classList.contains("is-filtered-out")).length;
       // An empty list has its own message; this one is only for a query that hides every card.
       results.classList.toggle("is-empty", !!query && cards.length > 0 && shown === 0);
@@ -355,9 +481,11 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  _activateContextMenus() {
+  _activateSectionContextMenus() {
     if (!game.user.isGM) return;
-    for (const tile of this.element.querySelectorAll(".collection-card[data-section-id]")) {
+    for (const tile of this.element.querySelectorAll(
+      ".collection-card[data-section-id], .library-nav-item[data-section-id]",
+    )) {
       tile.addEventListener("contextmenu", (event) => {
         event.preventDefault();
         this._showSectionMenu(event, tile.dataset.sectionId, {
@@ -445,7 +573,30 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const view = target.dataset.libraryView;
     if (!LIBRARY_VIEWS.includes(view)) return;
     this._activeView = view;
+    this._activeSectionId = null;
     this.render();
+  }
+
+  _onOpenManageMenu(event, target) {
+    if (!game.user.isGM) return;
+    showContextMenu(buttonMenuEvent(target), [
+      {
+        label: localize("BESTIARY.Tier.WorldTitle"),
+        icon: "fa-stairs",
+        onClick: () => new BestiaryTierSettings().render({ force: true }),
+      },
+      { separator: true },
+      {
+        label: localize("BESTIARY.Transfer.Import"),
+        icon: "fa-file-import",
+        onClick: () => importBestiaryFromFile(),
+      },
+      {
+        label: localize("BESTIARY.Transfer.ExportAll"),
+        icon: "fa-file-export",
+        onClick: () => exportBestiary({}),
+      },
+    ]);
   }
 
   async _onToggleCreatureLayout(event, target) {
@@ -469,12 +620,11 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onOpenSection(event, target) {
     const sectionId = target.closest("[data-section-id]")?.dataset.sectionId;
-    if (!sectionId) return;
-    this.close();
-    new BestiarySectionView({ sectionId }).render({ force: true });
+    if (sectionId) this.openCollection(sectionId);
   }
 
   _onOpenCreature(event, target) {
+    if (event.target.closest("button")) return;
     const uuid = target.closest("[data-uuid]")?.dataset.uuid;
     if (uuid) game.bestiaryJournal?.openCreature(uuid);
   }
@@ -500,15 +650,10 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const tile = target.closest("[data-section-id]");
     if (!tile) return;
     // The "…" button opens the same menu as a right click.
-    const bounds = target.getBoundingClientRect();
-    this._showSectionMenu(
-      { target, currentTarget: target, clientX: bounds.left, clientY: bounds.bottom + 4 },
-      tile.dataset.sectionId,
-      {
-        isHidden: tile.dataset.hidden === "true",
-        isLocked: tile.dataset.locked === "true",
-      },
-    );
+    this._showSectionMenu(buttonMenuEvent(target), tile.dataset.sectionId, {
+      isHidden: tile.dataset.hidden === "true",
+      isLocked: tile.dataset.locked === "true",
+    });
   }
 
   _editSectionById(sectionId) {

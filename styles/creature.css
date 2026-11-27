@@ -171,39 +171,60 @@
   color: var(--step-color);
 }
 
-.creature-key-stats {
+.creature-vitals-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
-  gap: 8px;
-}
-.key-stat {
-  display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 2px;
-  min-height: 58px;
-  padding: 7px 8px;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  margin: 0;
   border: 1px solid var(--suite-border);
   border-radius: var(--suite-radius);
   background: var(--suite-surface);
-  text-align: center;
+  overflow: hidden;
 }
 
-.key-stat span {
-  order: 2;
+.vital-cell {
+  display: grid;
+  gap: 2px;
+  padding: 9px 12px;
+  min-width: 0;
+}
+
+.vital-cell + .vital-cell {
+  border-left: 1px solid var(--suite-border);
+}
+
+.vital-cell dt {
+  margin: 0;
   color: var(--suite-subtle);
-  font: 600 10px var(--suite-font-body);
-  letter-spacing: 0.12em;
+  font: 600 0.68rem/1.2 var(--suite-font-body);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.key-stat strong {
-  order: 1;
-  font: 700 19px/1.1 var(--suite-font-body);
-}
-.key-stat .hp-formula {
-  order: 3;
+
+.vital-cell dd {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
   margin: 0;
+  font-variant-numeric: tabular-nums;
 }
+
+.vital-cell dd strong {
+  color: var(--suite-text);
+  font: 700 1.2rem/1.1 var(--suite-font-body);
+}
+
+.vital-cell.is-danger dd strong {
+  color: var(--suite-danger);
+}
+
+.vital-cell .hp-formula {
+  margin: 0;
+  color: var(--suite-muted);
+  font-size: 0.78rem;
+}
+
 .hp-progress {
   margin-top: 6px;
   height: 4px;
@@ -286,75 +307,109 @@
   gap: 8px;
 }
 .ability-score {
-  position: relative;
-  overflow: hidden;
   display: grid;
   justify-items: center;
   align-content: center;
-  gap: 1px;
-  height: 68px;
-  padding: 6px 4px;
+  gap: 3px;
+  min-height: 74px;
+  padding: 8px 6px;
   border: 1px solid var(--suite-border);
   border-radius: var(--suite-radius);
   background: var(--suite-surface);
-  transition:
-    border-color var(--suite-fast),
-    transform var(--suite-fast) var(--suite-ease);
-}
-.ability-score:hover {
-  border-color: var(--suite-accent-line);
-  transform: translateY(-1px);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
-.ability-score span {
-  order: 1;
+.ability-label {
   color: var(--suite-subtle);
   font: 600 10px var(--suite-font-body);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.ability-score strong {
-  order: 3;
-  color: var(--suite-muted);
-  font: 500 11px var(--suite-font-body);
-  transition:
-    transform var(--suite-normal) var(--suite-ease),
-    opacity var(--suite-fast);
-}
-.ability-score em {
-  order: 2;
+.ability-mod {
   color: var(--suite-text);
   font: 700 20px/1 var(--suite-font-body);
   font-style: normal;
 }
-.ability-score small {
-  position: absolute;
-  bottom: 7px;
-  inset-inline: 0;
-  color: var(--suite-accent);
-  font: 500 11px var(--suite-font-body);
-  text-align: center;
-  opacity: 0;
-  transform: translateY(6px);
-  transition:
-    transform var(--suite-normal) var(--suite-ease),
-    opacity var(--suite-fast);
+.ability-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--suite-muted);
+  font: 500 11px/1.2 var(--suite-font-body);
 }
-.ability-score:hover strong {
-  opacity: 0;
-  transform: translateY(-6px);
+.ability-meta strong {
+  color: var(--suite-text);
+  font-weight: 600;
 }
-.ability-score:hover small {
-  opacity: 1;
-  transform: none;
+.ability-dot {
+  color: var(--suite-subtle);
+}
+.ability-save {
+  color: var(--suite-accent-bright);
+  font-weight: 500;
 }
 
-.creature-info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
-  align-items: start;
+.creature-traits-ledger {
+  padding: 0;
+  overflow: hidden;
 }
+
+.traits-ledger-list {
+  margin: 0;
+}
+
+.traits-ledger-row {
+  display: grid;
+  grid-template-columns: minmax(118px, 148px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  padding: 11px 16px;
+}
+
+.traits-ledger-row + .traits-ledger-row {
+  border-top: 1px solid var(--suite-border);
+}
+
+.traits-ledger-row dt {
+  margin: 0;
+  color: var(--suite-subtle);
+  font: 600 0.74rem/1.4 var(--suite-font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.traits-ledger-row dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.traits-inline-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--suite-text);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+
+.traits-inline-list > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.traits-inline-list > span strong {
+  color: var(--suite-accent-bright);
+  font-weight: 600;
+}
+
+.traits-defenses {
+  display: grid;
+  gap: 9px;
+}
+
 .trait-chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -364,14 +419,11 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 3px 9px;
   border: 1px solid var(--suite-border);
   border-radius: 99px;
   background: var(--suite-raised);
-  font-size: 0.79rem;
-}
-.trait-chip-list > span strong {
-  color: var(--suite-accent);
+  font-size: 0.78rem;
 }
 .trait-chip-list > span.is-positive {
   border-color: color-mix(in srgb, var(--suite-positive) 42%, transparent);
@@ -384,19 +436,29 @@
 .trait-chip-list > span > i {
   font-size: 0.72rem;
 }
-/* Damage and condition defenses read as two labelled groups. */
-.defense-group + .defense-group {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--suite-border);
+
+.defense-group {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 10px;
 }
-.defense-group h3 {
-  padding: 0 0 6px;
-  color: var(--suite-subtle);
-  font-size: 0.72rem;
+
+.defense-group-label {
+  color: var(--suite-muted);
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+}
+
+@media (max-width: 620px) {
+  .ability-scores-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .traits-ledger-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
 }
 
 .creature-expanded-layout {

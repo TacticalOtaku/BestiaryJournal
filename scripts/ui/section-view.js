@@ -1,40 +1,22 @@
-import {
-  BESTIARY_COMMANDS,
-  isSectionVisible,
-  selectVisibleFamilies,
-  selectVisibleSections,
-} from "../core/bestiary-domain.js";
+import { selectVisibleSections } from "../core/bestiary-domain.js";
 import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store.js";
-import { runCommand } from "../foundry/command-feedback.js";
-import {
-  getLibraryViewMode,
-  getShowOnboardingHints,
-  setLibraryViewMode,
-  toggleCollapsedFamily,
-} from "../foundry/client-preferences.js";
-import { postCreatureToChat } from "./creature-cards.js";
-import { PARTY_VIEWER } from "../core/knowledge-lens.js";
+import { toggleFavoriteCreature } from "../foundry/client-preferences.js";
+import { localize } from "../foundry/foundry-runtime.js";
+import { bindArtwork } from "./artwork.js";
+import { CollectionWorkspaceController, prepareCollectionContext } from "./collection-workspace.js";
+import { buildCreatureRows, rowInputs } from "./creature-rows.js";
 import { BestiaryGuideApp, maybeShowFirstTimeGuide } from "./guide-app.js";
 import { BestiaryKnowledgeBoard } from "./knowledge-board.js";
-import { confirmDialog, formatCount, localize, resolveUuid } from "../foundry/foundry-runtime.js";
-import { BestiaryTileEditor } from "./tile-editor.js";
-import { BestiaryEntryEditor } from "./entry-editor.js";
-import { BestiaryBulkImport } from "./bulk-import.js";
-import { BestiaryBulkResearch } from "./bulk-research.js";
-import { exportBestiary, exportCreatureEntry } from "../foundry/transfer.js";
-import { playApplicationEntrance, showContextMenu } from "./ui-effects.js";
-import { buildFamilyGroups, buildFilterOptions } from "./section-model.js";
-import { UNGROUPED_ID, buildCreatureRows, rowInputs, summarizeRows } from "./creature-rows.js";
-import {
-  activeFilterCount,
-  compareCollectionCards,
-  matchesCollectionFilter,
-} from "../core/collection-filter.js";
+import { playApplicationEntrance } from "./ui-effects.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-const CARD_DRAG_TYPE = "application/x-bestiary-card";
+function buttonMenuEvent(target) {
+  const bounds = target.getBoundingClientRect();
+  return { target, currentTarget: target, clientX: bounds.left, clientY: bounds.bottom + 4 };
+}
 
+/** Standalone collection window wrapper preserved for backwards compatibility with callers/instances. */
 export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV2) {
   static _instances = new Set();
 
@@ -49,72 +31,95 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
         BestiaryKnowledgeBoard.open(this.sectionId);
       },
       goBack: function () {
-        this._onGoBack();
+        this.close();
+        game.bestiaryJournal?.open();
       },
       switchSection: function (event, target) {
-        this._onSwitchSection(event, target);
+        const sectionId = target.dataset.sectionId;
+        if (!sectionId || sectionId === this.sectionId) return;
+        this.sectionId = sectionId;
+        this._collection.setSection(sectionId);
+        this.render();
       },
       toggleView: function (event, target) {
-        this._onToggleView(event, target);
+        this._collection.toggleView(target.dataset.viewMode);
       },
       selectCreature: function (event, target) {
-        this._onSelectCreature(event, target);
+        this._collection.selectCreature(event, target);
       },
       openCreature: function (event, target) {
-        this._onOpenCreature(event, target);
+        this._collection.openCreature(event, target);
+      },
+      toggleFavorite: async function (event, target) {
+        event.stopPropagation();
+        const uuid = target.closest("[data-uuid]")?.dataset.uuid;
+        if (!uuid) return;
+        await toggleFavoriteCreature(uuid);
+        await this.render();
       },
       removeCreature: function (event, target) {
-        this._onRemoveCreature(event, target);
+        this._collection.removeCreature(event, target);
       },
       openSheet: function (event, target) {
-        this._onOpenSheet(event, target);
+        this._collection.openSheet(event, target);
       },
       toggleCreatureVisibility: function (event, target) {
-        this._onToggleCreatureVisibility(event, target);
+        this._collection.toggleCreatureVisibility(event, target);
       },
       toggleCreatureLock: function (event, target) {
-        this._onToggleCreatureLock(event, target);
+        this._collection.toggleCreatureLock(event, target);
       },
       openEntryEditor: function (event, target) {
-        this._onOpenEntryEditor(event, target);
+        this._collection.openEntryEditor(event, target);
       },
       toggleFilters: function () {
-        this._toggleFilters();
+        this._collection.toggleFilters();
       },
       closePreview: function () {
-        this._closePreview();
+        this._collection.closePreview();
       },
       resetFilters: function () {
-        this._resetFilters();
+        this._collection.resetFilters();
       },
       createFamily: function () {
-        this._onCreateFamily();
+        this._collection.createFamily();
       },
       editFamily: function (event, target) {
-        this._onEditFamily(event, target);
+        this._collection.editFamily(target);
       },
       deleteFamily: function (event, target) {
-        this._onDeleteFamily(event, target);
+        this._collection.deleteFamily(target);
       },
       toggleFamily: function (event, target) {
-        this._onToggleFamily(event, target);
+        this._collection.toggleFamily(target);
+      },
+      focusFamily: function (event, target) {
+        const familyId = target.closest("[data-family-id]")?.dataset.familyId;
+        if (familyId) this._collection.focusFamily(familyId);
+      },
+      openCollectionMenu: function (event, target) {
+        event.stopPropagation();
+        this._collection.showCollectionMenu(buttonMenuEvent(target));
+      },
+      openFamilyMenu: function (event, target) {
+        event.stopPropagation();
+        const familyId = target.closest("[data-family-id]")?.dataset.familyId;
+        if (familyId) this._collection.showFamilyMenu(buttonMenuEvent(target), familyId);
       },
       openBulkImport: function (event, target) {
-        this._onOpenBulkImport(event, target);
+        this._collection.openBulkImport(target.dataset.familyId || "");
       },
       openBulkResearch: function (event, target) {
-        if (!game.user.isGM) return;
-        const familyId = target.dataset.familyId;
-        new BestiaryBulkResearch({
-          sectionId: this.sectionId,
-          familyId: familyId === UNGROUPED_ID ? null : familyId,
-        }).render({ force: true });
+        this._collection.openBulkResearch(target.dataset.familyId || null);
       },
       exportSection: function () {
-        this._onExportSection();
+        this._collection.exportSection();
       },
       exportEntry: function (event, target) {
-        this._onExportEntry(event, target);
+        this._collection.exportEntry(event, target);
+      },
+      clearCollectionSearch: function () {
+        this._collection.clearSearch();
       },
       openGuide: function (event, target) {
         BestiaryGuideApp.open({ tab: target?.dataset?.tab || "quickstart" });
@@ -133,800 +138,59 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
     const uniqueId = options.uniqueId ?? foundry.utils.randomID(16);
     super({ ...options, uniqueId });
     this.sectionId = options.sectionId;
-    this._viewMode = getLibraryViewMode();
-    this._sortMode = "name-asc";
-    this._searchQuery = "";
-    this._filtersOpen = false;
-    this._selectedUuid = null;
-    this._typeFilters = new Set();
-    this._sizeFilters = new Set();
-    this._familyFilters = new Set();
-    this._crMin = "";
-    this._crMax = "";
+    this._collection = new CollectionWorkspaceController(this, this.sectionId);
     BestiarySectionView._instances.add(this);
   }
 
   get title() {
     const section = getBestiaryData().sections.find((item) => item.id === this.sectionId);
-    return (section && isSectionVisible(section, game.user) && section.name) || localize("BESTIARY.Title");
+    return section?.name || localize("BESTIARY.Title");
   }
 
   async _prepareContext() {
     const data = getBestiaryData();
     const knowledge = getBestiaryKnowledge();
-    const found = data.sections.find((item) => item.id === this.sectionId);
-    const isGM = game.user.isGM;
-    // A collection hidden while a player had it open disappears for them too.
-    const section = found && isSectionVisible(found, game.user) ? found : null;
     const visibleSections = selectVisibleSections(data, game.user);
     const inputs = await rowInputs(visibleSections, { data, knowledge });
-    const allSections = this._buildSectionNavigation(visibleSections, inputs);
-
-    if (!section) return { creatures: [], groups: [], allSections, isGM, isEmpty: true, missing: true };
-
-    const creatures = buildCreatureRows([section], inputs);
-    const families = selectVisibleFamilies(section, game.user);
-    const groups = buildFamilyGroups(section, families, creatures, isGM);
-    const { typeOptions, sizeOptions } = buildFilterOptions(creatures);
-
-    return {
-      creatures,
-      groups,
-      families,
-      familyOptions: families.map((family) => ({ value: family.id, label: family.name })),
-      allSections,
-      typeOptions,
-      sizeOptions,
-      isGM,
-      isEmpty: creatures.length === 0,
-      sectionName: section.name,
-      sectionId: section.id,
-      sectionImage: section.image,
-      sectionLocked: !!section.locked,
-      resultCount: creatures.length,
-      progressLabel: this._progressLabel(creatures),
-      viewMode: this._viewMode,
-      isGrid: this._viewMode === "grid",
-      filtersOpen: this._filtersOpen,
-      hasFamilies: families.length > 0,
-      showHints: getShowOnboardingHints(),
-    };
-  }
-
-  /** «изучено 3 из 8»: the player's own, or for the GM the party's (the tier every player has reached). */
-  _progressLabel(creatures) {
-    const { progress } = summarizeRows(creatures);
-    return progress ? game.i18n.format("BESTIARY.Progress.Known", progress) : "";
-  }
-
-  _buildSectionNavigation(visibleSections, inputs) {
-    return visibleSections.map((section) => ({
+    const allSections = visibleSections.map((section) => ({
       ...section,
       creatureCount: buildCreatureRows([section], inputs).length,
       isActive: section.id === this.sectionId,
     }));
+    const collection = await prepareCollectionContext({
+      sectionId: this.sectionId,
+      state: this._collection.state,
+      inputs,
+    });
+    return {
+      ...collection,
+      isGM: game.user.isGM,
+      allSections,
+    };
   }
-
-  // ── Rendering ──
 
   _onFirstRender(context, options) {
     super._onFirstRender(context, options);
-    // The outer element survives re-renders, so element-level listeners are
-    // bound once and always look up the current controls.
-    this.element.addEventListener("keydown", (event) => this._onShellKeydown(event));
-    this.element.addEventListener("drop", () => this._clearDragState(), true);
-    this.element.addEventListener("dragend", () => this._clearDragState(), true);
+    this.element.addEventListener("keydown", (event) => this._collection.handleKeydown(event));
+    this.element.addEventListener("drop", () => this._collection.clearDragState(), true);
+    this.element.addEventListener("dragend", () => this._collection.clearDragState(), true);
   }
 
   _onRender(context, options) {
     super._onRender(context, options);
-    this._syncWindowTitle();
+    this._disposeArtwork?.();
+    const title = this.window?.title;
+    if (title instanceof HTMLElement) title.textContent = this.title;
     if (context.missing) return;
-    this._dragDepth = new WeakMap();
-    this._activateSearchAndFilters();
-    this._activateDragDrop();
-    this._activateCards();
-    this._activateContextMenus();
-    this._restoreFilterControls();
-    this._applyClientState();
-    this._restoreSelection();
+    this._collection.activate({ missing: context.missing });
     playApplicationEntrance(this, ".section-shell");
+    this._disposeArtwork = bindArtwork(this.element);
     maybeShowFirstTimeGuide(this);
   }
 
-  /** The frame is built once; keep its title in step with the collection. */
-  _syncWindowTitle() {
-    const title = this.window?.title;
-    if (title instanceof HTMLElement) title.textContent = this.title;
-  }
-
-  _restoreSelection() {
-    if (!this._selectedUuid) return;
-    const exists = this.element.querySelector(
-      `.creature-preview-content[data-uuid="${CSS.escape(this._selectedUuid)}"]`,
-    );
-    if (exists) this._selectCreatureByUuid(this._selectedUuid);
-    else this._closePreview();
-  }
-
-  _restoreFilterControls() {
-    const search = this.element.querySelector(".collection-search-input");
-    if (search) search.value = this._searchQuery;
-
-    const sort = this.element.querySelector(".collection-sort-select");
-    if (sort) sort.value = this._sortMode;
-
-    for (const checkbox of this.element.querySelectorAll("[data-filter-type]")) {
-      const selected = this._filterSetFor(checkbox.dataset.filterType);
-      checkbox.checked = selected.has(checkbox.value);
-    }
-    const min = this.element.querySelector('[data-cr-bound="min"]');
-    const max = this.element.querySelector('[data-cr-bound="max"]');
-    if (min) min.value = this._crMin;
-    if (max) max.value = this._crMax;
-  }
-
-  _filterSetFor(kind) {
-    if (kind === "type") return this._typeFilters;
-    if (kind === "size") return this._sizeFilters;
-    return this._familyFilters;
-  }
-
-  _activateSearchAndFilters() {
-    const search = this.element.querySelector(".collection-search-input");
-    search?.addEventListener("input", (event) => {
-      this._searchQuery = event.currentTarget.value.trim().toLocaleLowerCase();
-      this._applyClientState();
-    });
-    this.element.querySelector(".collection-sort-select")?.addEventListener("change", (event) => {
-      this._sortMode = event.currentTarget.value;
-      this._applyClientState();
-    });
-    for (const checkbox of this.element.querySelectorAll("[data-filter-type]")) {
-      checkbox.addEventListener("change", (event) => {
-        const set = this._filterSetFor(event.currentTarget.dataset.filterType);
-        event.currentTarget.checked
-          ? set.add(event.currentTarget.value)
-          : set.delete(event.currentTarget.value);
-        this._applyClientState();
-      });
-    }
-    for (const input of this.element.querySelectorAll("[data-cr-bound]")) {
-      input.addEventListener("input", (event) => {
-        if (event.currentTarget.dataset.crBound === "min") this._crMin = event.currentTarget.value;
-        else this._crMax = event.currentTarget.value;
-        this._applyClientState();
-      });
-    }
-  }
-
-  _onShellKeydown(event) {
-    const search = this.element.querySelector(".collection-search-input");
-    if (event.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
-      event.preventDefault();
-      search?.focus();
-    } else if (event.key === "Escape" && (search?.value || this._filtersOpen)) {
-      event.preventDefault();
-      event.stopPropagation();
-      if (search?.value) {
-        search.value = "";
-        this._searchQuery = "";
-        this._applyClientState();
-      } else this._toggleFilters(false);
-    }
-  }
-
-  _activateCards() {
-    for (const card of this.element.querySelectorAll("[data-creature-entry][data-uuid]")) {
-      card.addEventListener("dblclick", (event) => {
-        if (game.user.isGM) this._onOpenSheet(event, card);
-        else this._onOpenCreature(event, card);
-      });
-      card.addEventListener("dragstart", (event) => {
-        event.dataTransfer.setData(
-          "text/plain",
-          JSON.stringify({
-            type: "Actor",
-            uuid: card.dataset.uuid,
-            bestiarySource: this.sectionId,
-          }),
-        );
-        event.dataTransfer.setData(CARD_DRAG_TYPE, card.dataset.uuid);
-      });
-      card.addEventListener("keydown", (event) => {
-        if (event.target !== card) return;
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          this._onSelectCreature(event, card);
-        }
-      });
-    }
-  }
-
-  _activateContextMenus() {
-    if (!game.user.isGM) return;
-    for (const card of this.element.querySelectorAll("[data-creature-entry][data-uuid]")) {
-      card.addEventListener("contextmenu", (event) => {
-        event.preventDefault();
-        this._showCreatureMenu(event, card);
-      });
-    }
-  }
-
-  _showCreatureMenu(event, card) {
-    const uuid = card.dataset.uuid;
-    const isHidden = card.dataset.hidden === "true";
-    const isLocked = card.dataset.locked === "true";
-    const data = getBestiaryData();
-    const section = data.sections.find((item) => item.id === this.sectionId);
-    const families = selectVisibleFamilies(section, game.user);
-
-    const items = [
-      {
-        label: localize("BESTIARY.ViewCreature"),
-        icon: "fa-eye",
-        onClick: () => this._openCreatureByUuid(uuid),
-      },
-      {
-        label: localize("BESTIARY.OpenSheet"),
-        icon: "fa-arrow-up-right-from-square",
-        onClick: () => this._openSheetByUuid(uuid),
-      },
-      {
-        label: localize("BESTIARY.SendToChatParty"),
-        icon: "fa-message",
-        onClick: () => this._sendToChatByUuid(uuid),
-      },
-      {
-        label: localize("BESTIARY.Entry.Title"),
-        icon: "fa-sliders",
-        onClick: () => this._openEntryEditorByUuid(uuid),
-      },
-      {
-        label: localize(isHidden ? "BESTIARY.ShowToPlayers" : "BESTIARY.HideFromPlayers"),
-        icon: isHidden ? "fa-eye" : "fa-eye-slash",
-        onClick: () => this._toggleVisibilityByUuid(uuid),
-      },
-      {
-        label: localize(isLocked ? "BESTIARY.Lock.Unlock" : "BESTIARY.Lock.Lock"),
-        icon: isLocked ? "fa-lock-open" : "fa-lock",
-        onClick: () => this._toggleLockByUuid(uuid, !isLocked),
-      },
-    ];
-
-    if (families.length) {
-      items.push({ separator: true });
-      for (const family of families) {
-        items.push({
-          label: game.i18n.format("BESTIARY.Families.MoveTo", { name: family.name }),
-          icon: "fa-folder-tree",
-          onClick: () => this._moveToFamily(uuid, family.id),
-        });
-      }
-      items.push({
-        label: localize("BESTIARY.Families.MoveToNone"),
-        icon: "fa-folder-minus",
-        onClick: () => this._moveToFamily(uuid, null),
-      });
-    }
-
-    items.push({ separator: true });
-    items.push({
-      label: localize("BESTIARY.Transfer.ExportEntry"),
-      icon: "fa-file-export",
-      onClick: () => exportCreatureEntry(this.sectionId, uuid),
-    });
-    items.push({
-      label: localize("BESTIARY.RemoveCreature"),
-      icon: "fa-trash",
-      danger: true,
-      onClick: () => this._removeByUuid(uuid),
-    });
-    showContextMenu(event, items);
-  }
-
-  _activateDragDrop() {
-    if (!game.user.isGM) return;
-
-    // The workspace only accepts new creatures; regrouping happens by dropping
-    // a card on a family header, so a stray drop cannot silently ungroup it.
-    const workspace = this.element.querySelector(".collection-workspace");
-    if (workspace) this._bindDropZone(workspace, () => null, { acceptMove: false });
-
-    for (const header of this.element.querySelectorAll("[data-family-drop]")) {
-      this._bindDropZone(
-        header,
-        () => {
-          const id = header.dataset.familyDrop;
-          return id === UNGROUPED_ID ? null : id;
-        },
-        { acceptMove: true },
-      );
-    }
-  }
-
-  /**
-   * The collection-wide overlay only reacts to things dragged in from outside;
-   * family headers also accept cards moved within the collection.
-   */
-  _bindDropZone(element, resolveFamilyId, { acceptMove = true } = {}) {
-    const accepts = (event) => acceptMove || !event.dataTransfer?.types?.includes(CARD_DRAG_TYPE);
-    element.addEventListener("dragenter", (event) => {
-      event.preventDefault();
-      if (!accepts(event)) return;
-      this._dragDepth.set(element, (this._dragDepth.get(element) ?? 0) + 1);
-      element.classList.add("is-dragging-actor");
-    });
-    element.addEventListener("dragover", (event) => event.preventDefault());
-    element.addEventListener("dragleave", (event) => {
-      if (!accepts(event)) return;
-      const depth = Math.max(0, (this._dragDepth.get(element) ?? 0) - 1);
-      this._dragDepth.set(element, depth);
-      if (!depth) element.classList.remove("is-dragging-actor");
-    });
-    element.addEventListener("drop", async (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      this._clearDragState();
-      await this._onDrop(event, resolveFamilyId(), acceptMove);
-    });
-  }
-
-  /** A drop anywhere, handled or not, ends every highlight at once. */
-  _clearDragState() {
-    this._dragDepth = new WeakMap();
-    for (const zone of this.element?.querySelectorAll(".is-dragging-actor") ?? []) {
-      zone.classList.remove("is-dragging-actor");
-    }
-  }
-
-  _filterState() {
-    return {
-      query: this._searchQuery,
-      types: this._typeFilters,
-      sizes: this._sizeFilters,
-      families: this._familyFilters,
-      crMin: this._crMin,
-      crMax: this._crMax,
-    };
-  }
-
-  _applyClientState() {
-    if (!this.element) return;
-    const state = this._filterState();
-
-    let visible = 0;
-    for (const element of this.element.querySelectorAll("[data-creature-entry]")) {
-      const show = matchesCollectionFilter(element.dataset, state);
-      element.classList.toggle("is-filtered-out", !show);
-      if (show && element.closest(".collection-grid-view")) visible += 1;
-    }
-
-    for (const container of this.element.querySelectorAll(".family-grid, .collection-list-body")) {
-      [...container.children]
-        .filter((child) => child.matches("[data-creature-entry]"))
-        .toSorted((a, b) => compareCollectionCards(a.dataset, b.dataset, this._sortMode))
-        .forEach((child) => container.appendChild(child));
-    }
-
-    const activeFilters = activeFilterCount(state);
-    const isNarrowing = activeFilters > 0 || !!this._searchQuery;
-
-    for (const group of this.element.querySelectorAll("[data-family-group]")) {
-      const shown = [...group.querySelectorAll("[data-creature-entry]")].filter(
-        (card) => !card.classList.contains("is-filtered-out"),
-      ).length;
-      // An empty family is only hidden while a filter is narrowing the list.
-      // Otherwise it has to stay on screen: it is the GM's drop target, and
-      // the only way to rename or delete it.
-      group.classList.toggle("is-empty-after-filter", shown === 0 && isNarrowing);
-      const counter = group.querySelector(".family-count");
-      if (counter) counter.textContent = String(shown);
-    }
-    for (const count of this.element.querySelectorAll(".collection-result-count")) {
-      count.textContent = String(visible);
-    }
-    for (const label of this.element.querySelectorAll(".collection-result-label")) {
-      label.textContent = formatCount("BESTIARY.Count.Creatures", visible);
-    }
-    const badge = this.element.querySelector(".filter-count-badge");
-    if (badge) {
-      badge.textContent = String(activeFilters);
-      badge.hidden = activeFilters === 0;
-    }
-    this._renderFilterChips();
-  }
-
-  _renderFilterChips() {
-    const container = this.element.querySelector(".active-filter-chips");
-    if (!container) return;
-    container.replaceChildren();
-
-    for (const input of this.element.querySelectorAll(
-      ".collection-filter-panel input[type='checkbox']:checked",
-    )) {
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.innerHTML = `<span></span><i class="fa-solid fa-xmark"></i>`;
-      chip.querySelector("span").textContent =
-        input.closest("label")?.querySelector("span")?.textContent ?? input.value;
-      chip.addEventListener("click", () => {
-        input.checked = false;
-        input.dispatchEvent(new Event("change", { bubbles: true }));
-      });
-      container.appendChild(chip);
-    }
-
-    for (const [value, label, bound] of [
-      [this._crMin, localize("BESTIARY.From"), "min"],
-      [this._crMax, localize("BESTIARY.To"), "max"],
-    ]) {
-      if (value === "") continue;
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.innerHTML = `<span></span><i class="fa-solid fa-xmark"></i>`;
-      chip.querySelector("span").textContent = `${localize("BESTIARY.CRShort")} ${label} ${value}`;
-      chip.addEventListener("click", () => {
-        const input = this.element.querySelector(`[data-cr-bound="${bound}"]`);
-        input.value = "";
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-      });
-      container.appendChild(chip);
-    }
-
-    if (container.children.length) {
-      const clear = document.createElement("button");
-      clear.type = "button";
-      clear.className = "clear-filter-chips";
-      clear.textContent = localize("BESTIARY.ClearAll");
-      clear.addEventListener("click", () => this._resetFilters());
-      container.appendChild(clear);
-    }
-  }
-
-  // ── Actions ──
-
-  async _onToggleView(event, target) {
-    const mode = target.dataset.viewMode;
-    if (!["grid", "list"].includes(mode)) return;
-    this._viewMode = mode;
-    await setLibraryViewMode(mode);
-    this.element.querySelector(".collection-grid-view")?.classList.toggle("is-hidden", mode !== "grid");
-    this.element.querySelector(".collection-list-view")?.classList.toggle("is-hidden", mode !== "list");
-    for (const button of this.element.querySelectorAll("[data-view-mode]")) {
-      const active = button.dataset.viewMode === mode;
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-pressed", String(active));
-    }
-  }
-
-  _toggleFilters(force) {
-    this._filtersOpen = typeof force === "boolean" ? force : !this._filtersOpen;
-    this.element?.querySelector(".collection-filter-panel")?.classList.toggle("is-open", this._filtersOpen);
-    this.element?.querySelector(".filter-backdrop")?.classList.toggle("is-open", this._filtersOpen);
-  }
-
-  _resetFilters() {
-    this._typeFilters.clear();
-    this._sizeFilters.clear();
-    this._familyFilters.clear();
-    this._crMin = "";
-    this._crMax = "";
-    for (const input of this.element.querySelectorAll(".collection-filter-panel input")) {
-      if (input.type === "checkbox") input.checked = false;
-      else input.value = "";
-    }
-    this._applyClientState();
-  }
-
-  _onSelectCreature(event, target) {
-    if (event.target.closest("button")) return;
-    const uuid = target.closest("[data-uuid]")?.dataset.uuid;
-    if (uuid) this._selectCreatureByUuid(uuid);
-  }
-
-  _selectCreatureByUuid(uuid) {
-    this._selectedUuid = uuid;
-    for (const card of this.element.querySelectorAll("[data-creature-entry]")) {
-      card.classList.toggle("is-selected", card.dataset.uuid === uuid);
-    }
-    for (const preview of this.element.querySelectorAll(".creature-preview-content")) {
-      preview.classList.toggle("is-active", preview.dataset.uuid === uuid);
-    }
-    this.element.querySelector(".collection-preview-panel")?.classList.add("has-selection");
-    this.element.querySelector(".collection-layout")?.classList.add("has-preview");
-  }
-
-  _closePreview() {
-    this._selectedUuid = null;
-    this.element.querySelector(".collection-preview-panel")?.classList.remove("has-selection");
-    this.element.querySelector(".collection-layout")?.classList.remove("has-preview");
-    this.element
-      .querySelectorAll("[data-creature-entry]")
-      .forEach((card) => card.classList.remove("is-selected"));
-  }
-
-  _onGoBack() {
-    this.close();
-    game.bestiaryJournal?.open();
-  }
-
-  _onSwitchSection(event, target) {
-    const sectionId = target.dataset.sectionId;
-    if (!sectionId || sectionId === this.sectionId) return;
-    this.sectionId = sectionId;
-    this._selectedUuid = null;
-    // Filters of the old collection would hide cards with no chip left to explain it.
-    this._familyFilters.clear();
-    this._typeFilters.clear();
-    this._sizeFilters.clear();
-    this.render();
-  }
-
-  _onOpenCreature(event, target) {
-    event.stopPropagation();
-    const uuid = target.closest("[data-uuid]")?.dataset.uuid ?? this._selectedUuid;
-    if (uuid) this._openCreatureByUuid(uuid);
-  }
-
-  _openCreatureByUuid(uuid) {
-    game.bestiaryJournal?.openCreature(uuid, { sectionId: this.sectionId });
-  }
-
-  async _onOpenSheet(event, target) {
-    event.stopPropagation();
-    const uuid = target.closest?.("[data-uuid]")?.dataset.uuid ?? target.dataset?.uuid ?? this._selectedUuid;
-    await this._openSheetByUuid(uuid);
-  }
-
-  async _openSheetByUuid(uuid) {
-    if (!game.user.isGM || !uuid) return;
-    const actor = await resolveUuid(uuid);
-    actor?.sheet.render({ force: true });
-  }
-
-  /** Posts only what every player already knows, so a research prompt spoils nothing. */
-  async _sendToChatByUuid(uuid) {
-    await postCreatureToChat({ uuid, sectionId: this.sectionId, viewer: PARTY_VIEWER });
-  }
-
-  _onOpenEntryEditor(event, target) {
-    event.stopPropagation();
-    const uuid = target.closest("[data-uuid]")?.dataset.uuid ?? this._selectedUuid;
-    if (uuid) this._openEntryEditorByUuid(uuid);
-  }
-
-  _openEntryEditorByUuid(uuid) {
-    new BestiaryEntryEditor({ sectionId: this.sectionId, uuid }).render({ force: true });
-  }
-
-  // ── Families ──
-
-  _onCreateFamily() {
-    new BestiaryTileEditor({ mode: "family", sectionId: this.sectionId }).render({ force: true });
-  }
-
-  _onEditFamily(event, target) {
-    event.stopPropagation();
-    const familyId = target.closest("[data-family-id]")?.dataset.familyId;
-    const section = getBestiaryData().sections.find((item) => item.id === this.sectionId);
-    const family = section?.families.find((item) => item.id === familyId);
-    if (!family) return;
-    new BestiaryTileEditor({ mode: "family", sectionId: this.sectionId, tileData: family }).render({
-      force: true,
-    });
-  }
-
-  async _onDeleteFamily(event, target) {
-    event.stopPropagation();
-    const familyId = target.closest("[data-family-id]")?.dataset.familyId;
-    if (!familyId) return;
-    const confirmed = await confirmDialog({
-      title: localize("BESTIARY.Families.Delete"),
-      yesLabel: localize("BESTIARY.Families.Delete"),
-      content: `<p>${localize("BESTIARY.Families.ConfirmDelete")}</p>`,
-    });
-    if (!confirmed) return;
-    await runCommand(
-      {
-        type: BESTIARY_COMMANDS.DELETE_FAMILY,
-        sectionId: this.sectionId,
-        familyId,
-      },
-      { unchanged: "BESTIARY.Lock.Blocked" },
-    );
-  }
-
-  async _onToggleFamily(event, target) {
-    event.stopPropagation();
-    const group = target.closest("[data-family-group]");
-    const familyId = group?.dataset.familyGroup;
-    if (!familyId) return;
-    const collapsed = (await toggleCollapsedFamily(`${this.sectionId}:${familyId}`)).has(
-      `${this.sectionId}:${familyId}`,
-    );
-    // The same family appears in both the grid and the list; keep them in step.
-    for (const element of this.element.querySelectorAll(`[data-family-group="${CSS.escape(familyId)}"]`)) {
-      element.classList.toggle("is-collapsed", collapsed);
-      element.querySelector(".family-toggle")?.setAttribute("aria-expanded", String(!collapsed));
-      const icon = element.querySelector(".family-chevron");
-      icon?.classList.toggle("fa-chevron-down", !collapsed);
-      icon?.classList.toggle("fa-chevron-right", collapsed);
-    }
-  }
-
-  async _moveToFamily(uuid, familyId) {
-    await runCommand({
-      type: BESTIARY_COMMANDS.MOVE_CREATURE,
-      sectionId: this.sectionId,
-      uuid,
-      targetFamilyId: familyId,
-    });
-  }
-
-  // ── Import / export ──
-
-  _onOpenBulkImport(event, target) {
-    if (!game.user.isGM) return;
-    const familyId = target?.dataset.familyId ?? "";
-    new BestiaryBulkImport({
-      sectionId: this.sectionId,
-      familyId: familyId === UNGROUPED_ID ? "" : familyId,
-    }).render({ force: true });
-  }
-
-  _onExportSection() {
-    exportBestiary({ sectionIds: [this.sectionId] });
-  }
-
-  _onExportEntry(event, target) {
-    event.stopPropagation();
-    const uuid = target.closest("[data-uuid]")?.dataset.uuid ?? this._selectedUuid;
-    if (uuid) exportCreatureEntry(this.sectionId, uuid);
-  }
-
-  // ── Drops ──
-
-  async _onDrop(event, familyId, acceptMove = true) {
-    let dropData;
-    try {
-      dropData = JSON.parse(event.dataTransfer.getData("text/plain"));
-    } catch {
-      return;
-    }
-
-    if (dropData.type === "Folder") return this._onDropFolder(dropData, familyId);
-    if (dropData.type !== "Actor") return;
-
-    // Dragging a card between families inside this collection moves it.
-    if (dropData.bestiarySource === this.sectionId) {
-      if (acceptMove) await this._moveToFamily(dropData.uuid, familyId);
-      return;
-    }
-
-    const actor = await resolveUuid(dropData.uuid);
-    if (!actor || actor.type !== "npc") {
-      ui.notifications.warn(localize("BESTIARY.OnlyNpcActors"));
-      return;
-    }
-    const section = getBestiaryData().sections.find((item) => item.id === this.sectionId);
-    if (!section) return;
-    if (section.creatures?.some((entry) => entry.uuid === actor.uuid)) {
-      ui.notifications.info(game.i18n.format("BESTIARY.AlreadyInCollection", { name: actor.name }));
-      return;
-    }
-
-    const result = await runCommand(
-      {
-        type: BESTIARY_COMMANDS.ADD_CREATURE,
-        sectionId: this.sectionId,
-        familyId,
-        uuid: actor.uuid,
-        label: actor.name,
-        thumb: actor.img,
-      },
-      { unchanged: "BESTIARY.Lock.Blocked" },
-    );
-    if (!result?.changed) return;
-    ui.notifications.info(
-      game.i18n.format("BESTIARY.AddedToCollection", {
-        name: actor.name,
-        collection: section.name,
-      }),
-    );
-  }
-
-  /** Dropping an actor folder adds every NPC inside it at once. */
-  async _onDropFolder(dropData, familyId) {
-    const folder = dropData.uuid ? await resolveUuid(dropData.uuid) : game.folders?.get(dropData.id);
-    if (!folder || folder.type !== "Actor") return;
-    const actors = folder.contents.filter((actor) => actor.type === "npc");
-    if (!actors.length) {
-      ui.notifications.warn(localize("BESTIARY.Import.FolderEmpty"));
-      return;
-    }
-    const present = new Set(
-      getBestiaryData()
-        .sections.find((item) => item.id === this.sectionId)
-        ?.creatures.map((entry) => entry.uuid) ?? [],
-    );
-    const fresh = actors.filter((actor) => !present.has(actor.uuid));
-    if (!fresh.length) {
-      ui.notifications.info(localize("BESTIARY.Import.NothingNew"));
-      return;
-    }
-    const result = await runCommand(
-      {
-        type: BESTIARY_COMMANDS.ADD_CREATURES,
-        sectionId: this.sectionId,
-        familyId,
-        entries: fresh.map((actor) => ({ uuid: actor.uuid, label: actor.name, thumb: actor.img })),
-      },
-      { unchanged: "BESTIARY.Lock.Blocked" },
-    );
-    if (result?.changed)
-      ui.notifications.info(game.i18n.format("BESTIARY.Import.Done", { count: fresh.length }));
-  }
-
-  // ── Entry mutations ──
-
-  async _onRemoveCreature(event, target) {
-    event.stopPropagation();
-    const uuid = target.closest("[data-uuid]")?.dataset.uuid ?? this._selectedUuid;
-    if (uuid) await this._removeByUuid(uuid);
-  }
-
-  async _removeByUuid(uuid) {
-    // Only this collection's locks hold the entry here, as the command itself decides.
-    const section = getBestiaryData().sections.find((item) => item.id === this.sectionId);
-    if (section?.locked || section?.creatures.find((item) => item.uuid === uuid)?.locked) {
-      ui.notifications.warn(localize("BESTIARY.Lock.Blocked"));
-      return;
-    }
-    const confirmed = await confirmDialog({
-      title: localize("BESTIARY.RemoveCreature"),
-      yesLabel: localize("BESTIARY.RemoveCreature"),
-      content: `<p>${localize("BESTIARY.ConfirmRemoveCreature")}</p>`,
-    });
-    if (!confirmed) return;
-    await runCommand(
-      {
-        type: BESTIARY_COMMANDS.REMOVE_CREATURE,
-        sectionId: this.sectionId,
-        uuid,
-      },
-      { unchanged: "BESTIARY.Lock.Blocked" },
-    );
-  }
-
-  async _onToggleCreatureVisibility(event, target) {
-    event.stopPropagation();
-    const uuid = target.closest("[data-uuid]")?.dataset.uuid ?? this._selectedUuid;
-    if (uuid) await this._toggleVisibilityByUuid(uuid);
-  }
-
-  async _toggleVisibilityByUuid(uuid) {
-    await runCommand({
-      type: BESTIARY_COMMANDS.TOGGLE_CREATURE_VISIBILITY,
-      sectionId: this.sectionId,
-      uuid,
-    });
-  }
-
-  async _onToggleCreatureLock(event, target) {
-    event.stopPropagation();
-    const card = target.closest("[data-uuid]");
-    if (!card) return;
-    await this._toggleLockByUuid(card.dataset.uuid, card.dataset.locked !== "true");
-  }
-
-  async _toggleLockByUuid(uuid, locked) {
-    await runCommand({
-      type: BESTIARY_COMMANDS.SET_CREATURE_LOCK,
-      sectionId: this.sectionId,
-      uuid,
-      locked,
-    });
+  _onClose(options) {
+    this._disposeArtwork?.();
+    super._onClose(options);
   }
 
   async refreshFromExternalUpdate(payload = {}) {
