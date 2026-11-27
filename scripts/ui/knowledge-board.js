@@ -69,7 +69,8 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
         current._selectedUuids.clear();
       }
       current.render({ force: true });
-      current.bringToFront();
+      if (current.minimized) current.maximize?.();
+      current.bringToFront?.();
       return current;
     }
     const board = new this({ sectionId });

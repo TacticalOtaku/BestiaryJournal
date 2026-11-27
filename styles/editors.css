@@ -726,6 +726,19 @@
   .bulk-import-controls {
     grid-template-columns: minmax(0, 1fr);
   }
+  .bulk-import-row {
+    grid-template-columns: 18px 30px minmax(0, 1fr) auto;
+  }
+  .bulk-row-meta {
+    display: none;
+  }
+  :where(.bestiary-app) .bulk-research-skills {
+    grid-template-columns: 1fr;
+  }
+  :where(.bestiary-app) .bulk-research-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
   .tier-def-row {
     grid-template-columns: minmax(0, 1fr);
   }

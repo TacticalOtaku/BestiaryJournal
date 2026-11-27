@@ -130,6 +130,9 @@ setupGame({
 
 const { BestiaryKnowledgeBoard } = await import("../scripts/ui/knowledge-board.js");
 const { BestiaryApp } = await import("../scripts/ui/bestiary-app.js");
+const { BestiaryCreatureView } = await import("../scripts/ui/creature-view.js");
+const { BestiaryGuideApp } = await import("../scripts/ui/guide-app.js");
+const { createApi } = await import("../scripts/ui/api.js");
 const { CollectionWorkspaceController } = await import("../scripts/ui/collection-workspace.js");
 const { buildFamilyGroups } = await import("../scripts/ui/section-model.js");
 const { SILHOUETTE_PLACEHOLDER } = await import("../scripts/core/image-framing.js");
@@ -489,4 +492,105 @@ test("BestiaryApp._applySearch matches mixed-case text and toggles notes empty s
   app._searchQuery = "absent";
   app._applySearch();
   assert.equal(notesFeed.classList.contains("is-empty"), true);
+});
+
+test("Minimize CSS guards, narrow dock rules, and viewport ceilings hold across styles", () => {
+  const frameCss = readFileSync(join(process.cwd(), "styles/frame.css"), "utf8");
+  assert.match(frameCss, /\.bestiary-app\.minimized\s*>\s*\.window-content/);
+  assert.match(frameCss, /max-height:\s*calc\(100dvh - 16px\)/);
+
+  const libraryCss = readFileSync(join(process.cwd(), "styles/library.css"), "utf8");
+  assert.match(libraryCss, /\.library-sidebar-footer[\s\S]*?display:\s*flex/);
+  assert.match(libraryCss, /\.library-create-button[\s\S]*?width:\s*auto/);
+  assert.match(libraryCss, /\.library-collection-nav:empty/);
+
+  const creatureCss = readFileSync(join(process.cwd(), "styles/creature.css"), "utf8");
+  assert.match(
+    creatureCss,
+    /\.creature-vitals-strip[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/,
+  );
+});
+
+test("Window openers maximize minimized instances and switch creature rail tab cleanly", () => {
+  setupGame();
+  const calls = { maxBoard: 0, maxGuide: 0, maxMain: 0, maxCreature: 0, frontCreature: 0, renderCreature: 0 };
+
+  const fakeBoard = {
+    _scope: "forest",
+    minimized: true,
+    render: () => {},
+    maximize: () => {
+      fakeBoard.minimized = false;
+      calls.maxBoard += 1;
+    },
+    bringToFront: () => {},
+  };
+  const fakeGuide = {
+    minimized: true,
+    setTab: () => {},
+    maximize: () => {
+      fakeGuide.minimized = false;
+      calls.maxGuide += 1;
+    },
+    bringToFront: () => {},
+  };
+  foundry.applications.instances.set(BestiaryKnowledgeBoard.DEFAULT_OPTIONS.id, fakeBoard);
+  foundry.applications.instances.set(BestiaryGuideApp.DEFAULT_OPTIONS.id, fakeGuide);
+
+  BestiaryKnowledgeBoard.open("forest");
+  BestiaryGuideApp.open({ tab: "research" });
+  assert.equal(calls.maxBoard, 1);
+  assert.equal(calls.maxGuide, 1);
+
+  foundry.applications.instances.delete(BestiaryKnowledgeBoard.DEFAULT_OPTIONS.id);
+  foundry.applications.instances.delete(BestiaryGuideApp.DEFAULT_OPTIONS.id);
+
+  const api = createApi();
+  let closed = 0;
+  api.mainApp = {
+    rendered: true,
+    minimized: true,
+    maximize: () => {
+      api.mainApp.minimized = false;
+      calls.maxMain += 1;
+    },
+    bringToFront: () => {},
+    close: () => {
+      closed += 1;
+    },
+  };
+
+  api.toggle();
+  assert.equal(calls.maxMain, 1);
+  assert.equal(closed, 0);
+
+  api.toggle();
+  assert.equal(closed, 1);
+
+  const fakeCreature = {
+    actorUuid: "Actor.wolf",
+    rendered: true,
+    minimized: true,
+    _rail: "knowledge",
+    render: () => {
+      calls.renderCreature += 1;
+    },
+    maximize: () => {
+      fakeCreature.minimized = false;
+      calls.maxCreature += 1;
+    },
+    bringToFront: () => {
+      calls.frontCreature += 1;
+    },
+  };
+  BestiaryCreatureView._instances.add(fakeCreature);
+  try {
+    api.openCreature("Actor.wolf", { rail: "comments" });
+    assert.equal(fakeCreature._rail, "comments");
+    assert.equal(calls.renderCreature, 1);
+    assert.equal(calls.maxCreature, 1);
+    assert.equal(calls.frontCreature, 1);
+  } finally {
+    BestiaryCreatureView._instances.delete(fakeCreature);
+  }
 });

@@ -34,13 +34,23 @@ export function createApi() {
     open() {
       if (!this.mainApp) this.mainApp = new BestiaryApp();
       this.mainApp.render({ force: true });
+      if (this.mainApp.minimized) this.mainApp.maximize?.();
+      this.mainApp.bringToFront?.();
     },
     close() {
       if (this.mainApp?.rendered) this.mainApp.close();
     },
     toggle() {
-      if (this.mainApp?.rendered) this.close();
-      else this.open();
+      if (this.mainApp?.rendered) {
+        if (this.mainApp.minimized) {
+          this.mainApp.maximize?.();
+          this.mainApp.bringToFront?.();
+        } else {
+          this.close();
+        }
+      } else {
+        this.open();
+      }
     },
 
     /** Opens a creature's card; `options.sectionId` picks the collection, `options.rail` the side tab. */
@@ -54,7 +64,12 @@ export function createApi() {
         (app) => app.actorUuid === uuid && app.rendered,
       );
       if (current) {
-        current.bringToFront();
+        if (options.rail && ["knowledge", "comments", "config"].includes(options.rail)) {
+          current._rail = options.rail;
+          current.render();
+        }
+        if (current.minimized) current.maximize?.();
+        current.bringToFront?.();
         return current;
       }
       const app = new BestiaryCreatureView({ uuid, ...options });

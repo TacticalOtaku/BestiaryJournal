@@ -457,6 +457,11 @@
 }
 
 @container bestiary-window (max-width: 620px) {
+  .creature-detail-view {
+    padding: 12px 14px 20px;
+    gap: 12px;
+  }
+
   .ability-scores-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1268,6 +1273,19 @@
 }
 
 @container bestiary-window (max-width: 560px) {
+  .creature-vitals-strip {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .vital-cell + .vital-cell {
+    border-left: 0;
+  }
+  .vital-cell:nth-child(2n) {
+    border-left: 1px solid var(--suite-border);
+  }
+  .vital-cell:nth-child(n + 3) {
+    border-top: 1px solid var(--suite-border);
+  }
   .knowledge-roster li {
     grid-template-columns: 28px minmax(0, 1fr);
   }

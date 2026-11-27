@@ -1356,43 +1356,122 @@
   }
 
   .library-sidebar {
-    max-height: 236px;
-    padding: 8px 10px;
+    max-height: none;
+    overflow: visible;
+    gap: 6px;
+    padding: 7px 10px 8px;
     border-right: 0;
     border-bottom: 1px solid var(--suite-border);
   }
 
-  .library-collection-nav:has(.library-nav-item) {
-    min-height: 0;
-    max-height: 88px;
-  }
-
-  .library-sidebar-footer {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  .library-create-button {
-    flex: 1 1 160px;
-  }
-
-  .library-footer-actions {
-    flex: 1 1 180px;
+  .library-sidebar-heading {
+    display: none;
   }
 
   .library-primary-nav {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
   }
 
   .library-primary-nav .library-nav-item {
     width: auto;
+    flex: 0 0 auto;
+    min-height: 28px;
+    padding: 3px 9px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .library-collection-nav,
+  .library-collection-nav:has(.library-nav-item) {
+    flex: 0 0 auto;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+    min-height: 0;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1px 0;
+    scrollbar-width: thin;
+  }
+
+  .library-collection-nav:empty {
+    display: none;
+  }
+
+  .library-collection-nav .library-nav-item {
+    width: auto;
+    flex: 0 0 auto;
+    min-height: 28px;
+    padding: 3px 9px;
+    border: 1px solid var(--suite-border);
+    background: var(--suite-surface);
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .library-collection-nav .library-nav-item.is-active {
+    border-color: var(--suite-accent-line);
+    background: var(--suite-accent-soft);
+  }
+
+  .library-collection-nav .library-nav-label {
     flex: 0 1 auto;
+    max-width: 170px;
+  }
+
+  .library-sidebar-footer {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    padding-top: 6px;
+  }
+
+  .library-create-button {
+    width: auto;
+    flex: 1 1 auto;
+    min-height: 28px;
+    padding: 4px 10px;
+    font-size: 0.77rem;
+  }
+
+  .library-footer-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 5px;
+  }
+
+  .library-footer-btn {
+    min-height: 28px;
+    padding: 4px 9px;
+    font-size: 0.77rem;
+  }
+
+  .workspace-header {
+    padding: 9px 12px 8px;
+    gap: 7px;
+  }
+
+  .workspace-header-actions {
+    width: 100%;
+  }
+
+  .workspace-header-actions .toolbar-search {
+    flex: 1 1 0;
+    max-width: none;
+    min-width: 0;
   }
 
   .library-scroll {
-    padding: 14px;
+    padding: 12px;
+    gap: 16px;
   }
 }

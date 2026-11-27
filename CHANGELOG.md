@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.1
+
+### Fixed
+
+- **Compact Window Sidebar & Header (`<= 760px`)**: Reworked the narrow-window sidebar into compact horizontal strips (`primary nav`, horizontally scrollable `collection` chips, and a single-row flex GM footer), overriding `.library-create-button` `width: 100%` and fixing `.library-sidebar-footer` grid wrapping so collection entries are never crushed into a few pixels when resizing small. Expanded `.workspace-header-actions .toolbar-search` cleanly across the available width.
+- **Foundry `ApplicationV2` Minimize & Restore Behavior**: Reinforced `.minimized` and `.minimizing` rules in `styles/frame.css` (`display: none` on `.window-content`, `height: auto`, seamless header border) over Foundry's `@layer application` defaults, relaxed expanded minimums to `min(440px, 100vw - 24px) × min(340px, 100dvh - 24px)` (`360 × 260` for utility dialogs), and capped all non-minimized windows to the viewport (`100vw - 16px` × `100dvh - 16px`) for 720p/768p laptops.
+- **Restoring Minimized Windows & Creature Rail Tab Switching**: Updated `createApi()` (`open`, `toggle`, `openCreature`), `BestiaryApp.openCollection`, `BestiaryGuideApp.open`, and `BestiaryKnowledgeBoard.open` so re-opening or toggling an already minimized window calls `maximize()` instead of staying collapsed or closing immediately; `openCreature(uuid, { rail })` now also switches tabs on already-open creature sheets.
+- **Narrow Collection, Creature Sheet & Dialog Layouts**: Full-width search toolbar row below `680px` in collections, `2×2` `.creature-vitals-strip` grid below `560px`, tighter narrow sheet padding (`<= 620px`), single-column bulk research skills (`<= 520px`), and simplified bulk-import rows below `520px`.
+
+### Validation
+
+- 210 automated unit tests pass, together with ESLint, Prettier, project/manifest validation, and Night/Parchment contrast checks.
+
 ## 0.7.0
 
 ### Added

@@ -84,6 +84,7 @@ export class BestiaryGuideApp extends HandlebarsApplicationMixin(ApplicationV2) 
     const existing = foundry.applications?.instances?.get?.(BestiaryGuideApp.DEFAULT_OPTIONS.id);
     if (existing) {
       if (tab) existing.setTab(tab);
+      if (existing.minimized) existing.maximize?.();
       existing.bringToFront?.();
       return existing;
     }

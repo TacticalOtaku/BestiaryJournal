@@ -214,6 +214,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this._activeSectionId = sectionId;
     this._collection.setSection(sectionId);
     await this.render({ force: true });
+    if (this.minimized) await this.maximize?.();
     this.bringToFront?.();
     return this;
   }

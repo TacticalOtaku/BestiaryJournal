@@ -961,6 +961,32 @@
 }
 
 @container bestiary-window (max-width: 680px) {
+  .collection-toolbar .toolbar-search {
+    flex: 1 1 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .collection-sort-select {
+    flex: 1 1 120px;
+    min-width: 0;
+  }
+
+  .collection-results-scroll {
+    padding: 12px;
+    gap: 14px;
+  }
+
+  .family-header.has-image {
+    min-height: 60px;
+    padding: 8px 10px;
+  }
+
+  .family-cover-frame {
+    width: 46px;
+    height: 46px;
+  }
+
   .collection-layout.has-preview {
     grid-template-columns: minmax(0, 1fr);
   }
