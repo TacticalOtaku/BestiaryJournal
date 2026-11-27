@@ -38,15 +38,15 @@ Our design direction adapts **Tubik Studio's 7 UI Design Trends of 2026** into a
 
 Implementation begins after the open design, architecture, and prototype decision tickets on the Wayfinder map resolve:
 
-| Track | Decision / Investigation | Type | Dependencies |
-| --- | --- | --- | --- |
-| Typography & Tokens | [Research: Portable Typography, Color & Fluid clamp() Foundation (Cyrillic + Latin)](https://github.com/TacticalOtaku/BestiaryJournal/issues/2) | `research` | — |
-| Runtime & Perf | [Research: Foundry v14 ApplicationV2 Performance, Partial DOM & Store/Artwork Bottlenecks](https://github.com/TacticalOtaku/BestiaryJournal/issues/3) | `research` | — |
-| Identity System | [Decision: Portable Design System Contract, Naming & Bestiary Theme Adapter](https://github.com/TacticalOtaku/BestiaryJournal/issues/4) | `grilling` | Foundation Research |
-| UX & Flows | [Decision: Consolidated Information Architecture & GM vs Player Workspace Flows](https://github.com/TacticalOtaku/BestiaryJournal/issues/5) | `grilling` | Runtime Research |
-| Data & Code Structure | [Decision: Data Caching, Store Indexing & Module Decomposition Architecture](https://github.com/TacticalOtaku/BestiaryJournal/issues/6) | `grilling` | Runtime Research |
-| Visual Gate | [Prototype: Interactive Editorial Tactical Dossier (Library/Inspector & Creature Dossier)](https://github.com/TacticalOtaku/BestiaryJournal/issues/7) | `prototype` | Identity System, UX & Flows |
-| Execution Lock | [Decision: Finalize Road to 8.0 Staged Implementation & Migration Roadmap](https://github.com/TacticalOtaku/BestiaryJournal/issues/8) | `grilling` | Data & Code Structure, Visual Gate |
+| Track | Decision / Investigation | Type | Status | Dependencies |
+| --- | --- | --- | --- | --- |
+| Typography & Tokens | [Research: Portable Typography, Color & Fluid clamp() Foundation (Cyrillic + Latin)](https://github.com/TacticalOtaku/BestiaryJournal/issues/2) ([report](https://github.com/TacticalOtaku/BestiaryJournal/blob/research/portable-typography-foundation/docs/research/portable-typography-foundation.md)) | `research` | Done | — |
+| Runtime & Perf | [Research: Foundry v14 ApplicationV2 Performance, Partial DOM & Store/Artwork Bottlenecks](https://github.com/TacticalOtaku/BestiaryJournal/issues/3) ([report](https://github.com/TacticalOtaku/BestiaryJournal/blob/research/foundry-v14-performance-audit/docs/research/foundry-v14-performance-audit.md)) | `research` | Done | — |
+| Identity System | [Decision: Portable Design System Contract, Naming & Bestiary Theme Adapter](https://github.com/TacticalOtaku/BestiaryJournal/issues/4) | `grilling` | Frontier (Unblocked) | Foundation Research |
+| UX & Flows | [Decision: Consolidated Information Architecture & GM vs Player Workspace Flows](https://github.com/TacticalOtaku/BestiaryJournal/issues/5) | `grilling` | Frontier (Unblocked) | Runtime Research |
+| Data & Code Structure | [Decision: Data Caching, Store Indexing & Module Decomposition Architecture](https://github.com/TacticalOtaku/BestiaryJournal/issues/6) | `grilling` | Frontier (Unblocked) | Runtime Research |
+| Visual Gate | [Prototype: Interactive Editorial Tactical Dossier (Library/Inspector & Creature Dossier)](https://github.com/TacticalOtaku/BestiaryJournal/issues/7) | `prototype` | Blocked | Identity System, UX & Flows |
+| Execution Lock | [Decision: Finalize Road to 8.0 Staged Implementation & Migration Roadmap](https://github.com/TacticalOtaku/BestiaryJournal/issues/8) | `grilling` | Blocked | Data & Code Structure, Visual Gate |
 
 ---
 
