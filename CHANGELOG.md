@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.6.0
+
+### Added
+
+- **Party Knowledge Enhancements**: Added a whole-party quick-set column per creature row to assign one creature's tier to all players in one click, checkbox row multi-select (`Apply to selected` / `Apply to all`), live name search, and family scoping inside `BestiaryKnowledgeBoard`.
+- **Visual Family Banners & Showcase**: Added a dedicated **Families** showcase grid view inside collections with cover art cards and direct actor/folder drag-and-drop targets, plus enlarged family header banners showing cover artwork, progress bars, and always-visible GM tools.
+- **Custom Unknown Silhouette Artwork**: Added a custom archival vector silhouette (`assets/unknown-creature.svg`) framed for both **Night** and **Parchment** themes and chat cards when a creature's portrait is unknown.
+
+### Changed
+
+- **Unified Workspace & Cleaner Chrome**: Integrated collection browsing directly inside `BestiaryApp` via a shared `CollectionWorkspaceController` (`scripts/ui/collection-workspace.js`) so the collections sidebar, Look drawer, and Guide stay accessible across views (keeping `BestiarySectionView` compatible as a thin wrapper). Moved header utilities into normal flex flow, replaced unlabeled sidebar tool icons with a **Manage** menu, and unified creature cards across the library and collections.
+- **Editorial Statblock Layout**: Replaced separate vital boxes and trait card grids with a hairline-divided vitals bar, always-visible ability modifiers/scores/saving throws (removing hover-only reveals), and a clean tabular traits and defenses ledger.
+
+### Fixed
+
+- Fixed minimized bestiary windows leaving an oversized blank frame by excluding `.minimized` and `.minimizing` states from minimum window size rules.
+- Fixed sidebar navigation labels colliding on shorter/non-fullscreen windows by locking non-list sidebar chrome and giving the sidebar and collections list independent scrolling.
+
+### Validation
+
+- 205 automated unit tests pass, together with ESLint, Prettier, project/manifest validation, and Night/Parchment contrast checks.
+
 ## 0.5.1
 
 ### Changed

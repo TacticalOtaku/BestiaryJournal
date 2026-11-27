@@ -73,7 +73,7 @@ Creature knowledge is tracked per player along a customizable research ladder (4
 | **Mastered** | Alignment, XP, immunities, vulnerabilities, damage modifiers, condition immunities, bonus/legendary actions, reactions, spells, gear, and bio |
 
 - **Custom tiers:** GMs can add custom research tiers (between default tiers or beyond **Mastered**), rename or edit hints, choose FontAwesome icons and WCAG-verified accent colors, reorder tiers, or remove them. Existing creature and player progress remaps automatically when tiers change.
-- **Knowledge management:** GMs set tiers for individual players in the creature card, grant knowledge to the whole party in one click, or manage the entire matrix via the **Party Knowledge** board.
+- **Knowledge management:** GMs set tiers for individual players in the creature card, grant a creature's tier to the whole party in one click, or manage the full matrix (with name search, family filter, and multi-select batch updates) via the **Party Knowledge** board.
 - **Research rolls:** Players roll Nature, Arcana, Religion, Perception, or another allowed skill directly from the creature card; success raises their tier by one. Research DC derives from CR or is set by the GM.
 - **GM authority:** Research rolls are judged by the active GM client (verifying message author, character ownership, skill eligibility, freshness, and single-use consumption) and posted to chat respecting what recipients know.
 - **Flexible reveal thresholds:** Customize which blocks appear at each tier globally and per creature; hide or lock individual actions, reactions, and spells down to **GM Only**.
@@ -93,15 +93,15 @@ Creature knowledge is tracked per player along a customizable research ladder (4
 
 ### Collections, Families, Bulk Import & Research Config
 
-- **Collections & families** with drag-and-drop between families, context menus, filtering (family, type, size, CR), sorting, and tile/list switching.
+- **Unified workspace & families showcase:** Collections open inside the main window with a persistent collections sidebar, a **Cards / List / Families** switcher, visual family banners with cover art and progress bars, drag-and-drop between families (including directly onto large family showcase cards), and filtering by family, type, size, or CR.
 - **Bulk research configuration:** Update research DC and allowed skills across a collection, family, or the whole bestiary while preserving locked entries.
 - **Bulk import & portability:** Import NPCs from world actors and compendiums (with filters and optional world-actor copying), drop actor folders straight into a collection, and export/import structure & knowledge as JSON (`merge` or `replace all`).
 
 ### Interface & Artwork
 
-- **Look drawer** inside the library (user & client preferences): **Night**, **Parchment**, **Auto**, and **Match AIM** (integrates with _AIM: Actor Window_), 6 accent colors, 2 density modes (**Comfortable** / **Compact**), 3 collection cover sizes (**Small** / **Medium** / **Large**), and motion levels respecting OS reduced-motion and Foundry low-performance mode.
+- **Look drawer** inside the library and collections (user & client preferences): **Night**, **Parchment**, **Auto**, and **Match AIM** (integrates with _AIM: Actor Window_), 6 accent colors, 2 density modes (**Comfortable** / **Compact**), 3 collection cover sizes (**Small** / **Medium** / **Large**), and motion levels respecting OS reduced-motion and Foundry low-performance mode.
 - **Bundled typography:** Built on the unified **Onest** variable font (`Latin` + `Cyrillic`) across headings, UI, and tabular numeric metrics.
-- **Smart framing & animated art:** Square collection covers show the full artwork over a blurred backdrop with adaptive captions; creature portraits and tokens support focal-point cropping, and animated GIF/WebP art plays on hover or keyboard focus.
+- **Smart framing & animated art:** Unknown creatures display a custom archival silhouette tailored for dark and light themes; collection covers show the full artwork over a blurred backdrop; creature portraits and tokens support focal-point cropping, and animated GIF/WebP art plays on hover or keyboard focus.
 
 ### Built for GMs & Players
 

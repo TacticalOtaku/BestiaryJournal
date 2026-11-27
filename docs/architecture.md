@@ -38,7 +38,7 @@ scripts/
     creature-display.js, client-preferences.js, command-feedback.js,
     knowledge-watch.js, encounter.js, sharing-window.js
   ui/                ApplicationV2 windows and view helpers: view-model preparation and DOM only
-    bestiary-app.js      the library window; section-view.js a collection (groups/filters in section-model.js)
+    bestiary-app.js      unified library & collection window; collection-workspace.js shared collection controller (groups/filters in section-model.js); section-view.js legacy wrapper
     creature-view.js     a creature's card (filtered statblock in creature-statblock.js)
     creature-rows.js     the creature rows of the library and of a collection, their count and progress
     creature-cards.js    view-model builder, name sort, and chat posting for creature cards
