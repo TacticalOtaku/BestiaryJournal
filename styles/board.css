@@ -3,6 +3,7 @@
 .bestiary-app.bestiary-knowledge-board .window-content {
   padding: 0;
 }
+
 .knowledge-board-shell {
   height: 100%;
   display: grid;
@@ -10,24 +11,27 @@
   gap: 12px;
   padding: 16px 22px;
 }
+
 .knowledge-board-header {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
+
 .knowledge-board-header h1 {
-  font-family: var(--suite-font-display);
-  font-size: 1.45rem;
-  font-weight: 700;
-  letter-spacing: -0.015em;
+  font-size: 1.4rem;
 }
+
 .knowledge-board-filters {
   display: grid;
   grid-template-columns: minmax(200px, 1.4fr) minmax(150px, 1fr) auto;
   gap: 10px;
   align-items: end;
 }
+
 .board-search {
+  max-width: none;
+  width: 100%;
   height: 34px;
 }
 
@@ -41,23 +45,41 @@
   border: 1px solid var(--suite-border);
   border-radius: var(--suite-radius);
   background: var(--suite-surface);
+  transition:
+    border-color var(--suite-fast) var(--suite-ease),
+    background-color var(--suite-fast) var(--suite-ease);
 }
+
+.knowledge-board-controls.has-selection {
+  border-color: var(--suite-accent-line);
+  background: color-mix(in oklab, var(--suite-accent) 7%, var(--suite-surface));
+}
+
 .board-selection-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: 34px;
 }
+
 .board-selection-status {
   color: var(--suite-muted);
   font-size: 0.81rem;
+  font-weight: 500;
 }
+
+.knowledge-board-controls.has-selection .board-selection-status {
+  color: var(--suite-accent-bright);
+  font-weight: 600;
+}
+
 .board-bulk-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px;
 }
+
 .board-bulk-actions .suite-primary-button,
 .board-bulk-actions .suite-secondary-button {
   min-height: 34px;
@@ -71,6 +93,7 @@
   border-radius: var(--suite-radius-lg);
   background: var(--suite-surface);
 }
+
 .knowledge-board-table table {
   width: 100%;
   margin: 0;
@@ -78,6 +101,7 @@
   border-collapse: collapse;
   background: none;
 }
+
 .knowledge-board-table :is(th, td) {
   padding: 6px 10px;
   border: 0;
@@ -85,6 +109,7 @@
   text-align: left;
   vertical-align: middle;
 }
+
 .knowledge-board-table thead th {
   position: sticky;
   top: 0;
@@ -96,22 +121,27 @@
   text-transform: uppercase;
   white-space: nowrap;
 }
-.knowledge-board-table thead th span {
+
+.knowledge-board-table thead th .board-player-heading {
   border-left: 3px solid var(--user-color, var(--suite-accent));
-  padding-left: 6px;
+  padding-left: 7px;
 }
+
 .knowledge-board-table thead th.board-party-col {
-  color: var(--suite-accent);
+  color: var(--suite-accent-bright);
 }
+
 .knowledge-board-table .board-check-col {
   width: 36px;
   padding-right: 4px;
   text-align: center;
 }
+
 .knowledge-board-table .board-party-col {
   border-right: 1px solid var(--suite-border-strong);
 }
-.knowledge-board-table th img {
+
+.knowledge-board-table tbody th img {
   display: inline-block;
   width: 28px;
   height: 28px;
@@ -121,26 +151,28 @@
   object-fit: cover;
   vertical-align: middle;
 }
-.knowledge-board-table thead th img {
-  display: none;
-}
+
 .knowledge-board-table tbody th {
   color: var(--suite-text);
   font-weight: 600;
   font-size: 0.86rem;
 }
+
 .knowledge-board-table tbody th .fa-lock {
   margin-left: 6px;
   color: var(--suite-subtle);
 }
+
 .knowledge-board-table tbody tr:hover {
   background: var(--suite-raised);
   box-shadow: inset 2px 0 0 var(--suite-accent-line);
 }
+
 .knowledge-board-table tbody tr.is-selected {
   background: var(--suite-accent-soft);
   box-shadow: inset 2px 0 0 var(--suite-accent);
 }
+
 .knowledge-board-table tbody tr.is-locked {
   opacity: 0.7;
 }
@@ -160,28 +192,44 @@
   color: var(--chip-color);
   font: 600 12px var(--suite-font-body);
 }
+
 .board-party-tier.is-mixed {
   --chip-color: var(--suite-muted);
   border-left-style: dashed;
   background: var(--suite-hover);
 }
+
 .board-tier.is-unknown,
 .board-party-tier.is-unknown {
   --chip-color: var(--tier-unknown);
 }
+
 .board-tier.is-rumors,
 .board-party-tier.is-rumors {
   --chip-color: var(--tier-rumors);
 }
+
 .board-tier.is-studied,
 .board-party-tier.is-studied {
   --chip-color: var(--tier-studied);
 }
+
 .board-tier.is-mastered,
 .board-party-tier.is-mastered {
   --chip-color: var(--tier-mastered);
 }
+
 .board-tier[data-tier-color],
 .board-party-tier[data-tier-color] {
   --chip-color: var(--tier-color);
+}
+
+@container bestiary-window (max-width: 680px) {
+  .knowledge-board-shell {
+    padding: 12px 14px;
+  }
+
+  .knowledge-board-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

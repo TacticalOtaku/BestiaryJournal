@@ -15,14 +15,18 @@
 }
 .tile-editor-preview {
   position: relative;
-  height: 170px;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  max-height: 220px;
   border: 1px solid var(--suite-border);
   border-radius: var(--suite-radius);
   overflow: hidden;
-  background: var(--suite-sunken);
+  background:
+    radial-gradient(circle at 50% 35%, var(--suite-accent-soft), transparent 72%), var(--suite-sunken);
 }
 .tile-editor-preview.is-empty {
-  height: 64px;
+  aspect-ratio: auto;
+  height: 76px;
   border-style: dashed;
   border-color: var(--suite-border-strong);
   background: none;
@@ -41,7 +45,8 @@
   width: 100%;
   height: 100%;
   border: 0;
-  object-fit: cover;
+  object-fit: contain;
+  display: block;
 }
 .tile-editor-preview img.is-empty {
   display: none;
@@ -705,12 +710,21 @@
   color: var(--suite-muted);
 }
 
+@container bestiary-window (max-width: 640px) {
+  .bulk-import-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @container bestiary-window (max-width: 520px) {
   .entry-editor-grid {
     grid-template-columns: minmax(0, 1fr);
   }
   .entry-editor-frame {
     max-width: 220px;
+  }
+  .bulk-import-controls {
+    grid-template-columns: minmax(0, 1fr);
   }
   .tier-def-row {
     grid-template-columns: minmax(0, 1fr);

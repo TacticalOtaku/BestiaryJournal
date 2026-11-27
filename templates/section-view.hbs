@@ -41,15 +41,16 @@
       <header class="workspace-header">
         <div class="workspace-header-top">
           <div class="workspace-heading">
-            <nav class="workspace-breadcrumb">
-              <button type="button" class="workspace-breadcrumb-link" data-action="goBack">
-                {{localize "BESTIARY.Title"}}
-              </button>
-              <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-              <span>{{sectionName}}</span>
-            </nav>
-
             <div class="workspace-title-row">
+              <button
+                type="button"
+                class="workspace-breadcrumb-back"
+                data-action="goBack"
+                data-tooltip="{{localize 'BESTIARY.AllCollections'}}"
+                aria-label="{{localize 'BESTIARY.AllCollections'}}"
+              >
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+              </button>
               <h1>{{sectionName}}</h1>
               {{#if sectionHidden}}
                 <span class="badge-chip is-muted" data-tooltip="{{localize 'BESTIARY.HiddenFromPlayers'}}">
@@ -61,19 +62,18 @@
                   <i class="fa-solid fa-lock" aria-hidden="true"></i>
                 </span>
               {{/if}}
+              <p class="workspace-meta">
+                <span class="collection-result-label">{{summaryCountLabel}}</span>
+                {{#if familyCountLabel}}
+                  <span class="meta-dot" aria-hidden="true">·</span>
+                  <span>{{familyCountLabel}}</span>
+                {{/if}}
+                {{#if progressLabel}}
+                  <span class="meta-dot" aria-hidden="true">·</span>
+                  <span>{{progressLabel}}</span>
+                {{/if}}
+              </p>
             </div>
-
-            <p class="workspace-meta">
-              <span class="collection-result-label">{{summaryCountLabel}}</span>
-              {{#if familyCountLabel}}
-                <span class="meta-dot" aria-hidden="true">·</span>
-                <span>{{familyCountLabel}}</span>
-              {{/if}}
-              {{#if progressLabel}}
-                <span class="meta-dot" aria-hidden="true">·</span>
-                <span>{{progressLabel}}</span>
-              {{/if}}
-            </p>
           </div>
 
           <div class="workspace-header-actions">
@@ -89,6 +89,7 @@
               </button>
               <button
                 type="button"
+                class="suite-secondary-button"
                 data-action="createFamily"
                 data-tooltip="{{localize 'BESTIARY.Guide.TooltipCreateFamily'}}"
               >
@@ -119,23 +120,25 @@
         </div>
 
         <div class="collection-toolbar">
-          <label class="toolbar-search">
-            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-            <input
-              type="search"
-              class="collection-search-input"
-              placeholder="{{localize 'BESTIARY.SearchCollection'}}"
-              aria-label="{{localize 'BESTIARY.SearchCollection'}}"
-            />
-            <button
-              type="button"
-              class="collection-search-clear"
-              data-action="clearCollectionSearch"
-              aria-label="{{localize 'BESTIARY.ClearSearch'}}"
-            >
-              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-            </button>
-          </label>
+          <search class="bestiary-search-landmark">
+            <label class="toolbar-search">
+              <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+              <input
+                type="search"
+                class="collection-search-input"
+                placeholder="{{localize 'BESTIARY.SearchCollection'}}"
+                aria-label="{{localize 'BESTIARY.SearchCollection'}}"
+              />
+              <button
+                type="button"
+                class="search-clear-btn collection-search-clear"
+                data-action="clearCollectionSearch"
+                aria-label="{{localize 'BESTIARY.ClearSearch'}}"
+              >
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            </label>
+          </search>
 
           <button type="button" class="btn-filter" data-action="toggleFilters">
             <i class="fa-solid fa-filter" aria-hidden="true"></i>
@@ -194,6 +197,7 @@
 
       <div class="collection-workspace" data-section-id="{{sectionId}}">
         <div class="filter-backdrop {{#if filtersOpen}}is-open{{/if}}" data-action="toggleFilters"></div>
+        <div class="preview-backdrop" data-action="closePreview"></div>
 
         <div class="collection-layout">
           <aside
@@ -203,7 +207,7 @@
             <div class="filter-panel-header">
               <h3>{{localize "BESTIARY.Filters"}}</h3>
               <div class="filter-panel-actions">
-                <button type="button" class="btn-text" data-action="resetFilters">
+                <button type="button" class="btn-ghost-sm" data-action="resetFilters">
                   {{localize "BESTIARY.Reset"}}
                 </button>
                 <button type="button" class="icon-btn" data-action="toggleFilters" aria-label="{{localize 'Close'}}">
@@ -265,7 +269,7 @@
             </div>
           </aside>
 
-          <div class="collection-results-scroll">
+          <div class="collection-results-scroll bestiary-scrollable">
             <section class="collection-grid-view {{#unless isGrid}}is-hidden{{/unless}}">
               {{#each groups}}
                 <section
@@ -371,7 +375,6 @@
                           class="creature-card {{#if this.isHidden}}is-hidden-entry{{/if}} {{#if this.isLocked}}is-locked-entry{{/if}} {{#if this.isMissing}}is-missing-entry{{/if}}"
                           data-creature-entry
                           data-art-interaction
-                          data-action="selectCreature"
                           data-uuid="{{this.uuid}}"
                           data-name="{{this.sortName}}"
                           data-type="{{this.typeKey}}"
@@ -382,79 +385,85 @@
                           data-locked="{{this.isLocked}}"
                           data-search-text="{{this.searchText}}"
                           draggable="true"
-                          tabindex="0"
                         >
-                          <div class="creature-card-media bestiary-art {{this.image.frameClass}}">
-                            <img src="{{this.image.src}}" alt="{{this.name}}" style="{{this.image.imageStyle}}" loading="lazy" />
-                            <div class="creature-card-quick">
-                              <button
-                                type="button"
-                                class="card-quick-btn {{#if this.isFavorite}}is-active{{/if}}"
-                                data-action="toggleFavorite"
-                                data-tooltip="{{localize 'BESTIARY.ToggleFavorite'}}"
-                                aria-label="{{localize 'BESTIARY.ToggleFavorite'}}"
-                                aria-pressed="{{this.isFavorite}}"
-                              >
-                                <i class="{{#if this.isFavorite}}fa-solid{{else}}fa-regular{{/if}} fa-star" aria-hidden="true"></i>
-                              </button>
-                              <button
-                                type="button"
-                                class="card-quick-btn card-quick-open"
-                                data-action="openCreature"
-                                data-tooltip="{{localize 'BESTIARY.ViewCreature'}}"
-                                aria-label="{{localize 'BESTIARY.ViewCreature'}}"
-                              >
-                                <i class="fa-solid fa-book-open" aria-hidden="true"></i>
-                              </button>
-                              {{#if @root.isGM}}
-                                <button
-                                  type="button"
-                                  class="card-quick-btn card-quick-sheet"
-                                  data-action="openSheet"
-                                  data-tooltip="{{localize 'BESTIARY.OpenSheet'}}"
-                                  aria-label="{{localize 'BESTIARY.OpenSheet'}}"
-                                >
-                                  <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
-                                </button>
+                          <button
+                            type="button"
+                            class="creature-card-hit"
+                            data-action="selectCreature"
+                            aria-label="{{this.name}}"
+                          >
+                            <div class="creature-card-media bestiary-art {{this.image.frameClass}}">
+                              <img src="{{this.image.src}}" alt="{{this.name}}" style="{{this.image.imageStyle}}" loading="lazy" />
+                              {{#if this.isNew}}
+                                <span class="bestiary-new-dot" data-tooltip="{{localize 'BESTIARY.Notice.New'}}"></span>
+                              {{/if}}
+                              {{#if this.isLocked}}
+                                <span class="creature-card-flag is-lock" data-tooltip="{{localize 'BESTIARY.Lock.Locked'}}">
+                                  <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                                </span>
+                              {{/if}}
+                              {{#if this.isHidden}}
+                                <span class="creature-card-flag is-hidden" data-tooltip="{{localize 'BESTIARY.HiddenFromPlayers'}}">
+                                  <i class="fa-solid fa-eye-slash" aria-hidden="true"></i>
+                                </span>
+                              {{/if}}
+                              {{#if this.knowsCr}}
+                                <span class="creature-card-cr">{{localize "BESTIARY.CRShort"}} {{this.crFormatted}}</span>
                               {{/if}}
                             </div>
-                            {{#if this.isNew}}
-                              <span class="creature-card-new">{{localize "BESTIARY.Notice.New"}}</span>
-                            {{/if}}
-                            {{#if this.isLocked}}
-                              <span class="creature-card-flag is-lock" data-tooltip="{{localize 'BESTIARY.Lock.Locked'}}">
-                                <i class="fa-solid fa-lock" aria-hidden="true"></i>
-                              </span>
-                            {{/if}}
-                            {{#if this.isHidden}}
-                              <span class="creature-card-flag is-hidden" data-tooltip="{{localize 'BESTIARY.HiddenFromPlayers'}}">
-                                <i class="fa-solid fa-eye-slash" aria-hidden="true"></i>
-                              </span>
-                            {{/if}}
-                            {{#if this.knowsCr}}
-                              <span class="creature-card-cr">{{localize "BESTIARY.CRShort"}} {{this.crFormatted}}</span>
-                            {{/if}}
-                          </div>
 
-                          <div class="creature-card-body">
-                            <div class="creature-card-title-block">
-                              {{#if this.isMissing}}
-                                <span class="creature-missing-tag">{{localize "BESTIARY.MissingActor"}}</span>
+                            <div class="creature-card-body">
+                              <div class="creature-card-title-block">
+                                {{#if this.isMissing}}
+                                  <span class="creature-missing-tag">{{localize "BESTIARY.MissingActor"}}</span>
+                                {{/if}}
+                                <h3 class="{{#unless this.knowsName}}is-unknown-name{{/unless}}">
+                                  {{#each (bjNameParts this.name)}}{{this}}{{#unless @last}}<wbr />{{/unless}}{{/each}}
+                                </h3>
+                                <p class="creature-card-subtitle">{{this.typeLabel}}</p>
+                              </div>
+                              {{#if this.tierBadge}}
+                                <span
+                                  class="tier-indicator is-{{this.tierBadge.key}}"
+                                  {{#if this.tierBadge.color}}data-tier-color="{{this.tierBadge.color}}"{{/if}}
+                                  {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}
+                                >
+                                  <span>{{this.tierBadge.label}}</span>
+                                </span>
                               {{/if}}
-                              <h3 class="{{#unless this.knowsName}}is-unknown-name{{/unless}}">
-                                {{#each (bjNameParts this.name)}}{{this}}{{#unless @last}}<wbr />{{/unless}}{{/each}}
-                              </h3>
-                              <p class="creature-card-subtitle">{{this.typeLabel}}</p>
                             </div>
-                            {{#if this.tierBadge}}
-                              <span
-                                class="tier-chip is-{{this.tierBadge.key}}"
-                              {{#if this.tierBadge.color}}data-tier-color="{{this.tierBadge.color}}"{{/if}}
-                                {{#if this.tierBadge.tooltip}}data-tooltip="{{this.tierBadge.tooltip}}"{{/if}}
+                          </button>
+
+                          <div class="creature-card-quick">
+                            <button
+                              type="button"
+                              class="card-quick-btn {{#if this.isFavorite}}is-active{{/if}}"
+                              data-action="toggleFavorite"
+                              data-tooltip="{{localize 'BESTIARY.ToggleFavorite'}}"
+                              aria-label="{{localize 'BESTIARY.ToggleFavorite'}}"
+                              aria-pressed="{{this.isFavorite}}"
+                            >
+                              <i class="{{#if this.isFavorite}}fa-solid{{else}}fa-regular{{/if}} fa-star" aria-hidden="true"></i>
+                            </button>
+                            <button
+                              type="button"
+                              class="card-quick-btn card-quick-open"
+                              data-action="openCreature"
+                              data-tooltip="{{localize 'BESTIARY.ViewCreature'}}"
+                              aria-label="{{localize 'BESTIARY.ViewCreature'}}"
+                            >
+                              <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                            </button>
+                            {{#if @root.isGM}}
+                              <button
+                                type="button"
+                                class="card-quick-btn card-quick-sheet"
+                                data-action="openSheet"
+                                data-tooltip="{{localize 'BESTIARY.OpenSheet'}}"
+                                aria-label="{{localize 'BESTIARY.OpenSheet'}}"
                               >
-                                <i class="fa-solid {{this.tierBadge.icon}}" aria-hidden="true"></i>
-                                <span>{{this.tierBadge.label}}</span>
-                              </span>
+                                <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                              </button>
                             {{/if}}
                           </div>
                         </article>
@@ -531,61 +540,66 @@
                     data-family-drop="{{this.id}}"
                     data-system-group="{{this.isSystemGroup}}"
                     data-search-text="{{this.name}}"
-                    data-action="focusFamily"
                     data-art-interaction
-                    tabindex="0"
-                    role="button"
                   >
-                    <div class="family-showcase-media bestiary-art bestiary-frame {{#unless this.image}}is-placeholder{{/unless}}">
-                      {{#if this.image}}
-                        <img src="{{this.image}}" alt="{{this.name}}" loading="lazy" />
-                      {{else}}
-                        <span class="family-showcase-placeholder" aria-hidden="true">
-                          <i class="fa-solid fa-layer-group"></i>
-                        </span>
-                      {{/if}}
-                      <span class="family-showcase-count">{{bjCount "BESTIARY.Count.Creatures" this.count}}</span>
-                      {{#if @root.isGM}}
-                        {{#unless this.isSystemGroup}}
-                          <button
-                            type="button"
-                            class="card-quick-btn family-showcase-menu"
-                            data-action="openFamilyMenu"
-                            aria-haspopup="menu"
-                            data-tooltip="{{localize 'BESTIARY.Manage'}}"
-                            aria-label="{{localize 'BESTIARY.Manage'}}"
-                          >
-                            <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
-                          </button>
-                        {{/unless}}
-                      {{/if}}
-                    </div>
-                    <div class="family-showcase-body">
-                      <div class="family-showcase-title-row">
-                        <h3>{{this.name}}</h3>
-                        {{#if this.hidden}}
-                          <span class="badge-chip is-muted" data-tooltip="{{localize 'BESTIARY.HiddenFromPlayers'}}">
-                            <i class="fa-solid fa-eye-slash" aria-hidden="true"></i>
+                    <button
+                      type="button"
+                      class="family-showcase-hit"
+                      data-action="focusFamily"
+                      aria-label="{{this.name}}"
+                    >
+                      <div class="family-showcase-media bestiary-art bestiary-frame {{#unless this.image}}is-placeholder{{/unless}}">
+                        {{#if this.image}}
+                          <img src="{{this.image}}" alt="{{this.name}}" loading="lazy" />
+                        {{else}}
+                          <span class="family-showcase-placeholder" aria-hidden="true">
+                            <i class="fa-solid fa-layer-group"></i>
                           </span>
                         {{/if}}
+                        <span class="family-showcase-count">{{bjCount "BESTIARY.Count.Creatures" this.count}}</span>
                       </div>
-                      {{#if this.progress}}
-                        <div class="collection-progress-row">
-                          <div class="collection-progress" title="{{this.progress.label}}">
-                            {{#each this.progress.segments}}
-                              <i
-                                class="is-{{this.key}}"
-                                data-tier-color="{{this.color}}"
-                                style="flex-grow: {{this.count}}"
-                              ></i>
-                            {{/each}}
-                          </div>
-                          <span class="collection-progress-label">{{this.progress.label}}</span>
+                      <div class="family-showcase-body">
+                        <div class="family-showcase-title-row">
+                          <h3>{{this.name}}</h3>
+                          {{#if this.hidden}}
+                            <span class="badge-chip is-muted" data-tooltip="{{localize 'BESTIARY.HiddenFromPlayers'}}">
+                              <i class="fa-solid fa-eye-slash" aria-hidden="true"></i>
+                            </span>
+                          {{/if}}
                         </div>
-                      {{else}}
-                        <p class="family-showcase-empty">{{localize "BESTIARY.Families.Empty"}}</p>
-                      {{/if}}
-                    </div>
+                        {{#if this.progress}}
+                          <div class="collection-progress-row">
+                            <div class="collection-progress" title="{{this.progress.label}}">
+                              {{#each this.progress.segments}}
+                                <i
+                                  class="is-{{this.key}}"
+                                  data-tier-color="{{this.color}}"
+                                  style="flex-grow: {{this.count}}"
+                                ></i>
+                              {{/each}}
+                            </div>
+                            <span class="collection-progress-label">{{this.progress.label}}</span>
+                          </div>
+                        {{else}}
+                          <p class="family-showcase-empty">{{localize "BESTIARY.Families.Empty"}}</p>
+                        {{/if}}
+                      </div>
+                    </button>
+
+                    {{#if @root.isGM}}
+                      {{#unless this.isSystemGroup}}
+                        <button
+                          type="button"
+                          class="card-quick-btn family-showcase-menu"
+                          data-action="openFamilyMenu"
+                          aria-haspopup="menu"
+                          data-tooltip="{{localize 'BESTIARY.Manage'}}"
+                          aria-label="{{localize 'BESTIARY.Manage'}}"
+                        >
+                          <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+                        </button>
+                      {{/unless}}
+                    {{/if}}
                   </article>
                 {{/each}}
 
@@ -597,6 +611,14 @@
                 {{/if}}
               </div>
             </section>
+
+            <div class="collection-empty-filtered">
+              <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+              <p>{{localize "BESTIARY.NoMatchingCreatures"}}</p>
+              <button type="button" class="suite-secondary-button" data-action="resetCollectionView">
+                {{localize "BESTIARY.Reset"}}
+              </button>
+            </div>
 
             {{#if isEmpty}}
               <div class="collection-empty">
@@ -632,7 +654,6 @@
                     <img src="{{this.image.src}}" alt="{{this.name}}" style="{{this.image.imageStyle}}" loading="lazy" />
                   </div>
                   <div class="preview-title-group">
-                    <span class="preview-eyebrow">{{localize "BESTIARY.QuickPreview"}}</span>
                     <h2 class="{{#unless this.knowsName}}is-unknown-name{{/unless}}">{{this.name}}</h2>
                     <p class="preview-subtitle">{{this.typeLabel}}</p>
                     {{#if this.tierBadge}}
@@ -656,7 +677,7 @@
                   </button>
                 </div>
 
-                {{#if (bjOr this.showAc this.showHp)}}
+                {{#if (bjOr this.showAc this.showHp this.knowsCr)}}
                   <div class="preview-vitals">
                     {{#if this.showAc}}
                       <div class="preview-vital">
@@ -686,50 +707,109 @@
                   </p>
                 {{/if}}
 
-                <div class="preview-actions">
-                  <button type="button" class="btn-primary-soft" data-action="openCreature">
+                <div class="preview-primary-bar">
+                  <button type="button" class="btn-primary-soft preview-open-btn" data-action="openCreature">
                     <i class="fa-solid fa-book-open" aria-hidden="true"></i>
                     <span>{{localize "BESTIARY.ViewCreature"}}</span>
                   </button>
-                  {{#if @root.isGM}}
-                    <button type="button" data-action="openEntryEditor">
-                      <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-                      <span>{{localize "BESTIARY.Entry.Title"}}</span>
-                    </button>
-                    <button type="button" data-action="openSheet">
-                      <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
-                      <span>{{localize "BESTIARY.OpenSheet"}}</span>
-                    </button>
-                    <button type="button" data-action="toggleCreatureVisibility">
-                      <i class="fa-solid {{#if this.isHidden}}fa-eye{{else}}fa-eye-slash{{/if}}" aria-hidden="true"></i>
-                      <span>
-                        {{#if this.isHidden}}
-                          {{localize "BESTIARY.ShowToPlayers"}}
-                        {{else}}
-                          {{localize "BESTIARY.HideFromPlayers"}}
-                        {{/if}}
-                      </span>
-                    </button>
-                    <button type="button" data-action="toggleCreatureLock">
-                      <i class="fa-solid {{#if this.isLocked}}fa-lock-open{{else}}fa-lock{{/if}}" aria-hidden="true"></i>
-                      <span>
-                        {{#if this.isLocked}}
-                          {{localize "BESTIARY.Lock.Unlock"}}
-                        {{else}}
-                          {{localize "BESTIARY.Lock.Lock"}}
-                        {{/if}}
-                      </span>
-                    </button>
-                    <button type="button" data-action="exportEntry">
-                      <i class="fa-solid fa-file-export" aria-hidden="true"></i>
-                      <span>{{localize "BESTIARY.Transfer.ExportEntry"}}</span>
-                    </button>
-                    <button type="button" class="btn-danger-soft" data-action="removeCreature">
-                      <i class="fa-solid fa-trash" aria-hidden="true"></i>
-                      <span>{{localize "BESTIARY.RemoveCreature"}}</span>
-                    </button>
-                  {{/if}}
                 </div>
+
+                {{#if @root.isGM}}
+                  <div class="preview-tool-strip">
+                    <button
+                      type="button"
+                      class="icon-btn"
+                      data-action="openEntryEditor"
+                      data-tooltip="{{localize 'BESTIARY.Entry.Title'}}"
+                      aria-label="{{localize 'BESTIARY.Entry.Title'}}"
+                    >
+                      <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-btn"
+                      data-action="openSheet"
+                      data-tooltip="{{localize 'BESTIARY.OpenSheet'}}"
+                      aria-label="{{localize 'BESTIARY.OpenSheet'}}"
+                    >
+                      <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-btn {{#if this.isHidden}}is-active{{/if}}"
+                      data-action="toggleCreatureVisibility"
+                      data-tooltip="{{#if this.isHidden}}{{localize 'BESTIARY.ShowToPlayers'}}{{else}}{{localize 'BESTIARY.HideFromPlayers'}}{{/if}}"
+                      aria-label="{{#if this.isHidden}}{{localize 'BESTIARY.ShowToPlayers'}}{{else}}{{localize 'BESTIARY.HideFromPlayers'}}{{/if}}"
+                    >
+                      <i class="fa-solid {{#if this.isHidden}}fa-eye{{else}}fa-eye-slash{{/if}}" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-btn {{#if this.isLocked}}is-active{{/if}}"
+                      data-action="toggleCreatureLock"
+                      data-tooltip="{{#if this.isLocked}}{{localize 'BESTIARY.Lock.Unlock'}}{{else}}{{localize 'BESTIARY.Lock.Lock'}}{{/if}}"
+                      aria-label="{{#if this.isLocked}}{{localize 'BESTIARY.Lock.Unlock'}}{{else}}{{localize 'BESTIARY.Lock.Lock'}}{{/if}}"
+                    >
+                      <i class="fa-solid {{#if this.isLocked}}fa-lock-open{{else}}fa-lock{{/if}}" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-btn"
+                      data-action="exportEntry"
+                      data-tooltip="{{localize 'BESTIARY.Transfer.ExportEntry'}}"
+                      aria-label="{{localize 'BESTIARY.Transfer.ExportEntry'}}"
+                    >
+                      <i class="fa-solid fa-file-export" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-btn is-danger"
+                      data-action="removeCreature"
+                      data-tooltip="{{localize 'BESTIARY.RemoveCreature'}}"
+                      aria-label="{{localize 'BESTIARY.RemoveCreature'}}"
+                    >
+                      <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    </button>
+                  </div>
+
+                  {{#if ../familyOptions.length}}
+                    <label class="preview-control-field">
+                      <span>{{localize "BESTIARY.Families.Title"}}</span>
+                      <select
+                        class="preview-family-select"
+                        data-uuid="{{this.uuid}}"
+                        aria-label="{{localize 'BESTIARY.Families.Title'}}"
+                      >
+                        <option value="">{{localize "BESTIARY.Families.None"}}</option>
+                        {{#each ../familyOptions}}
+                          <option value="{{this.value}}" {{#if (bjEq this.value ../familyId)}}selected{{/if}}>
+                            {{this.label}}
+                          </option>
+                        {{/each}}
+                      </select>
+                    </label>
+                  {{/if}}
+
+                  {{#if ../hasPlayers}}
+                    <div class="preview-quick-party">
+                      <span>{{localize "BESTIARY.Knowledge.PartyTitle"}}</span>
+                      <div class="preview-party-chips">
+                        {{#each ../partyTierOptions}}
+                          <button
+                            type="button"
+                            class="preview-tier-btn"
+                            data-action="setPreviewPartyTier"
+                            data-tier="{{this.value}}"
+                            data-tier-color="{{this.color}}"
+                          >
+                            <i class="fa-solid {{this.icon}}" aria-hidden="true"></i>
+                            <span>{{this.label}}</span>
+                          </button>
+                        {{/each}}
+                      </div>
+                    </div>
+                  {{/if}}
+                {{/if}}
               </div>
             {{/each}}
           </aside>

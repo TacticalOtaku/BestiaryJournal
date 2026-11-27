@@ -1,7 +1,7 @@
 <div class="bulk-import-shell">
   <header class="bulk-import-header">
     <div>
-      <p class="library-eyebrow">{{sectionName}}</p>
+      <p class="window-kicker">{{sectionName}}</p>
       <h1>{{localize "BESTIARY.Import.Title"}}</h1>
       <p class="bulk-import-lead">{{localize "BESTIARY.Import.Lead"}}</p>
     </div>
@@ -23,10 +23,18 @@
     </label>
 
     <search class="bestiary-search-landmark">
-      <label class="library-search bulk-search">
+      <label class="toolbar-search bulk-search">
         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
         <span class="sr-only">{{localize "BESTIARY.Import.Search"}}</span>
         <input type="search" class="bulk-search-input" placeholder="{{localize 'BESTIARY.Import.Search'}}" value="{{query}}" />
+        <button
+          type="button"
+          class="search-clear-btn bulk-search-clear"
+          data-action="clearBulkSearch"
+          aria-label="{{localize 'BESTIARY.ClearSearch'}}"
+        >
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
       </label>
     </search>
 

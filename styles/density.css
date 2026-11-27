@@ -10,6 +10,13 @@
   padding: 12px 14px 18px;
   gap: 14px;
 }
+.bestiary-app[data-density="compact"] .recent-shelf {
+  gap: 8px;
+}
+.bestiary-app[data-density="compact"] .recent-card {
+  gap: 9px;
+  padding: 6px 8px;
+}
 .bestiary-app[data-density="compact"] .collection-grid,
 .bestiary-app[data-density="compact"] .creature-card-grid {
   gap: 10px;
@@ -23,12 +30,12 @@
   margin-bottom: 12px;
 }
 .bestiary-app[data-density="compact"] .family-header.has-image {
-  min-height: 66px;
-  padding: 8px 12px;
+  min-height: 62px;
+  padding: 7px 12px;
 }
 .bestiary-app[data-density="compact"] .family-cover-frame {
-  width: 50px;
-  height: 50px;
+  width: 48px;
+  height: 48px;
 }
 .bestiary-app[data-density="compact"] .family-showcase-grid {
   gap: 12px;
@@ -42,13 +49,16 @@
   padding: 12px 16px 20px;
   gap: 10px;
 }
+.bestiary-app[data-density="compact"] .creature-body {
+  gap: 16px;
+}
 .bestiary-app[data-density="compact"] .creature-profile-card {
   grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
   gap: 16px;
   padding-bottom: 12px;
 }
 .bestiary-app[data-density="compact"] :is(.creature-main-column, .creature-expanded-layout) {
-  gap: 8px;
+  gap: 12px;
 }
 .bestiary-app[data-density="compact"] .vital-cell {
   padding: 6px 10px;
@@ -67,19 +77,28 @@
   padding: 8px 12px;
 }
 .bestiary-app[data-density="compact"] .creature-content-card {
-  padding: 9px;
+  padding: 0;
 }
 .bestiary-app[data-density="compact"] .creature-traits-ledger {
   padding: 0;
 }
 .bestiary-app[data-density="compact"] .section-toggle {
-  min-height: 34px;
+  min-height: 32px;
 }
 .bestiary-app[data-density="compact"] .creature-item-toggle {
   padding: 6px 9px;
 }
 .bestiary-app[data-density="compact"] .rail-tabs button {
   padding: 9px 6px;
+}
+.bestiary-app[data-density="compact"] .rail-body {
+  padding: 4px 0 10px 12px;
+}
+.bestiary-app[data-density="compact"] .knowledge-roster {
+  gap: 6px;
+}
+.bestiary-app[data-density="compact"] .preview-party-chips {
+  gap: 4px;
 }
 
 .bestiary-app[data-density="compact"] .bulk-import-row {

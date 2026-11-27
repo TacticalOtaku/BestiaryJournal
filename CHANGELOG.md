@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.7.0
+
+### Added
+
+- **Smart Collection Preview Inspector**: Upgraded the collection quick-preview drawer with an inline family assignment selector, one-click whole-party tier assignment chips for GMs, a unified action tool strip, and clear empty-result reset states for filtered collections and Notes searches.
+- **Horizontal Recent Shelf**: Added a dedicated horizontal scrollable recent-creatures shelf on the Library Overview without crowding collection cards.
+
+### Changed
+
+- **Unified Editorial Codex Design**: Unified button hierarchy (`.btn-primary-soft`, `.btn-ghost-sm`, uniform `34px` `.icon-btn` tools, `.toolbar-search`, `.window-kicker`, `.inline-tip`) across all 8 module windows, removed gradient glow buttons and heavy section borders in favor of cleaner editorial typography and rule dividers, and converted the creature sheet rail (`Knowledge`, `Notes`, `Tiers`) into a docked sticky inspector with a single-row player roster and top preview accent.
+- **Accessible Card Anatomy**: Separated card activation (`<button class="*-hit">`) from secondary quick actions across collections, creatures, and family showcase tiles, and replaced full-badge card noise with calmer `.tier-indicator` accents while keeping `.tier-chip` badges in lists and inspectors.
+
+### Fixed
+
+- **Window Container Responsiveness (`@container bestiary-window`)**: Migrated all responsive breakpoints across the library, collection workspace, creature sheet, knowledge board, and editor dialogs from viewport `@media (max-width)` queries to Foundry window container queries so non-fullscreen windows adapt cleanly at any monitor resolution, and added `container: bestiary-sheet / size` on `.creature-detail-wrapper` so the docked rail stays strictly bounded to the window height.
+- **Search & Batch Selection Edge Cases**: Fixed library CSS hiding `.library-creature-results` and `.library-notes-feed` during searches outside Overview, fixed case-insensitive search filtering in `BestiaryApp`, `BestiaryKnowledgeBoard`, and family showcase tiles (without hiding the create-family card), excluded hidden filtered rows from `BestiaryKnowledgeBoard` batch `Apply to selected`, restored CR display in library list view, and aligned `BestiaryTileEditor` preview framing (`aspect-ratio: 4 / 3`, `contain`) with card renders.
+- **Focus, Sheen & Theme Polish**: Removed double focus rings inside `.toolbar-search`, fixed `.bestiary-frame` hover sheen conflicts with `.bestiary-art`, kept neutral `.rail-inline-button` hover styling unless `.is-danger` is explicitly set, extended `@media (forced-colors: active)` coverage, and tightened narrow sidebar (`<= 760px`) wrapping.
+
+### Validation
+
+- 208 automated unit tests pass, together with ESLint, Prettier, project/manifest validation, localization parity checks, and Night/Parchment contrast checks.
+
 ## 0.6.0
 
 ### Added

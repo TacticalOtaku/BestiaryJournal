@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 globalThis.foundry = {
@@ -130,6 +130,7 @@ setupGame({
 
 const { BestiaryKnowledgeBoard } = await import("../scripts/ui/knowledge-board.js");
 const { BestiaryApp } = await import("../scripts/ui/bestiary-app.js");
+const { CollectionWorkspaceController } = await import("../scripts/ui/collection-workspace.js");
 const { buildFamilyGroups } = await import("../scripts/ui/section-model.js");
 const { SILHOUETTE_PLACEHOLDER } = await import("../scripts/core/image-framing.js");
 
@@ -262,4 +263,230 @@ test("UX redesign invariants hold across templates, custom silhouette SVG, and C
 
   const libraryCss = readFileSync(join(process.cwd(), "styles/library.css"), "utf8");
   assert.match(libraryCss, /\.library-collection-nav:has\(\.library-nav-item\)/);
+  assert.match(
+    libraryCss,
+    /\.library-scroll\.is-searching[\s\S]*?:not\(\.library-search-results,\s*\.library-creature-results,\s*\.library-notes-feed\)/,
+  );
+
+  const templateFiles = readdirSync(join(process.cwd(), "templates")).filter((name) => name.endsWith(".hbs"));
+  assert.equal(templateFiles.length >= 9, true);
+  for (const name of templateFiles) {
+    const html = readFileSync(join(process.cwd(), "templates", name), "utf8");
+    assert.doesNotMatch(
+      html,
+      /class="[^"]*\b(?:library-search|library-eyebrow)(?:\s|")/,
+      `Legacy class in ${name}`,
+    );
+  }
+
+  assert.match(creatureHtml, /is-previewing/);
+  assert.match(creatureHtml, /btn-primary-soft/);
+  assert.match(creatureHtml, /rail-inline-button is-danger/);
+
+  const frameCssNew = readFileSync(join(process.cwd(), "styles/frame.css"), "utf8");
+  assert.match(frameCssNew, /\.toolbar-search/);
+  assert.match(frameCssNew, /\.window-kicker/);
+  assert.match(frameCssNew, /\.inline-tip/);
+  assert.match(
+    frameCssNew,
+    /\.bestiary-frame:not\(\.is-silhouette,\s*\.is-placeholder,\s*\.bestiary-art\)::after/,
+  );
+
+  const creatureCss = readFileSync(join(process.cwd(), "styles/creature.css"), "utf8");
+  assert.doesNotMatch(creatureCss, /container:\s*bestiary-card/);
+  assert.match(creatureCss, /container:\s*bestiary-sheet \/ size/);
+  for (const cssFile of ["library.css", "collection.css", "creature.css", "board.css", "editors.css"]) {
+    const css = readFileSync(join(process.cwd(), "styles", cssFile), "utf8");
+    assert.match(css, /@container bestiary-window/, `Missing container query in ${cssFile}`);
+    assert.doesNotMatch(css, /@media\s*\(max-width:/, `Legacy viewport media query in ${cssFile}`);
+  }
+});
+
+function createClassList(initial = []) {
+  const set = new Set(initial);
+  return {
+    contains: (name) => set.has(name),
+    add: (...names) => names.forEach((name) => set.add(name)),
+    remove: (...names) => names.forEach((name) => set.delete(name)),
+    toggle: (name, force) => {
+      const next = typeof force === "boolean" ? force : !set.has(name);
+      if (next) set.add(name);
+      else set.delete(name);
+      return next;
+    },
+  };
+}
+
+test("KnowledgeBoard excludes hidden filtered rows from Apply Selected and restores rows via _clearSearch", async () => {
+  const values = setupGame({
+    players: [
+      { id: "p1", name: "Alice", isGM: false },
+      { id: "p2", name: "Bob", isGM: false },
+    ],
+  });
+  const board = new BestiaryKnowledgeBoard({ sectionId: "forest" });
+  await board._prepareContext();
+  board._selectedUuids.add("Actor.wolf");
+  board._selectedUuids.add("Actor.goblin");
+
+  const wolfRow = {
+    dataset: { uuid: "Actor.wolf", searchText: "dire wolf beast" },
+    classList: createClassList(["is-selected"]),
+  };
+  const goblinRow = {
+    dataset: { uuid: "Actor.goblin", searchText: "goblin scout" },
+    classList: createClassList(["is-selected", "is-filtered-out"]),
+  };
+  const searchInput = { value: "wolf", focus() {} };
+  const clearBtn = { classList: createClassList(["is-visible"]) };
+  const emptyBanner = { hidden: true };
+
+  board._searchQuery = "wolf";
+  board.element = {
+    querySelector: (selector) =>
+      ({
+        ".board-bulk-tier": { value: "3" },
+        ".board-bulk-user": { value: "" },
+        ".board-search-input": searchInput,
+        ".board-search-clear": clearBtn,
+        ".board-search-empty": emptyBanner,
+      })[selector] ?? null,
+    querySelectorAll: (selector) => {
+      if (selector === "tbody tr[data-uuid]") return [wolfRow, goblinRow];
+      return [];
+    },
+  };
+
+  await board._onApplySelected();
+  assert.equal(values.bestiaryKnowledge.users.p1["Actor.wolf"].tier, 3);
+  assert.equal(values.bestiaryKnowledge.users.p2["Actor.wolf"].tier, 3);
+  assert.equal(values.bestiaryKnowledge.users.p1["Actor.goblin"].tier, 1);
+  assert.equal(values.bestiaryKnowledge.users.p2["Actor.goblin"].tier, 0);
+  assert.equal(board._selectedUuids.has("Actor.wolf"), false);
+  assert.equal(board._selectedUuids.has("Actor.goblin"), true);
+
+  board._clearSearch();
+  assert.equal(searchInput.value, "");
+  assert.equal(board._searchQuery, "");
+  assert.equal(goblinRow.classList.contains("is-filtered-out"), false);
+  assert.equal(clearBtn.classList.contains("is-visible"), false);
+});
+
+test("CollectionWorkspaceController filters showcase families case-insensitively, preserves create card, toggles empty state, and sets party tier", async () => {
+  const values = setupGame({
+    players: [
+      { id: "p1", name: "Alice", isGM: false },
+      { id: "p2", name: "Bob", isGM: false },
+    ],
+  });
+  const familyBeasts = {
+    dataset: { familyId: "beasts", searchText: "Forest Beasts" },
+    classList: createClassList(),
+  };
+  const familyUngrouped = {
+    dataset: { familyId: "__ungrouped__", searchText: "Ungrouped" },
+    classList: createClassList(),
+  };
+  const createCard = {
+    dataset: {},
+    classList: createClassList(["is-create-card"]),
+  };
+  const creatureWolf = {
+    dataset: { searchText: "Dire Wolf", creatureType: "beast", sizeKey: "med", cr: "1", familyId: "beasts" },
+    classList: createClassList(),
+  };
+  const creatureGoblin = {
+    dataset: {
+      searchText: "Goblin Scout",
+      creatureType: "humanoid",
+      sizeKey: "sm",
+      cr: "0.25",
+      familyId: "__ungrouped__",
+    },
+    classList: createClassList(),
+  };
+  const workspace = { classList: createClassList() };
+  const searchInput = { value: "forest" };
+
+  const root = {
+    querySelector: (selector) =>
+      ({
+        ".collection-workspace": workspace,
+        ".collection-search-input": searchInput,
+        ".filter-count-badge": null,
+        ".collection-search-clear": null,
+        ".active-filter-chips": null,
+      })[selector] ?? null,
+    querySelectorAll: (selector) => {
+      if (selector === ".collection-grid-view [data-creature-entry]") return [creatureWolf, creatureGoblin];
+      if (selector === ".collection-list-view [data-creature-entry]") return [];
+      if (selector === ".collection-sort-container") return [];
+      if (selector === "[data-family-group]") return [];
+      if (selector === ".family-showcase-card:not(.is-create-card)") return [familyBeasts, familyUngrouped];
+      if (selector === ".collection-result-count") return [];
+      if (selector === ".collection-result-label") return [];
+      if (selector === ".collection-filter-panel input") return [];
+      return [];
+    },
+  };
+
+  const controller = new CollectionWorkspaceController({ element: root }, "forest");
+  controller.state.viewMode = "families";
+  controller.state.searchQuery = "forest";
+  controller.state.selectedUuid = "Actor.goblin";
+
+  controller.applyClientState();
+  assert.equal(familyBeasts.classList.contains("is-filtered-out"), false);
+  assert.equal(familyUngrouped.classList.contains("is-filtered-out"), true);
+  assert.equal(createCard.classList.contains("is-filtered-out"), false);
+  assert.equal(workspace.classList.contains("is-filtered-empty"), false);
+
+  controller.state.searchQuery = "nomatch";
+  controller.applyClientState();
+  assert.equal(familyBeasts.classList.contains("is-filtered-out"), true);
+  assert.equal(workspace.classList.contains("is-filtered-empty"), true);
+
+  controller.resetAllFiltering();
+  assert.equal(searchInput.value, "");
+  assert.equal(controller.state.searchQuery, "");
+  assert.equal(workspace.classList.contains("is-filtered-empty"), false);
+
+  await controller.setPartyTier(2);
+  assert.equal(values.bestiaryKnowledge.users.p1["Actor.goblin"].tier, 2);
+  assert.equal(values.bestiaryKnowledge.users.p2["Actor.goblin"].tier, 2);
+});
+
+test("BestiaryApp._applySearch matches mixed-case text and toggles notes empty state", () => {
+  setupGame();
+  const app = new BestiaryApp();
+  const wolfNote = { dataset: { searchText: "Dire Wolf Pack Note" }, classList: createClassList() };
+  const goblinNote = { dataset: { searchText: "Goblin Ambush" }, classList: createClassList() };
+  const clearBtn = { classList: createClassList() };
+  const scroll = { classList: createClassList() };
+  const notesFeed = {
+    classList: createClassList(),
+    querySelectorAll: (selector) => (selector === ".notes-feed-item" ? [wolfNote, goblinNote] : []),
+  };
+
+  app.element = {
+    querySelector: (selector) =>
+      ({
+        ".library-search-clear": clearBtn,
+        ".library-scroll": scroll,
+        ".library-search-results, .library-creature-results": null,
+        ".library-notes-feed": notesFeed,
+      })[selector] ?? null,
+    querySelectorAll: (selector) => (selector === "[data-search-text]" ? [wolfNote, goblinNote] : []),
+  };
+
+  app._searchQuery = "wolf";
+  app._applySearch();
+  assert.equal(wolfNote.classList.contains("is-filtered-out"), false);
+  assert.equal(goblinNote.classList.contains("is-filtered-out"), true);
+  assert.equal(notesFeed.classList.contains("is-empty"), false);
+  assert.equal(clearBtn.classList.contains("is-visible"), true);
+
+  app._searchQuery = "absent";
+  app._applySearch();
+  assert.equal(notesFeed.classList.contains("is-empty"), true);
 });

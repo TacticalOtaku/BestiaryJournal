@@ -38,6 +38,9 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
       clearSelection: function () {
         this._clearSelection();
       },
+      clearBoardSearch: function () {
+        this._clearSearch();
+      },
     },
   };
 
@@ -286,10 +289,26 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
     playApplicationEntrance(this, ".knowledge-board-shell");
   }
 
-  _visibleUnlockedRows() {
-    return [...(this.element?.querySelectorAll("tbody tr[data-uuid]") ?? [])].filter(
-      (row) => !row.classList.contains("is-filtered-out") && !row.classList.contains("is-locked"),
-    );
+  _visibleUnlockedUuids() {
+    const domRows = [...(this.element?.querySelectorAll("tbody tr[data-uuid]") ?? [])];
+    if (domRows.length > 0) {
+      return domRows
+        .filter((row) => !row.classList.contains("is-filtered-out") && !row.classList.contains("is-locked"))
+        .map((row) => row.dataset.uuid);
+    }
+    const query = this._searchQuery;
+    return (this._rows ?? [])
+      .filter((row) => !row.locked && (!query || row.searchText.includes(query)))
+      .map((row) => row.uuid);
+  }
+
+  _clearSearch() {
+    const input = this.element?.querySelector(".board-search-input");
+    if (!input) return;
+    input.value = "";
+    this._searchQuery = "";
+    this._applySearchFilter();
+    input.focus();
   }
 
   _applySearchFilter() {
@@ -300,27 +319,31 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
       row.classList.toggle("is-filtered-out", !match);
       if (match) shown += 1;
     }
+    this.element?.querySelector(".board-search-clear")?.classList.toggle("is-visible", !!query);
     const empty = this.element?.querySelector(".board-search-empty");
     if (empty) empty.hidden = shown > 0 || !(this._rows?.length > 0);
     this._syncSelectionControls();
   }
 
   _syncSelectionControls() {
-    const visibleUnlocked = this._visibleUnlockedRows();
-    const checkedVisible = visibleUnlocked.filter((row) => this._selectedUuids.has(row.dataset.uuid)).length;
+    const visibleUnlocked = this._visibleUnlockedUuids();
+    const visibleSelectedCount = visibleUnlocked.filter((uuid) => this._selectedUuids.has(uuid)).length;
     const selectAll = this.element?.querySelector(".board-select-all");
     if (selectAll) {
       selectAll.disabled = visibleUnlocked.length === 0;
-      selectAll.checked = visibleUnlocked.length > 0 && checkedVisible === visibleUnlocked.length;
-      selectAll.indeterminate = checkedVisible > 0 && checkedVisible < visibleUnlocked.length;
+      selectAll.checked = visibleUnlocked.length > 0 && visibleSelectedCount === visibleUnlocked.length;
+      selectAll.indeterminate = visibleSelectedCount > 0 && visibleSelectedCount < visibleUnlocked.length;
     }
 
-    const selectedCount = this._selectedUuids.size;
+    const totalSelected = this._selectedUuids.size;
+    this.element
+      ?.querySelector(".knowledge-board-controls")
+      ?.classList.toggle("has-selection", visibleSelectedCount > 0);
     const applySelected = this.element?.querySelector('[data-action="applySelected"]');
     if (applySelected) {
-      applySelected.disabled = selectedCount === 0;
+      applySelected.disabled = visibleSelectedCount === 0;
       applySelected.querySelector("span").textContent = game.i18n.format("BESTIARY.Board.ApplySelected", {
-        count: selectedCount,
+        count: visibleSelectedCount,
       });
     }
     const applyAll = this.element?.querySelector('[data-action="applyAll"]');
@@ -331,12 +354,12 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
       });
     }
     const clearBtn = this.element?.querySelector('[data-action="clearSelection"]');
-    if (clearBtn) clearBtn.hidden = selectedCount === 0;
+    if (clearBtn) clearBtn.hidden = totalSelected === 0;
     const summary = this.element?.querySelector(".board-selection-status");
     if (summary) {
       summary.textContent =
-        selectedCount > 0
-          ? game.i18n.format("BESTIARY.Board.SelectedCount", { count: selectedCount })
+        visibleSelectedCount > 0
+          ? game.i18n.format("BESTIARY.Board.SelectedCount", { count: visibleSelectedCount })
           : localize("BESTIARY.Board.SelectHint");
     }
   }
@@ -359,8 +382,8 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
 
   async _onApplySelected() {
     const { tier, userIds } = this._bulkTarget();
-    const unlockedSet = new Set((this._rows ?? []).filter((row) => !row.locked).map((row) => row.uuid));
-    const uuids = [...this._selectedUuids].filter((uuid) => unlockedSet.has(uuid));
+    const visibleUnlocked = new Set(this._visibleUnlockedUuids());
+    const uuids = [...this._selectedUuids].filter((uuid) => visibleUnlocked.has(uuid));
     if (!uuids.length || !userIds.length) return;
     await runCommand({
       type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
@@ -370,12 +393,19 @@ export class BestiaryKnowledgeBoard extends HandlebarsApplicationMixin(Applicati
       source: "gm",
       grantedBy: game.user.id,
     });
-    this._clearSelection();
+    for (const uuid of uuids) this._selectedUuids.delete(uuid);
+    for (const checkbox of this.element?.querySelectorAll(".board-row-check") ?? []) {
+      if (uuids.includes(checkbox.dataset.uuid)) {
+        checkbox.checked = false;
+        checkbox.closest("tr")?.classList.remove("is-selected");
+      }
+    }
+    this._syncSelectionControls();
   }
 
   async _onApplyAll() {
     const { tier, userIds } = this._bulkTarget();
-    const uuids = this._visibleUnlockedRows().map((row) => row.dataset.uuid);
+    const uuids = this._visibleUnlockedUuids();
     if (!uuids.length || !userIds.length) return;
     const tierLabel = describeTier(tier).label;
     const confirmed = await confirmDialog({

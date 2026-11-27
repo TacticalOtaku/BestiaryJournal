@@ -24,8 +24,9 @@
     .collection-card-create,
     .creature-card,
     .family-showcase-card,
+    .recent-card,
     .suite-primary-button
   ):hover,
-.bestiary-app:not([data-motion="full"]) .collection-card:hover > img {
+.bestiary-app:not([data-motion="full"]) .collection-card:hover .collection-card-media > img {
   transform: none;
 }

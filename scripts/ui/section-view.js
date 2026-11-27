@@ -118,8 +118,14 @@ export class BestiarySectionView extends HandlebarsApplicationMixin(ApplicationV
       exportEntry: function (event, target) {
         this._collection.exportEntry(event, target);
       },
+      setPreviewPartyTier: function (event, target) {
+        this._collection.setPartyTier(target.dataset.tier);
+      },
       clearCollectionSearch: function () {
         this._collection.clearSearch();
+      },
+      resetCollectionView: function () {
+        this._collection.resetAllFiltering();
       },
       openGuide: function (event, target) {
         BestiaryGuideApp.open({ tab: target?.dataset?.tab || "quickstart" });

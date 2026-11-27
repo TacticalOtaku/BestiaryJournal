@@ -34,6 +34,9 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
       closeDialog: function () {
         this.close();
       },
+      clearBulkSearch: function () {
+        this._clearSearch();
+      },
     },
   };
 
@@ -210,6 +213,15 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
     }
   }
 
+  _clearSearch() {
+    const input = this.element?.querySelector(".bulk-search-input");
+    if (!input) return;
+    input.value = "";
+    this._query = "";
+    this._applyFilters();
+    input.focus();
+  }
+
   _applyFilters() {
     const min = this._crMin === "" ? -Infinity : Number(this._crMin);
     const max = this._crMax === "" ? Infinity : Number(this._crMax);
@@ -220,6 +232,7 @@ export class BestiaryBulkImport extends HandlebarsApplicationMixin(ApplicationV2
       row.classList.toggle("is-filtered-out", !show);
       if (show) visible += 1;
     }
+    this.element.querySelector(".bulk-search-clear")?.classList.toggle("is-visible", !!this._query);
     const counter = this.element.querySelector(".bulk-visible-count");
     if (counter) counter.textContent = String(visible);
     this._updateCounter();

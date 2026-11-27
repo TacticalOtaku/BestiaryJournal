@@ -174,8 +174,14 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       openEntryEditor: function (event, target) {
         this._collection.openEntryEditor(event, target);
       },
+      setPreviewPartyTier: function (event, target) {
+        this._collection.setPartyTier(target.dataset.tier);
+      },
       clearCollectionSearch: function () {
         this._collection.clearSearch();
+      },
+      resetCollectionView: function () {
+        this._collection.resetAllFiltering();
       },
     },
   };
@@ -439,7 +445,8 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _applySearch() {
     const query = this._searchQuery;
     for (const element of this.element.querySelectorAll("[data-search-text]")) {
-      element.classList.toggle("is-filtered-out", !!query && !element.dataset.searchText.includes(query));
+      const text = (element.dataset.searchText ?? "").toLocaleLowerCase();
+      element.classList.toggle("is-filtered-out", !!query && !text.includes(query));
     }
     this.element.querySelector(".library-search-clear")?.classList.toggle("is-visible", !!query);
     this.element.querySelector(".library-scroll")?.classList.toggle("is-searching", !!query);
@@ -449,6 +456,12 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const shown = [...cards].filter((card) => !card.classList.contains("is-filtered-out")).length;
       // An empty list has its own message; this one is only for a query that hides every card.
       results.classList.toggle("is-empty", !!query && cards.length > 0 && shown === 0);
+    }
+    const notesFeed = this.element.querySelector(".library-notes-feed");
+    if (notesFeed) {
+      const items = notesFeed.querySelectorAll(".notes-feed-item");
+      const shownNotes = [...items].filter((item) => !item.classList.contains("is-filtered-out")).length;
+      notesFeed.classList.toggle("is-empty", !!query && items.length > 0 && shownNotes === 0);
     }
   }
 
@@ -466,17 +479,6 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       card.addEventListener("dragstart", (event) => {
         event.dataTransfer.setData("text/plain", JSON.stringify({ type: "Actor", uuid: card.dataset.uuid }));
         event.dataTransfer.setData(CARD_DRAG_TYPE, card.dataset.uuid);
-      });
-    }
-    for (const card of this.element.querySelectorAll(
-      "[data-action='openSection'][tabindex], [data-action='openCreature'][tabindex]",
-    )) {
-      card.addEventListener("keydown", (event) => {
-        if (event.target !== card) return;
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          card.click();
-        }
       });
     }
   }
@@ -624,7 +626,7 @@ export class BestiaryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _onOpenCreature(event, target) {
-    if (event.target.closest("button")) return;
+    if (event.target?.closest?.(".creature-card-quick")) return;
     const uuid = target.closest("[data-uuid]")?.dataset.uuid;
     if (uuid) game.bestiaryJournal?.openCreature(uuid);
   }

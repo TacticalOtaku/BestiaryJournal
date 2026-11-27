@@ -11,6 +11,7 @@ import {
 } from "../core/collection-filter.js";
 import { PARTY_VIEWER } from "../core/knowledge-lens.js";
 import { getBestiaryData, getBestiaryKnowledge } from "../foundry/bestiary-store.js";
+import { localizedTierChoices } from "../foundry/creature-display.js";
 import {
   getLibraryViewMode,
   getShowOnboardingHints,
@@ -18,7 +19,13 @@ import {
   toggleCollapsedFamily,
 } from "../foundry/client-preferences.js";
 import { runCommand } from "../foundry/command-feedback.js";
-import { confirmDialog, formatCount, localize, resolveUuid } from "../foundry/foundry-runtime.js";
+import {
+  confirmDialog,
+  formatCount,
+  getPlayerUsers,
+  localize,
+  resolveUuid,
+} from "../foundry/foundry-runtime.js";
 import { exportBestiary, exportCreatureEntry } from "../foundry/transfer.js";
 import { BestiaryBulkImport } from "./bulk-import.js";
 import { BestiaryBulkResearch } from "./bulk-research.js";
@@ -63,6 +70,8 @@ export async function prepareCollectionContext({ sectionId, state, inputs: share
     sizeOptions,
     isGM,
     isEmpty: creatures.length === 0,
+    hasPlayers: isGM && getPlayerUsers().length > 0,
+    partyTierOptions: isGM ? localizedTierChoices(null, { includeNever: false }) : [],
     sectionName: section.name,
     sectionId: section.id,
     sectionImage: section.image,
@@ -235,11 +244,19 @@ export class CollectionWorkspaceController {
         this.applyClientState();
       });
     }
+    for (const select of this.element.querySelectorAll(".preview-family-select")) {
+      select.addEventListener("change", (event) => {
+        const uuid = event.currentTarget.dataset.uuid;
+        const targetFamilyId = event.currentTarget.value || null;
+        if (uuid) this.moveToFamily(uuid, targetFamilyId);
+      });
+    }
   }
 
   _activateCards() {
     for (const card of this.element.querySelectorAll("[data-creature-entry][data-uuid]")) {
       card.addEventListener("dblclick", (event) => {
+        if (event.target?.closest?.(".creature-card-quick")) return;
         if (game.user.isGM) this.openSheet(event, card);
         else this.openCreature(event, card);
       });
@@ -253,23 +270,6 @@ export class CollectionWorkspaceController {
           }),
         );
         event.dataTransfer.setData(CARD_DRAG_TYPE, card.dataset.uuid);
-      });
-      card.addEventListener("keydown", (event) => {
-        if (event.target !== card) return;
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          this.selectCreature(event, card);
-        }
-      });
-    }
-
-    for (const familyCard of this.element.querySelectorAll(".family-showcase-card[data-family-id]")) {
-      familyCard.addEventListener("keydown", (event) => {
-        if (event.target !== familyCard) return;
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          this.focusFamily(familyCard.dataset.familyId);
-        }
       });
     }
   }
@@ -361,19 +361,33 @@ export class CollectionWorkspaceController {
       if (counter) counter.textContent = String(shown);
     }
 
-    for (const card of this.element.querySelectorAll(".family-showcase-card")) {
-      const text = card.dataset.searchText ?? "";
+    let visibleFamilies = 0;
+    for (const card of this.element.querySelectorAll(".family-showcase-card:not(.is-create-card)")) {
+      const text = (card.dataset.searchText ?? "").toLocaleLowerCase();
       const matchSearch = !this.state.searchQuery || text.includes(this.state.searchQuery);
       const matchFilter =
         !this.state.familyFilters.size || this.state.familyFilters.has(card.dataset.familyId);
-      card.classList.toggle("is-filtered-out", !(matchSearch && matchFilter));
+      const showCard = matchSearch && matchFilter;
+      card.classList.toggle("is-filtered-out", !showCard);
+      if (showCard) visibleFamilies += 1;
     }
 
+    const totalEntries = this.element.querySelectorAll(".collection-grid-view [data-creature-entry]").length;
+    const isFamilies = this.state.viewMode === "families";
+    const shownActive = isFamilies ? visibleFamilies : visible;
+    const filteredEmpty = isFamilies
+      ? isNarrowing && visibleFamilies === 0 && totalEntries > 0
+      : isNarrowing && totalEntries > 0 && visible === 0;
+    this.element.querySelector(".collection-workspace")?.classList.toggle("is-filtered-empty", filteredEmpty);
+
     for (const count of this.element.querySelectorAll(".collection-result-count")) {
-      count.textContent = String(visible);
+      count.textContent = String(shownActive);
     }
     for (const label of this.element.querySelectorAll(".collection-result-label")) {
-      label.textContent = formatCount("BESTIARY.Count.Creatures", visible);
+      label.textContent = formatCount(
+        isFamilies ? "BESTIARY.Count.Families" : "BESTIARY.Count.Creatures",
+        shownActive,
+      );
     }
     const badge = this.element.querySelector(".filter-count-badge");
     if (badge) {
@@ -442,6 +456,13 @@ export class CollectionWorkspaceController {
     input.focus();
   }
 
+  resetAllFiltering() {
+    const input = this.element?.querySelector(".collection-search-input");
+    if (input) input.value = "";
+    this.state.searchQuery = "";
+    this.resetFilters();
+  }
+
   async toggleView(mode) {
     if (!["grid", "list", "families"].includes(mode)) return;
     this.state.viewMode = mode;
@@ -456,6 +477,7 @@ export class CollectionWorkspaceController {
       button.classList.toggle("is-active", active);
       button.setAttribute("aria-pressed", String(active));
     }
+    this.applyClientState();
   }
 
   async focusFamily(familyId) {
@@ -468,7 +490,10 @@ export class CollectionWorkspaceController {
       this.state.familyFilters = new Set([familyId]);
       this._restoreFilterControls();
       this.applyClientState();
-      return;
+    } else if (familyId === UNGROUPED_ID && this.state.familyFilters.size) {
+      this.state.familyFilters.clear();
+      this._restoreFilterControls();
+      this.applyClientState();
     }
     const target = this.element.querySelector(`[data-family-group="${CSS.escape(familyId)}"]`);
     if (target?.classList.contains("is-collapsed")) await this.toggleFamily(target);
@@ -497,7 +522,7 @@ export class CollectionWorkspaceController {
   }
 
   selectCreature(event, target) {
-    if (event.target.closest("button")) return;
+    if (event.target?.closest?.(".creature-card-quick")) return;
     const uuid = target.closest("[data-uuid]")?.dataset.uuid;
     if (uuid) this.selectCreatureByUuid(uuid);
   }
@@ -512,15 +537,34 @@ export class CollectionWorkspaceController {
     }
     this.element.querySelector(".collection-preview-panel")?.classList.add("has-selection");
     this.element.querySelector(".collection-layout")?.classList.add("has-preview");
+    this.element.querySelector(".preview-backdrop")?.classList.add("is-open");
   }
 
   closePreview() {
     this.state.selectedUuid = null;
     this.element.querySelector(".collection-preview-panel")?.classList.remove("has-selection");
     this.element.querySelector(".collection-layout")?.classList.remove("has-preview");
+    this.element.querySelector(".preview-backdrop")?.classList.remove("is-open");
     this.element
       .querySelectorAll("[data-creature-entry]")
       .forEach((card) => card.classList.remove("is-selected"));
+  }
+
+  async setPartyTier(tier) {
+    if (!game.user.isGM || !this.state.selectedUuid) return;
+    const userIds = getPlayerUsers().map((user) => user.id);
+    if (!userIds.length) return;
+    await runCommand(
+      {
+        type: BESTIARY_COMMANDS.SET_KNOWLEDGE,
+        uuids: [this.state.selectedUuid],
+        userIds,
+        tier: Number(tier),
+        source: "gm",
+        grantedBy: game.user.id,
+      },
+      { unchanged: "BESTIARY.Lock.Blocked" },
+    );
   }
 
   openCreature(event, target) {

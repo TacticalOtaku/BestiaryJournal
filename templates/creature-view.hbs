@@ -6,7 +6,7 @@
       <div class="suite-empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h2>{{localize "BESTIARY.CreatureLoadError"}}</h2></div>
     {{/if}}
   {{else}}
-    <div class="creature-detail-view {{#if isBlank}}is-blank{{/if}}">
+    <div class="creature-detail-view {{#if isBlank}}is-blank{{/if}} {{#if isPreviewing}}is-previewing{{/if}}">
 
       <header class="creature-topbar">
         <div class="creature-topbar-left">
@@ -35,7 +35,7 @@
           <button type="button" class="suite-icon-button {{#if isFavorite}}is-active{{/if}}" data-action="toggleFavorite" aria-pressed="{{#if isFavorite}}true{{else}}false{{/if}}" data-tooltip="{{localize 'BESTIARY.ToggleFavorite'}}" aria-label="{{localize 'BESTIARY.ToggleFavorite'}}"><i class="{{#if isFavorite}}fas{{else}}far{{/if}} fa-star" aria-hidden="true"></i></button>
           <button type="button" class="suite-icon-button" data-action="sendToChat" data-tooltip="{{localize 'BESTIARY.Guide.TooltipSendToChat'}}" aria-label="{{localize 'BESTIARY.SendToChat'}}"><i class="fa-regular fa-message" aria-hidden="true"></i></button>
           {{#if shareEnabled}}
-            <button type="button" class="suite-primary-button is-compact" data-action="shareCreature" data-tooltip="{{localize 'BESTIARY.Guide.TooltipShare'}}"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i>{{localize "BESTIARY.Share.Button"}}</button>
+            <button type="button" class="btn-primary-soft is-compact" data-action="shareCreature" data-tooltip="{{localize 'BESTIARY.Guide.TooltipShare'}}"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i>{{localize "BESTIARY.Share.Button"}}</button>
           {{/if}}
           <button type="button" class="suite-icon-button" data-action="openGuide" data-tab="research" data-tooltip="{{localize 'BESTIARY.Guide.OpenTooltip'}}" aria-label="{{localize 'BESTIARY.Guide.Title'}}"><i class="fa-regular fa-circle-question" aria-hidden="true"></i></button>
         </div>
@@ -45,7 +45,7 @@
         <div class="preview-banner">
           <i class="fa-solid fa-eye"></i>
           <span>{{localize "BESTIARY.Preview.Banner"}} <strong>{{previewUserName}}</strong></span>
-          <button type="button" data-action="clearPreview">{{localize "BESTIARY.Preview.Exit"}}</button>
+          <button type="button" class="btn-ghost-sm" data-action="clearPreview">{{localize "BESTIARY.Preview.Exit"}}</button>
         </div>
       {{/if}}
 
@@ -300,7 +300,7 @@
                 <section class="rail-card">
                   <header>
                     <h3>{{localize "BESTIARY.Knowledge.RosterTitle"}}</h3>
-                    <button type="button" class="rail-inline-button" data-action="resetTiers" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-rotate-left"></i>{{localize "BESTIARY.Knowledge.Reset"}}</button>
+                    <button type="button" class="rail-inline-button is-danger" data-action="resetTiers" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-rotate-left"></i>{{localize "BESTIARY.Knowledge.Reset"}}</button>
                   </header>
                   <ul class="knowledge-roster">
                     {{#each knowledgeRoster}}
@@ -448,7 +448,7 @@
               <section class="rail-card">
                 <header>
                   <h3>{{localize "BESTIARY.Tier.EntryTitle"}}</h3>
-                  <button type="button" class="rail-inline-button" data-action="resetBlockTiers" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-rotate-left"></i>{{localize "BESTIARY.Tier.Reset"}}</button>
+                  <button type="button" class="rail-inline-button is-danger" data-action="resetBlockTiers" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-rotate-left"></i>{{localize "BESTIARY.Tier.Reset"}}</button>
                 </header>
                 <p class="rail-hint">{{localize "BESTIARY.Tier.EntryHint"}}</p>
                 {{#if showHints}}<p class="rail-tip"><i class="fa-solid fa-eye" aria-hidden="true"></i>{{localize "BESTIARY.Guide.InlineItemPinTip"}}</p>{{/if}}

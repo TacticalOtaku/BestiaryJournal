@@ -1,10 +1,11 @@
-/* Bestiary Journal — window frame. Every window: frame, resets, artwork, shared controls, the context menu. */
+/* Bestiary Journal — window frame, resets, artwork frames, shared component kit, context menu. */
 
 /* The frame follows the window's theme, not Foundry's, so a parchment window never wears a dark title bar. */
 .bestiary-app {
   background: var(--suite-bg);
   font-family: var(--suite-font-body);
 }
+
 /* Foundry draws tooltips on its own element in Signika, which has no Cyrillic; theme-root.js tags ours. */
 #tooltip.bestiary-tooltip {
   font-family:
@@ -14,11 +15,13 @@
     "Segoe UI",
     sans-serif;
 }
+
 .bestiary-app > .window-header {
   background: var(--suite-surface);
   border-bottom: 1px solid var(--suite-border);
   color: var(--suite-muted);
 }
+
 .bestiary-app > .window-header .window-title {
   color: var(--suite-text);
   font-family: var(--suite-font-body);
@@ -43,13 +46,9 @@
 .bestiary-app .window-content textarea {
   font: inherit;
 }
-/* Foundry's `elements.forms` layer pins every button to `--button-size`
-   (height and min-height). Its `compatibility` reset only lifts that inside
-   `.app`, the ApplicationV1 root, so ApplicationV2 windows like ours keep the
-   fixed size: cards collapse and their content spills out of the tile, while
-   small chip buttons get inflated. Sizing is ours to decide here.
-   `:where()` keeps this at element specificity, so every component rule below
-   still wins; layer order already puts module styles above core. */
+
+/* Foundry's `elements.forms` layer pins every button to `--button-size`.
+   Keep sizing scoped at zero specificity so component controls own their exact heights. */
 :where(.bestiary-app .window-content) button {
   height: auto;
   min-height: 0;
@@ -60,35 +59,49 @@
   color: inherit;
   cursor: pointer;
 }
+
 .bestiary-app .window-content button:active:not(:disabled) {
   transform: scale(0.985);
 }
+
 .bestiary-app .window-content button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
+
 .bestiary-app .window-content ::selection {
   background: color-mix(in srgb, var(--suite-accent) 32%, transparent);
 }
 
-/* Foundry gives each heading level its own face (Signika, Amiri); ours inherit the window's unless a rule names one. */
+/* Foundry gives each heading level its own face; ours stay unified on Onest. */
 .bestiary-app :is(h1, h2, h3, h4, h5, h6) {
   border: 0;
   margin: 0;
   color: inherit;
   font-family: inherit;
 }
-.library-heading h1,
-.collection-title-copy h1,
+
 .creature-profile-heading h1,
 .entry-editor-heading h1,
 .bulk-import-header h1,
-.tier-settings-header h1 {
+.bulk-research-heading h1,
+.tier-settings-header h1,
+.guide-header h1,
+.knowledge-board-header h1 {
   font-family: var(--suite-font-display);
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.12;
+  line-height: 1.15;
   text-wrap: balance;
+}
+
+.window-kicker {
+  margin: 0 0 3px;
+  color: var(--suite-accent-bright);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .bestiary-app .window-content button:focus-visible,
@@ -101,9 +114,10 @@
   box-shadow: none;
 }
 
+/* Wrapper-focused inputs suppress the inner browser outline to avoid double focus rings. */
 .bestiary-app
   .window-content
-  :is(.library-search, .preview-as, .item-tier-control)
+  :is(.toolbar-search, .preview-as, .item-tier-control)
   :is(input, select):focus-visible {
   outline: 2px solid transparent;
 }
@@ -112,7 +126,6 @@
   display: contents;
 }
 
-/* Author styles below set `display` on many elements; `hidden` must still win. */
 :where(.bestiary-app) [hidden] {
   display: none !important;
 }
@@ -120,6 +133,7 @@
 .bestiary-app .is-filtered-out,
 .collection-grid-view.is-hidden,
 .collection-list-view.is-hidden,
+.collection-families-view.is-hidden,
 .family-group.is-empty-after-filter {
   display: none !important;
 }
@@ -128,6 +142,7 @@
   scrollbar-color: color-mix(in srgb, var(--suite-muted) 50%, transparent) transparent;
   scrollbar-width: thin;
 }
+
 @supports not (scrollbar-color: auto) {
   .bestiary-scrollable::-webkit-scrollbar {
     width: 6px;
@@ -141,6 +156,7 @@
     border-radius: 99px;
   }
 }
+
 :where(.bestiary-app) .sr-only {
   position: absolute;
   width: 1px;
@@ -156,15 +172,16 @@
 @keyframes suite-rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
+
 .suite-entering {
-  animation: suite-rise 320ms var(--suite-ease) both;
+  animation: suite-rise 260ms var(--suite-ease) both;
 }
 
 /* ── Artwork frames ─────────────────────────────────────────────────────── */
@@ -177,6 +194,7 @@
   border-radius: inherit;
   background: var(--suite-sunken);
 }
+
 .bestiary-frame > img {
   position: relative;
   z-index: 1;
@@ -186,42 +204,52 @@
   border: 0;
   transition: transform calc(var(--suite-art-duration, 700ms) * 0.75) var(--suite-ease);
 }
+
 .bestiary-frame.is-silhouette {
   background: radial-gradient(circle at 50% 44%, var(--suite-accent-soft), var(--suite-sunken) 78%);
 }
+
 .bestiary-frame.is-silhouette > img {
-  padding: 12%;
+  padding: 13%;
   object-fit: contain;
   opacity: 0.82;
 }
+
 .bestiary-app[data-theme="parchment"] .bestiary-frame.is-silhouette > img {
   opacity: 1;
   filter: brightness(0) opacity(0.68);
 }
-/* Foundry's placeholder art is white: it glares at night and vanishes on parchment, so it takes the silhouette ink. */
+
+/* Foundry's placeholder art is white: neutralize it in both Night and Parchment themes. */
 .bestiary-app img[src$="mystery-man.svg"] {
   filter: opacity(0.32);
 }
+
 .bestiary-app[data-theme="parchment"] img[src$="mystery-man.svg"] {
   filter: brightness(0) opacity(0.42);
 }
+
 .bestiary-frame.is-thumb {
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
-.bestiary-frame::after {
+/* Subtle specular sheen on interactive cover frames (only when full motion is active). */
+.bestiary-frame:not(.is-silhouette, .is-placeholder, .bestiary-art)::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  background: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 22%) 50%, transparent 62%);
-  transform: translateX(-120%);
+  background: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 16%) 50%, transparent 62%);
+  transform: translateX(-125%);
 }
-:is(.collection-creature-card, .library-creature-card, .recent-creature-card):hover .bestiary-frame::after {
-  transform: translateX(120%);
+
+:is(.creature-card, .collection-card, .family-showcase-card):hover
+  .bestiary-frame:not(.is-silhouette, .is-placeholder, .bestiary-art)::after {
+  transform: translateX(125%);
   transition: transform var(--suite-art-duration, 700ms) var(--suite-ease);
 }
+
 .bestiary-app:not([data-motion="full"]) .bestiary-frame::after {
   display: none;
 }
@@ -233,6 +261,7 @@
   isolation: isolate;
   background: var(--suite-sunken);
 }
+
 .bestiary-art > img,
 .bestiary-art > .bestiary-art-poster {
   position: absolute;
@@ -244,6 +273,7 @@
   object-fit: contain;
   pointer-events: none;
 }
+
 .bestiary-art > .bestiary-art-backdrop {
   position: absolute;
   inset: -6%;
@@ -258,12 +288,15 @@
     transform var(--suite-art-duration, 700ms) var(--suite-ease),
     opacity var(--suite-art-duration, 700ms) var(--suite-ease);
 }
+
 .bestiary-art.is-art-bound > img {
   opacity: 0;
 }
+
 .bestiary-art.is-art-active > img {
   opacity: 1;
 }
+
 .bestiary-art-fallback {
   position: absolute;
   inset: 0;
@@ -274,15 +307,17 @@
   text-align: center;
   overflow-wrap: anywhere;
 }
+
 .bestiary-art.is-art-active > .bestiary-art-poster {
   opacity: 0;
 }
+
 .bestiary-art.is-art-active > .bestiary-art-backdrop {
   transform: translateY(-3px) scale(1.03);
   opacity: 0.56;
 }
-.bestiary-art::after,
-.bestiary-art.bestiary-frame::after {
+
+.bestiary-art:not(.is-silhouette, .is-placeholder)::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -291,26 +326,33 @@
   background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 14%) 50%, transparent 70%);
   transform: translateX(-130%);
 }
-.bestiary-art.is-art-active::after {
+
+.bestiary-art.is-art-active:not(.is-silhouette, .is-placeholder)::after {
   animation: bestiary-art-glint 850ms var(--suite-ease) both;
 }
+
 @keyframes bestiary-art-glint {
   to {
     transform: translateX(130%);
   }
 }
+
 .bestiary-app:not([data-motion="full"]) .bestiary-art::after {
   display: none;
 }
+
 .bestiary-app:not([data-motion="full"]) .bestiary-art.is-art-ready > img {
   opacity: 0;
 }
+
 .bestiary-app:not([data-motion="full"]) .bestiary-art.is-art-ready > .bestiary-art-poster {
   opacity: 1;
 }
+
 .bestiary-app:not([data-motion="full"]) .bestiary-art > .bestiary-art-backdrop {
   transform: none;
 }
+
 @media (prefers-reduced-motion: reduce) {
   .bestiary-art::after {
     display: none;
@@ -332,6 +374,7 @@
   overflow: hidden;
   isolation: isolate;
 }
+
 .bestiary-spot::before {
   content: "";
   position: absolute;
@@ -342,95 +385,243 @@
   height: 280px;
   border-radius: 50%;
   pointer-events: none;
-  background: radial-gradient(circle, rgb(255 255 255 / 7%), transparent 70%);
+  background: radial-gradient(circle, rgb(255 255 255 / 6%), transparent 70%);
   opacity: 0;
   transform: translate(calc(var(--mx, 50%) - 140px), calc(var(--my, 50%) - 140px));
   transition: opacity var(--suite-normal);
 }
+
 .bestiary-spot:hover::before {
   opacity: 1;
 }
+
 .bestiary-app[data-theme="parchment"] .bestiary-spot::before {
-  background: radial-gradient(circle, rgb(255 255 255 / 50%), transparent 70%);
+  background: radial-gradient(circle, rgb(255 255 255 / 44%), transparent 70%);
 }
+
 .bestiary-app[data-motion="off"] .bestiary-spot::before {
   display: none;
 }
 
-/* ── Shared controls ────────────────────────────────────────────────────── */
+/* ── Shared component kit (unified across all 8 module windows) ─────────── */
 
 .suite-primary-button,
 .suite-secondary-button,
 .suite-danger-button,
-.suite-toolbar-button {
-  min-height: 40px;
-  border: 1px solid var(--suite-border);
+.btn-primary-soft,
+.btn-danger-soft {
+  min-height: 34px;
+  border: 1px solid var(--suite-border-strong);
   border-radius: var(--suite-radius-sm);
-  padding: 0 15px;
+  padding: 6px 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  background: var(--suite-surface);
+  gap: 7px;
+  background: var(--suite-raised);
   color: var(--suite-text);
+  font-size: 0.82rem;
+  font-weight: 500;
   white-space: nowrap;
   transition:
-    background var(--suite-fast),
-    border-color var(--suite-fast),
-    transform var(--suite-fast) var(--suite-ease-snap);
-}
-.suite-primary-button {
-  border-color: transparent;
-  background: linear-gradient(135deg, var(--suite-accent-bright), var(--suite-accent) 62%);
-  color: var(--suite-on-accent) !important;
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--suite-accent) 28%, transparent);
-}
-.suite-primary-button:hover:not(:disabled) {
-  filter: brightness(1.06);
-  transform: translateY(-1px);
-}
-.suite-primary-button.is-compact {
-  min-height: 34px;
-  padding: 0 12px;
-  font-size: 0.86rem;
-}
-.suite-secondary-button:hover,
-.suite-toolbar-button:hover {
-  background: var(--suite-hover);
-  border-color: var(--suite-border-strong);
-}
-.suite-danger-button {
-  color: var(--suite-danger);
-}
-.suite-danger-button:hover {
-  border-color: var(--suite-danger);
-  background: color-mix(in srgb, var(--suite-danger) 10%, transparent);
+    background-color var(--suite-fast) var(--suite-ease),
+    border-color var(--suite-fast) var(--suite-ease),
+    color var(--suite-fast) var(--suite-ease);
 }
 
-.suite-icon-button {
-  width: 36px;
-  height: 36px;
+.suite-primary-button {
+  border-color: color-mix(in oklab, var(--suite-accent) 70%, black);
+  background: var(--suite-accent);
+  color: var(--suite-on-accent) !important;
+  font-weight: 600;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 22%) inset;
+}
+
+.suite-primary-button:hover:not(:disabled) {
+  background: var(--suite-accent-bright);
+  border-color: var(--suite-accent-bright);
+}
+
+.suite-primary-button.is-compact {
+  min-height: 32px;
+  padding: 4px 11px;
+  font-size: 0.8rem;
+}
+
+.btn-primary-soft {
+  border-color: var(--suite-accent-line);
+  background: var(--suite-accent-soft);
+  color: var(--suite-accent-bright);
+  font-weight: 600;
+}
+
+.btn-primary-soft:hover:not(:disabled) {
+  border-color: var(--suite-accent);
+  background: color-mix(in oklab, var(--suite-accent) 24%, transparent);
+}
+
+.suite-secondary-button:hover:not(:disabled) {
+  background: var(--suite-hover);
+  border-color: var(--suite-accent-line);
+}
+
+.suite-danger-button,
+.btn-danger-soft {
+  border-color: color-mix(in oklab, var(--suite-danger) 40%, transparent);
+  background: color-mix(in oklab, var(--suite-danger) 12%, transparent);
+  color: var(--suite-danger);
+  font-weight: 600;
+}
+
+.suite-danger-button:hover:not(:disabled),
+.btn-danger-soft:hover:not(:disabled) {
+  border-color: var(--suite-danger);
+  background: color-mix(in oklab, var(--suite-danger) 20%, transparent);
+}
+
+.suite-icon-button,
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  padding: 0;
   border: 1px solid var(--suite-border);
   border-radius: var(--suite-radius-sm);
-  background: var(--suite-surface);
+  background: var(--suite-raised);
   color: var(--suite-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition:
-    color var(--suite-fast),
-    background var(--suite-fast),
-    border-color var(--suite-fast);
+    color var(--suite-fast) var(--suite-ease),
+    background-color var(--suite-fast) var(--suite-ease),
+    border-color var(--suite-fast) var(--suite-ease);
 }
-.suite-icon-button:hover {
+
+.suite-icon-button:hover:not(:disabled),
+.icon-btn:hover:not(:disabled) {
   color: var(--suite-text);
   background: var(--suite-hover);
   border-color: var(--suite-border-strong);
 }
-.suite-icon-button.is-active {
-  color: var(--suite-accent);
+
+.suite-icon-button.is-active,
+.icon-btn.is-active {
+  color: var(--suite-accent-bright);
   border-color: var(--suite-accent);
   background: var(--suite-accent-soft);
+}
+
+.btn-ghost-sm,
+.rail-inline-button {
+  border: 0;
+  border-radius: var(--suite-radius-sm);
+  background: none;
+  padding: 4px 8px;
+  color: var(--suite-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.btn-ghost-sm:hover:not(:disabled),
+.rail-inline-button:hover:not(:disabled) {
+  color: var(--suite-text);
+  background: var(--suite-hover);
+}
+
+.rail-inline-button.is-danger:hover:not(:disabled) {
+  color: var(--suite-danger);
+  background: color-mix(in oklab, var(--suite-danger) 12%, transparent);
+}
+
+/* Unified search input shared across BestiaryApp, SectionView, KnowledgeBoard, BulkImport */
+.toolbar-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 200px;
+  max-width: 320px;
+  min-width: 170px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--suite-border);
+  border-radius: var(--suite-radius-sm);
+  background: var(--suite-sunken);
+  color: var(--suite-muted);
+  transition: border-color var(--suite-fast) var(--suite-ease);
+}
+
+.toolbar-search:focus-within {
+  border-color: var(--suite-accent-line);
+  box-shadow: 0 0 0 2px var(--suite-accent-soft);
+}
+
+.toolbar-search > i {
+  font-size: 0.8rem;
+  opacity: 0.72;
+  flex: 0 0 auto;
+}
+
+.toolbar-search input {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  border: 0;
+  background: transparent;
+  color: var(--suite-text);
+  font-size: 0.84rem;
+  outline: none;
+  box-shadow: none;
+}
+
+.search-clear-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--suite-muted);
+  cursor: pointer;
+}
+
+.search-clear-btn.is-visible {
+  display: inline-flex;
+}
+
+.search-clear-btn:hover {
+  color: var(--suite-text);
+  background: var(--suite-hover);
+}
+
+.inline-tip {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--suite-border);
+  border-left: 2px solid var(--suite-accent);
+  border-radius: var(--suite-radius-sm);
+  background: var(--suite-sunken);
+  color: var(--suite-muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+}
+
+.inline-tip > i {
+  color: var(--suite-accent);
+  margin-top: 2px;
+  flex: 0 0 auto;
 }
 
 .suite-segmented {
@@ -438,11 +629,12 @@
   border: 1px solid var(--suite-border);
   border-radius: var(--suite-radius-sm);
   overflow: hidden;
-  background: var(--suite-surface);
+  background: var(--suite-sunken);
 }
+
 .suite-segmented button {
-  min-height: 40px;
-  padding: 0 13px;
+  min-height: 34px;
+  padding: 0 12px;
   border: 0;
   border-right: 1px solid var(--suite-border);
   border-radius: 0;
@@ -451,18 +643,23 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
+
 .suite-segmented button:last-child {
   border-right: 0;
 }
+
 .suite-segmented button:hover {
   color: var(--suite-text);
   background: var(--suite-hover);
 }
+
 .suite-segmented button.is-active {
-  color: var(--suite-accent);
+  color: var(--suite-accent-bright);
   background: var(--suite-accent-soft);
-  box-shadow: inset 0 2px 0 var(--suite-accent);
+  box-shadow: inset 0 -2px 0 var(--suite-accent);
 }
 
 .suite-badge {
@@ -476,15 +673,19 @@
   font-size: 0.72rem;
   backdrop-filter: blur(6px);
 }
+
 .suite-badge.is-warning {
   background: color-mix(in srgb, var(--suite-warning) 82%, black);
 }
+
 .suite-badge.is-locked {
   background: color-mix(in srgb, var(--tier-unknown) 78%, black);
 }
+
 .suite-badge.is-danger {
   background: color-mix(in srgb, var(--suite-danger) 82%, black);
 }
+
 .suite-badge.is-inline {
   background: var(--suite-sunken);
   color: var(--suite-muted);
@@ -492,54 +693,37 @@
 }
 
 .suite-empty-state {
-  min-height: 240px;
+  min-height: 220px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 11px;
+  gap: 10px;
   padding: 32px;
   color: var(--suite-muted);
   text-align: center;
 }
+
 .suite-empty-state.is-inline {
   min-height: 0;
-  padding: 22px 16px;
+  padding: 24px 16px;
   border-top: 1px solid var(--suite-border);
 }
-/* The profile already closes with a rule; the first block under it does not draw a second one. */
+
 .suite-empty-state > i {
-  font-size: 2rem;
+  font-size: 1.9rem;
   color: var(--suite-subtle);
 }
+
 .suite-empty-state h2,
 .suite-empty-state p {
   margin: 0;
 }
+
 .suite-empty-state h2 {
   color: var(--suite-text);
   font-family: var(--suite-font-display);
-  font-size: 1.1rem;
-}
-
-.suite-breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--suite-subtle);
-  font-size: 0.82rem;
-}
-.suite-breadcrumbs button {
-  border: 0;
-  background: none;
-  padding: 0;
-  color: var(--suite-muted);
-}
-.suite-breadcrumbs button:hover {
-  color: var(--suite-accent);
-}
-.suite-breadcrumbs i {
-  font-size: 0.62rem;
+  font-size: 1.05rem;
 }
 
 /* Tier palette tokens mapped by preset name */
@@ -574,7 +758,7 @@
   --tier-color: var(--tier-never);
 }
 
-/* Tier chips */
+/* Full tier chip (used in headers, inspector, and CreatureView) */
 .tier-chip {
   display: inline-flex;
   align-items: center;
@@ -589,29 +773,62 @@
   font-weight: 600;
   white-space: nowrap;
 }
+
 .tier-chip.is-large {
-  padding: 6px 13px;
-  font-size: 0.84rem;
+  padding: 5px 12px;
+  font-size: 0.82rem;
 }
-.tier-chip.is-unknown,
-.tier-chip.is-none {
+
+/* Quiet editorial indicator (used in dense creature card grids without noisy boxed chips) */
+.tier-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--chip-color, var(--tier-color, var(--tier-unknown)));
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tier-indicator::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tier-indicator > i {
+  font-size: 0.68rem;
+  opacity: 0.85;
+}
+
+:is(.tier-chip, .tier-indicator).is-unknown,
+:is(.tier-chip, .tier-indicator).is-none {
   --chip-color: var(--tier-unknown);
 }
-.tier-chip.is-rumors,
-.tier-chip.is-partial {
+
+:is(.tier-chip, .tier-indicator).is-rumors,
+:is(.tier-chip, .tier-indicator).is-partial {
   --chip-color: var(--tier-rumors);
 }
-.tier-chip.is-studied {
+
+:is(.tier-chip, .tier-indicator).is-studied {
   --chip-color: var(--tier-studied);
 }
-.tier-chip.is-mastered,
-.tier-chip.is-gm {
+
+:is(.tier-chip, .tier-indicator).is-mastered,
+:is(.tier-chip, .tier-indicator).is-gm {
   --chip-color: var(--tier-mastered);
 }
-.tier-chip.is-never {
+
+:is(.tier-chip, .tier-indicator).is-never {
   --chip-color: var(--tier-never);
 }
-.tier-chip[data-tier-color] {
+
+:is(.tier-chip, .tier-indicator)[data-tier-color] {
   --chip-color: var(--tier-color);
 }
 
@@ -628,12 +845,14 @@
   background: var(--suite-raised);
   box-shadow: var(--suite-shadow);
 }
+
 .bestiary-context-menu .context-items {
   display: flex;
   flex-direction: column;
   margin: 0;
   padding: 0;
 }
+
 :where(.bestiary-app) .context-item {
   width: 100%;
   display: flex;
@@ -645,22 +864,27 @@
   background: transparent;
   color: var(--suite-text);
   cursor: pointer;
-  font-size: 0.87rem;
+  font-size: 0.86rem;
   text-align: left;
 }
+
 :where(.bestiary-app) .context-item:hover {
   background: var(--suite-hover);
 }
+
 :where(.bestiary-app) .context-item > i {
   width: 16px;
   color: var(--suite-subtle);
 }
+
 :where(.bestiary-app) .context-item.is-danger {
   color: var(--suite-danger);
 }
+
 :where(.bestiary-app) .context-item.is-danger > i {
   color: var(--suite-danger);
 }
+
 :where(.bestiary-app) .context-separator {
   height: 1px;
   margin: 5px 8px;
@@ -673,6 +897,7 @@
   overflow-wrap: anywhere;
   line-height: 1.3;
 }
+
 :where(.bestiary-app) .bestiary-name-part + .bestiary-name-part {
   margin-top: 2px;
   font-size: 0.88em;
@@ -680,7 +905,7 @@
   color: var(--suite-muted);
 }
 
-/* Below this the big windows stop being usable: Foundry clamps resizing to these minimums when expanded. */
+/* Foundry clamps resizing to these minimums when expanded, never when minimized. */
 .bestiary-app:is(
     .bestiary-main,
     .bestiary-section-view,
@@ -690,6 +915,7 @@
   min-width: 540px;
   min-height: 420px;
 }
+
 .bestiary-app:is(.minimized, .minimizing) {
   min-width: 0;
   min-height: 0;
@@ -699,34 +925,30 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
 :where(.bestiary-app) .context-item.is-disabled:hover {
   background: transparent;
 }
+
 :where(.bestiary-app) .context-item:focus-visible {
   outline: 2px solid var(--suite-accent);
   outline-offset: -2px;
 }
 
-/* «New since you last looked»: AIM's accent dot, on the art of every creature tile a player has news about. */
+/* «New since you last looked»: accent indicator */
 .bestiary-new-dot {
   position: absolute;
-  top: 9px;
-  left: 9px;
+  top: 8px;
+  left: 8px;
   z-index: 4;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--suite-accent);
-  box-shadow:
-    0 0 0 2px var(--suite-surface),
-    0 0 10px var(--suite-accent);
-}
-.recent-creature-card .bestiary-new-dot {
-  top: 5px;
-  left: 5px;
+  box-shadow: 0 0 0 2px var(--suite-surface);
 }
 
-/* Smooth synchronous cross-fade when switching Night <-> Parchment (removed by theme-root.js after 280ms). */
+/* Smooth synchronous cross-fade when switching Night <-> Parchment. */
 .bestiary-app.aim-theme-fade,
 .bestiary-app.aim-theme-fade * {
   transition:
@@ -742,7 +964,7 @@
       input,
       select,
       textarea,
-      .library-search,
+      .toolbar-search,
       .preview-as,
       .item-tier-control,
       .collection-card,
@@ -764,6 +986,7 @@
       .collection-filter-panel,
       .tier-chip,
       .board-tier,
+      .board-party-tier,
       .suite-badge
     ) {
     border: 1px solid ButtonText;
@@ -778,6 +1001,5 @@
   }
   .bestiary-app .bestiary-new-dot {
     border: 2px solid Highlight;
-    background: Highlight;
   }
 }

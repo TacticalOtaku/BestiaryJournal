@@ -3,10 +3,18 @@
     <h1>{{localize "BESTIARY.Board.Title"}}</h1>
     <div class="knowledge-board-filters">
       <search class="bestiary-search-landmark">
-        <label class="library-search board-search">
+        <label class="toolbar-search board-search">
           <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
           <span class="sr-only">{{localize "BESTIARY.Board.Search"}}</span>
           <input type="search" class="board-search-input" placeholder="{{localize 'BESTIARY.Board.Search'}}" />
+          <button
+            type="button"
+            class="search-clear-btn board-search-clear"
+            data-action="clearBoardSearch"
+            aria-label="{{localize 'BESTIARY.ClearSearch'}}"
+          >
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
         </label>
       </search>
       <label class="bulk-field">
@@ -26,10 +34,10 @@
     </div>
   </header>
 
-  <div class="knowledge-board-controls">
+  <div class="knowledge-board-controls {{#if selectedCount}}has-selection{{/if}}">
     <div class="board-selection-bar">
       <span class="board-selection-status">{{#if selectedCount}}{{selectedLabel}}{{else}}{{localize "BESTIARY.Board.SelectHint"}}{{/if}}</span>
-      <button type="button" class="rail-inline-button" data-action="clearSelection" {{#unless selectedCount}}hidden{{/unless}}>
+      <button type="button" class="btn-ghost-sm" data-action="clearSelection" {{#unless selectedCount}}hidden{{/unless}}>
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>{{localize "BESTIARY.ClearAll"}}
       </button>
     </div>
@@ -67,7 +75,7 @@
             <th scope="col">{{localize "BESTIARY.Creature"}}</th>
             <th scope="col" class="board-party-col">{{localize "BESTIARY.Board.PartyColumn"}}</th>
             {{#each players}}
-              <th scope="col" style="--user-color: {{this.color}}"><img src="{{this.avatar}}" alt="" /><span>{{this.name}}</span></th>
+              <th scope="col" style="--user-color: {{this.color}}"><span class="board-player-heading">{{this.name}}</span></th>
             {{/each}}
           </tr>
         </thead>
@@ -98,7 +106,11 @@
           {{/each}}
         </tbody>
       </table>
-      <div class="suite-empty-state is-inline board-search-empty" hidden><i class="fa-solid fa-magnifying-glass"></i><h2>{{localize "BESTIARY.NoMatchingCreatures"}}</h2></div>
+      <div class="suite-empty-state is-inline board-search-empty" hidden>
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <h2>{{localize "BESTIARY.NoMatchingCreatures"}}</h2>
+        <button type="button" class="suite-secondary-button" data-action="clearBoardSearch">{{localize "BESTIARY.ClearSearch"}}</button>
+      </div>
       {{#unless rows.length}}<div class="suite-empty-state"><i class="fa-solid fa-inbox"></i><h2>{{localize "BESTIARY.Board.NoCreatures"}}</h2></div>{{/unless}}
     </div>
   {{else}}
